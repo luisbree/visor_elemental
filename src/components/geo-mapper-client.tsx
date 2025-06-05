@@ -53,8 +53,8 @@ const osmCategoryConfig: OSMCategoryConfig[] = [
   {
     id: 'watercourses',
     name: 'OSM Cursos de Agua',
-    overpassQueryFragment: (bboxStr) => `nwr[waterway~"^(river|stream)$"](${bboxStr});`,
-    matcher: (tags) => tags && (tags.waterway === 'river' || tags.waterway === 'stream'),
+    overpassQueryFragment: (bboxStr) => `nwr[waterway~"^(river|stream|canal)$"](${bboxStr});`,
+    matcher: (tags) => tags && (tags.waterway === 'river' || tags.waterway === 'stream' || tags.waterway === 'canal'),
     style: new Style({ stroke: new Stroke({ color: '#3a86ff', width: 2 }) })
   },
   {
