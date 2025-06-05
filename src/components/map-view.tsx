@@ -10,8 +10,10 @@ import {defaults as defaultControls} from 'ol/control';
 import { fromLonLat } from 'ol/proj';
 
 interface MapViewProps {
-  mapRef: React.MutableRefObject<OLMap | null>;
-  setMapInstanceAndElement: (map: OLMap, element: HTMLDivElement) => void; // Modified prop
+  // mapRef is now managed by useOpenLayersMap hook
+  setMapInstanceAndElement: (map: OLMap, element: HTMLDivElement) => void;
+  onMapClick?: (event: any) => void; // For feature inspection
+  activeBaseLayerId?: string; // To control visibility
 }
 
 export const BASE_LAYER_DEFINITIONS = [
@@ -52,15 +54,21 @@ export const BASE_LAYER_DEFINITIONS = [
 ] as const;
 
 
-const MapView: React.FC<MapViewProps> = ({ mapRef, setMapInstanceAndElement }) => {
+const MapView: React.FC<MapViewProps> = ({ setMapInstanceAndElement, onMapClick, activeBaseLayerId }) => {
   const mapElementRef = useRef<HTMLDivElement>(null);
+  const localMapRef = useRef<OLMap | null>(null); // Local ref for map instance within this component
 
   useEffect(() => {
-    if (!mapElementRef.current || mapRef.current) { 
+    if (!mapElementRef.current || localMapRef.current) { 
       return;
     }
 
-    const initialBaseLayers = BASE_LAYER_DEFINITIONS.map(def => def.createLayer());
+    const initialBaseLayers = BASE_LAYER_DEFINITIONS.map(def => {
+        const layer = def.createLayer();
+        // Set initial visibility based on activeBaseLayerId (first one if not specified)
+        layer.setVisible(def.id === (activeBaseLayerId || BASE_LAYER_DEFINITIONS[0].id));
+        return layer;
+    });
 
     const map = new OLMap({
       target: mapElementRef.current,
@@ -80,18 +88,36 @@ const MapView: React.FC<MapViewProps> = ({ mapRef, setMapInstanceAndElement }) =
       }),
     });
 
-    mapRef.current = map; 
-    setMapInstanceAndElement(map, mapElementRef.current); // Pass the map instance and its div element
+    localMapRef.current = map;
+    setMapInstanceAndElement(map, mapElementRef.current);
+
+    if (onMapClick) {
+      map.on('singleclick', onMapClick);
+    }
 
     return () => {
-      if (mapRef.current) {
-        mapRef.current.setTarget(undefined); 
+      if (localMapRef.current) {
+        if (onMapClick) localMapRef.current.un('singleclick', onMapClick);
+        localMapRef.current.setTarget(undefined); 
+        localMapRef.current = null;
       }
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); 
+  }, [setMapInstanceAndElement, onMapClick]); // activeBaseLayerId removed to avoid re-init on change, visibility handled by effect below
+
+  // Effect to handle base layer visibility changes
+  useEffect(() => {
+    if (localMapRef.current && activeBaseLayerId) {
+        localMapRef.current.getLayers().forEach(layer => {
+            if (layer.get('isBaseLayer')) {
+                layer.setVisible(layer.get('baseLayerId') === activeBaseLayerId);
+            }
+        });
+    }
+  }, [activeBaseLayerId]);
 
   return <div ref={mapElementRef} className="w-full h-full bg-gray-200" />;
 };
 
 export default MapView;
+
