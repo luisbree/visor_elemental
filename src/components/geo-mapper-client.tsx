@@ -2,10 +2,10 @@
 "use client";
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { MapPin, Server as ServerIcon } from 'lucide-react'; 
+import { MapPin, Server as ServerIcon } from 'lucide-react';
 import { Style, Fill, Stroke, Circle as CircleStyle } from 'ol/style';
-import { transformExtent } from 'ol/proj'; 
-import type { Extent } from 'ol/extent';   
+import { transformExtent } from 'ol/proj';
+import type { Extent } from 'ol/extent';
 
 import MapView, { BASE_LAYER_DEFINITIONS } from '@/components/map-view';
 import FeatureAttributesPanel from '@/components/panels/FeatureAttributesPanel';
@@ -91,33 +91,44 @@ export default function GeoMapperClient() {
   const layersPanelRef = useRef<HTMLDivElement>(null);
   const toolsPanelRef = useRef<HTMLDivElement>(null);
   const geoServerPanelRef = useRef<HTMLDivElement>(null);
-  const featureAttributesPanelRef = useRef<HTMLDivElement>(null); 
+  const featureAttributesPanelRef = useRef<HTMLDivElement>(null);
 
   const { mapRef, mapElementRef, drawingSourceRef, drawingLayerRef, setMapInstanceAndElement, isMapReady } = useOpenLayersMap();
   const { toast } = useToast();
-  
+
   const [activeBaseLayerId, setActiveBaseLayerId] = useState<string>(BASE_LAYER_DEFINITIONS[0].id);
   const handleChangeBaseLayer = useCallback((newBaseLayerId: string) => {
     setActiveBaseLayerId(newBaseLayerId);
   }, []);
 
-  const {
-    isInspectModeActive, toggleInspectMode, selectedFeatureAttributes,
-    isFeatureAttributesPanelVisible, currentInspectedLayerName,
-    closeFeatureAttributesPanel, processAndDisplayFeatures,
-  } = useFeatureInspection({ mapRef, mapElementRef, isMapReady, layers: [], drawingSourceRef, activeDrawTool: null, stopDrawingTool: () => {} }); 
+  const { activeDrawTool, toggleDrawingTool, stopDrawingTool, clearDrawnFeatures, saveDrawnFeaturesAsKML } = useDrawingInteractions({
+    mapRef, isMapReady, drawingSourceRef,
+    // Pass toggleInspectMode from the single featureInspectionHook instance
+    isInspectModeActive: false, // Placeholder, will be replaced by featureInspectionHook.isInspectModeActive
+    toggleInspectMode: () => {}, // Placeholder, will be replaced
+  });
+
+  const featureInspectionHook = useFeatureInspection({
+    mapRef, mapElementRef, isMapReady, layers: [], // 'layers' will be updated by useLayerManager
+    drawingSourceRef, drawingLayerRef, activeDrawTool, stopDrawingTool,
+  });
+
 
   const {
     layers, addLayer, removeLayer, toggleLayerVisibility, zoomToLayerExtent, handleShowLayerTable,
-  } = useLayerManager({ mapRef, isMapReady, drawingLayerRef, onShowTableRequest: processAndDisplayFeatures, 
+  } = useLayerManager({ mapRef, isMapReady, drawingLayerRef, onShowTableRequest: featureInspectionHook.processAndDisplayFeatures,
     updateGeoServerDiscoveredLayerState: (layerName, added) => {
         setGeoServerDiscoveredLayers(prev => prev.map(l => l.name === layerName ? { ...l, addedToMap: added } : l));
     }
   });
   
-  const { activeDrawTool, toggleDrawingTool, stopDrawingTool, clearDrawnFeatures, saveDrawnFeaturesAsKML } = useDrawingInteractions({
-    mapRef, isMapReady, drawingSourceRef, isInspectModeActive, toggleInspectMode,
+  // Re-initialize drawingInteractions with the correct toggleInspectMode
+  const drawingInteractions = useDrawingInteractions({
+    mapRef, isMapReady, drawingSourceRef,
+    isInspectModeActive: featureInspectionHook.isInspectModeActive,
+    toggleInspectMode: featureInspectionHook.toggleInspectMode,
   });
+
 
   const {
     isFetchingOSM, selectedOSMCategoryIds, setSelectedOSMCategoryIds, fetchOSMData,
@@ -128,20 +139,16 @@ export default function GeoMapperClient() {
   const {
     geoServerUrlInput, setGeoServerUrlInput, isLoadingGeoServerLayers,
     handleFetchGeoServerLayers, handleAddGeoServerLayerToMap,
-  } = useGeoServerLayers({ mapRef, isMapReady, addLayer, 
+  } = useGeoServerLayers({ mapRef, isMapReady, addLayer,
       onLayerStateUpdate: (layerName, added) => {
         setGeoServerDiscoveredLayers(prev => prev.map(l => l.name === layerName ? { ...l, addedToMap: added } : l));
       }
   });
 
-  const featureInspectionHook = useFeatureInspection({
-    mapRef, mapElementRef, isMapReady, layers, drawingSourceRef, activeDrawTool, stopDrawingTool
-  });
-
   const { panels, handlePanelMouseDown, togglePanelCollapse } = useFloatingPanels({
     layersPanelRef, toolsPanelRef, geoServerPanelRef, mapAreaRef, panelWidth: PANEL_WIDTH, panelPadding: PANEL_PADDING
   });
-  
+
   const [attrPanelPosition, setAttrPanelPosition] = useState({ x: 50, y: 50 });
   const handleAttrPanelMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
       const panel = featureAttributesPanelRef.current;
@@ -160,17 +167,17 @@ export default function GeoMapperClient() {
   }, []);
   const [isAttrPanelCollapsed, setIsAttrPanelCollapsed] = useState(false);
 
-  const zoomToBoundingBox = useCallback((bbox: [number, number, number, number]) => { 
+  const zoomToBoundingBox = useCallback((bbox: [number, number, number, number]) => {
     if (!mapRef.current) return;
     const extent4326: Extent = [bbox[0], bbox[1], bbox[2], bbox[3]];
     try {
         const extent3857 = transformExtent(extent4326, 'EPSG:4326', 'EPSG:3857');
-        
+
         if (extent3857 && extent3857.every(isFinite) && (extent3857[2] - extent3857[0] > 0.000001) && (extent3857[3] - extent3857[1] > 0.000001)) {
             mapRef.current.getView().fit(extent3857, {
             padding: [50, 50, 50, 50],
             duration: 1000,
-            maxZoom: 17, 
+            maxZoom: 17,
             });
             setTimeout(() => {
               toast({ description: "Ubicación encontrada y centrada en el mapa." });
@@ -188,6 +195,11 @@ export default function GeoMapperClient() {
     }
   }, [mapRef, toast]);
 
+  // Update layers prop for featureInspectionHook when layers change
+  useEffect(() => {
+    featureInspectionHook.updateLayers(layers);
+  }, [layers, featureInspectionHook]);
+
 
   return (
     <div className="flex h-screen w-screen flex-col bg-background text-foreground">
@@ -198,8 +210,8 @@ export default function GeoMapperClient() {
       <div ref={mapAreaRef} className="relative flex-1 overflow-hidden">
         <MapView
           setMapInstanceAndElement={setMapInstanceAndElement}
-          onMapClick={featureInspectionHook.isInspectModeActive && !activeDrawTool ? (e) => mapRef.current?.forEachFeatureAtPixel(e.pixel, featureInspectionHook.processAndDisplayFeatures) : undefined}
           activeBaseLayerId={activeBaseLayerId}
+          // onMapClick is removed; useFeatureInspection handles its own click listener
         />
 
         <FeatureAttributesPanel
@@ -210,8 +222,8 @@ export default function GeoMapperClient() {
           panelRef={featureAttributesPanelRef}
           initialPosition={attrPanelPosition}
           onMouseDownHeader={handleAttrPanelMouseDown}
-          isPanelCollapsed={isAttrPanelCollapsed} 
-          onTogglePanelCollapse={() => setIsAttrPanelCollapsed(!isAttrPanelCollapsed)} 
+          isPanelCollapsed={isAttrPanelCollapsed}
+          onTogglePanelCollapse={() => setIsAttrPanelCollapsed(!isAttrPanelCollapsed)}
         />
 
         <LayersPanel
@@ -231,7 +243,7 @@ export default function GeoMapperClient() {
           onChangeBaseLayer={handleChangeBaseLayer}
           isInspectModeActive={featureInspectionHook.isInspectModeActive}
           onToggleInspectMode={featureInspectionHook.toggleInspectMode}
-          isActiveDrawToolPresent={!!activeDrawTool}
+          isActiveDrawToolPresent={!!drawingInteractions.activeDrawTool}
           onZoomToBoundingBox={zoomToBoundingBox}
         />
 
@@ -241,11 +253,11 @@ export default function GeoMapperClient() {
           isCollapsed={panels.tools.isCollapsed}
           onToggleCollapse={() => togglePanelCollapse('tools')}
           onMouseDownHeader={(e) => handlePanelMouseDown(e, 'tools')}
-          activeDrawTool={activeDrawTool}
-          onToggleDrawingTool={toggleDrawingTool}
-          onStopDrawingTool={stopDrawingTool}
-          onClearDrawnFeatures={clearDrawnFeatures}
-          onSaveDrawnFeaturesAsKML={saveDrawnFeaturesAsKML}
+          activeDrawTool={drawingInteractions.activeDrawTool}
+          onToggleDrawingTool={drawingInteractions.toggleDrawingTool}
+          onStopDrawingTool={drawingInteractions.stopDrawingTool}
+          onClearDrawnFeatures={drawingInteractions.clearDrawnFeatures}
+          onSaveDrawnFeaturesAsKML={drawingInteractions.saveDrawnFeaturesAsKML}
           isFetchingOSM={isFetchingOSM}
           onFetchOSMDataTrigger={fetchOSMData}
           osmCategoriesForSelection={osmCategoriesForSelection}
@@ -254,9 +266,9 @@ export default function GeoMapperClient() {
           downloadFormat={downloadFormat}
           onDownloadFormatChange={setDownloadFormat}
           isDownloading={isDownloading}
-          onDownloadOSMLayers={() => handleDownloadOSMLayers(layers)} 
+          onDownloadOSMLayers={() => handleDownloadOSMLayers(layers)}
         />
-        
+
         <GeoServerPanel
           panelRef={geoServerPanelRef}
           position={panels.geoserver.position}
@@ -267,7 +279,7 @@ export default function GeoMapperClient() {
           onGeoServerUrlChange={setGeoServerUrlInput}
           onFetchGeoServerLayers={async () => {
             const discovered = await handleFetchGeoServerLayers();
-            setGeoServerDiscoveredLayers(discovered); // Actualiza el estado local con las capas descubiertas
+            setGeoServerDiscoveredLayers(discovered);
             return discovered;
           }}
           geoServerDiscoveredLayers={geoServerDiscoveredLayers}
