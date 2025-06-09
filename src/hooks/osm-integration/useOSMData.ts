@@ -222,27 +222,70 @@ export function useOSMData({ drawingSourceRef, addLayer, osmCategoryConfigs }: U
         let featuresFoundForShp = false;
 
         const sanitizeProperties = (olFeature: OLFeature<any>): Record<string, any> => {
-          const props = { ...olFeature.getProperties() };
-          delete props[olFeature.getGeometryName() as string];
+          const originalProps = olFeature.getProperties();
           const sanitizedProps: Record<string, any> = {};
-          for (const key in props) {
-            let sanitizedKey = key.replace(/[^a-zA-Z0-9_]/g, '').substring(0, 10);
-            if(sanitizedKey.length === 0) sanitizedKey = `prop${Object.keys(sanitizedProps).length}`;
-            let counter = 0; let finalKey = sanitizedKey;
-            while(Object.prototype.hasOwnProperty.call(sanitizedProps, finalKey)) { // Ensure unique key
-                counter++; finalKey = `${sanitizedKey.substring(0, 10 - String(counter).length)}${counter}`;
+          const geometryName = olFeature.getGeometryName();
+
+          for (const key in originalProps) {
+            if (Object.prototype.hasOwnProperty.call(originalProps, key) && key !== geometryName) {
+              let value = originalProps[key];
+
+              // Sanitize Key
+              let sanitizedKey = key.replace(/[^a-zA-Z0-9_]/g, '').substring(0, 10);
+              if (sanitizedKey.length === 0) {
+                // Create a generic key if sanitization results in an empty string
+                let i = 0;
+                do {
+                  sanitizedKey = `prop${i}`;
+                  i++;
+                } while (Object.prototype.hasOwnProperty.call(sanitizedProps, sanitizedKey));
+              } else {
+                // Ensure key uniqueness if truncated key already exists
+                let baseKey = sanitizedKey;
+                let counter = 0;
+                while (Object.prototype.hasOwnProperty.call(sanitizedProps, sanitizedKey)) {
+                  counter++;
+                  // Shorten baseKey to make room for counter, ensuring it doesn't exceed 10 chars
+                  const availableLength = 10 - String(counter).length;
+                  if (availableLength <= 0) { // Should not happen with reasonable counter
+                     console.warn(`Property key '${key}' cannot be uniquely sanitized within 10 characters.`);
+                     sanitizedKey = `prop_err${counter}`; // Fallback for extremely long conflicting keys
+                     break;
+                  }
+                  baseKey = baseKey.substring(0, availableLength);
+                  sanitizedKey = `${baseKey}${counter}`;
+                }
+              }
+              
+              // Sanitize Value
+              if (value === null || value === undefined) {
+                value = ""; // Convert null/undefined to empty string for DBF
+              } else if (typeof value === 'boolean') {
+                value = value ? "T" : "F"; // Or 1 and 0, "T" / "F" are common for logical
+              } else if (typeof value === 'object') {
+                value = JSON.stringify(value); // Convert objects/arrays to JSON string
+              } else if (typeof value === 'number') {
+                // Numbers are generally fine, shp-write should handle them.
+                // No specific change here unless issues arise with number precision/type.
+              }
+              
+              // Ensure string value is not excessively long (DBF field limit for strings)
+              if (typeof value === 'string' && value.length > 254) {
+                value = value.substring(0, 254);
+              }
+              sanitizedProps[sanitizedKey] = value;
             }
-            sanitizedProps[finalKey] = props[key];
           }
           return sanitizedProps;
         };
+
 
         osmLayers.forEach(layer => {
             const source = (layer.olLayer as VectorLayer<VectorSource<OLFeature<any>>>).getSource();
             const olFeatures = source ? source.getFeatures() : [];
 
             if (olFeatures.length > 0) {
-                const baseLayerFileName = layer.name.replace(/[^a-zA-Z0-9_]/g, '_').replace(/\s+/g, '_');
+                const baseLayerFileName = layer.name.replace(/[^\w-]/g, '_').replace(/\s+/g, '_').substring(0, 50); // Sanitize and shorten layer name for filename
                 
                 const points: GeoJSON.Feature[] = [];
                 const lines: GeoJSON.Feature[] = [];
@@ -253,18 +296,25 @@ export function useOSMData({ drawingSourceRef, addLayer, osmCategoryConfigs }: U
                         console.warn(`Skipping feature with null OpenLayers geometry in layer ${layer.name}. Feature ID: ${olFeature.getId()}`);
                         return; 
                     }
-                    const geoJsonFeature = olGeoJsonFormatter.writeFeatureObject(olFeature, {
-                        dataProjection: 'EPSG:4326',
-                        featureProjection: 'EPSG:3857'
-                    }) as GeoJSON.Feature;
+                    // Create a fresh GeoJSON feature object for shp-write
+                    // This ensures we are not passing OpenLayers specific properties or complex objects shp-write can't handle
+                    const olGeometry = olFeature.getGeometry();
+                    if (!olGeometry) return;
 
-                    if (!geoJsonFeature.geometry) {
-                        console.warn(`Skipping feature with null GeoJSON geometry in layer ${layer.name}. Feature ID: ${olFeature.getId()}`);
+                    // Transform geometry to GeoJSON format in EPSG:4326
+                    const geoJsonGeometry = JSON.parse(new GeoJSONFormat().writeGeometry(olGeometry.clone().transform('EPSG:3857', 'EPSG:4326'))) as GeoJSON.Geometry;
+
+                    if (!geoJsonGeometry) {
+                        console.warn(`Skipping feature with null GeoJSON geometry after transformation in layer ${layer.name}. Feature ID: ${olFeature.getId()}`);
                         return;
                     }
                     
-                    geoJsonFeature.properties = sanitizeProperties(olFeature);
-
+                    const geoJsonFeature: GeoJSON.Feature = {
+                        type: "Feature",
+                        geometry: geoJsonGeometry,
+                        properties: sanitizeProperties(olFeature) // Use our robust sanitizer
+                    };
+                    
                     const geomType = geoJsonFeature.geometry?.type;
                     if (geomType === 'Point' || geomType === 'MultiPoint') {
                         points.push(geoJsonFeature);
@@ -300,26 +350,26 @@ export function useOSMData({ drawingSourceRef, addLayer, osmCategoryConfigs }: U
           throw new Error("No se encontraron entidades válidas en las capas OSM para exportar como Shapefile después de filtrar geometrías nulas.");
         }
         
-        // Defensive check for FeatureCollection structure
+        // Final check for empty feature collections before passing to shpwrite
         for (const fileNameKey in geoJsonDataForShpExport) {
             if (Object.prototype.hasOwnProperty.call(geoJsonDataForShpExport, fileNameKey)) {
                 const fc = geoJsonDataForShpExport[fileNameKey];
                 if (!fc || typeof fc !== 'object' || fc.type !== "FeatureCollection" || !Array.isArray(fc.features)) {
                     console.error(`Estructura de FeatureCollection incorrecta para ${fileNameKey}:`, fc);
-                    toast(`Error interno: Datos malformados para la capa de exportación '${fileNameKey}'. Falta la matriz 'features' o el tipo es incorrecto.`);
+                    toast(`Error interno: Datos malformados para la capa de exportación '${fileNameKey}'.`);
                     setIsDownloading(false);
                     return; 
                 }
-                 if (fc.features.length === 0) { // Check if features array is empty
-                    console.warn(`FeatureCollection para ${fileNameKey} está vacía. No se incluirá en el SHP.`);
-                    delete geoJsonDataForShpExport[fileNameKey]; // Remove empty feature collection
-                    delete typesForShpExport[fileNameKey]; // Remove corresponding type
+                 if (fc.features.length === 0) { 
+                    console.warn(`FeatureCollection para ${fileNameKey} está vacía y será eliminada antes de la exportación SHP.`);
+                    delete geoJsonDataForShpExport[fileNameKey]; 
+                    delete typesForShpExport[fileNameKey]; 
                 }
             }
         }
         
         if (Object.keys(geoJsonDataForShpExport).length === 0) {
-            throw new Error("No hay FeatureCollections con entidades para exportar a Shapefile después de procesar.");
+            throw new Error("No hay FeatureCollections con entidades para exportar a Shapefile después de procesar y filtrar vacías.");
         }
         
         const shpWriteOptions = { folder: 'shapefiles_osm', types: typesForShpExport };
@@ -352,3 +402,5 @@ export function useOSMData({ drawingSourceRef, addLayer, osmCategoryConfigs }: U
   };
 }
 
+
+    
