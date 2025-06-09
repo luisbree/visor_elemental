@@ -10,10 +10,9 @@ import {defaults as defaultControls} from 'ol/control';
 import { fromLonLat } from 'ol/proj';
 
 interface MapViewProps {
-  // mapRef is now managed by useOpenLayersMap hook
   setMapInstanceAndElement: (map: OLMap, element: HTMLDivElement) => void;
-  onMapClick?: (event: any) => void; // For feature inspection
-  activeBaseLayerId?: string; // To control visibility
+  onMapClick?: (event: any) => void; 
+  activeBaseLayerId?: string; 
 }
 
 export const BASE_LAYER_DEFINITIONS = [
@@ -56,10 +55,11 @@ export const BASE_LAYER_DEFINITIONS = [
 
 const MapView: React.FC<MapViewProps> = ({ setMapInstanceAndElement, onMapClick, activeBaseLayerId }) => {
   const mapElementRef = useRef<HTMLDivElement>(null);
-  const localMapRef = useRef<OLMap | null>(null); // Local ref for map instance within this component
+  const olMapInstanceRef = useRef<OLMap | null>(null); // Internal ref to the map instance created by this component
 
+  // Effect for map initialization (runs once)
   useEffect(() => {
-    if (!mapElementRef.current || localMapRef.current) { 
+    if (!mapElementRef.current || olMapInstanceRef.current) { // Only run if div exists and map not yet created
       return;
     }
 
@@ -87,37 +87,49 @@ const MapView: React.FC<MapViewProps> = ({ setMapInstanceAndElement, onMapClick,
         rotate: false, 
       }),
     });
-
-    localMapRef.current = map;
+    
+    olMapInstanceRef.current = map; // Store locally
     setMapInstanceAndElement(map, mapElementRef.current);
 
-    if (onMapClick) {
-      map.on('singleclick', onMapClick);
-    }
-
     return () => {
-      if (localMapRef.current) {
-        if (onMapClick) localMapRef.current.un('singleclick', onMapClick);
-        localMapRef.current.setTarget(undefined); 
-        localMapRef.current = null;
+      // Cleanup when MapView unmounts completely
+      if (olMapInstanceRef.current) {
+        olMapInstanceRef.current.setTarget(undefined); // Detach map from target
+        // olMapInstanceRef.current.dispose(); // Consider if full disposal is needed
+        olMapInstanceRef.current = null;
       }
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [setMapInstanceAndElement, onMapClick]); // activeBaseLayerId removed to avoid re-init on change, visibility handled by effect below
+  }, [setMapInstanceAndElement]); // setMapInstanceAndElement should be stable
+
+  // Effect to handle 'onMapClick' listener changes
+  useEffect(() => {
+    if (!olMapInstanceRef.current) return; // Map not yet created
+    const currentMap = olMapInstanceRef.current;
+
+    if (onMapClick) {
+      currentMap.on('singleclick', onMapClick);
+    }
+    return () => {
+      if (onMapClick) { // Check if onMapClick was actually defined and attached
+        currentMap.un('singleclick', onMapClick);
+      }
+    };
+  }, [onMapClick]); // Only depends on onMapClick callback changing
 
   // Effect to handle base layer visibility changes
   useEffect(() => {
-    if (localMapRef.current && activeBaseLayerId) {
-        localMapRef.current.getLayers().forEach(layer => {
-            if (layer.get('isBaseLayer')) {
-                layer.setVisible(layer.get('baseLayerId') === activeBaseLayerId);
-            }
-        });
-    }
-  }, [activeBaseLayerId]);
+    if (!olMapInstanceRef.current || !activeBaseLayerId) return; // Map not yet created or no activeBaseLayerId
+    const currentMap = olMapInstanceRef.current;
+
+    currentMap.getLayers().forEach(layer => {
+        if (layer.get('isBaseLayer')) {
+            layer.setVisible(layer.get('baseLayerId') === activeBaseLayerId);
+        }
+    });
+  }, [activeBaseLayerId]); // Only depends on activeBaseLayerId changing
 
   return <div ref={mapElementRef} className="w-full h-full bg-gray-200" />;
 };
 
 export default MapView;
-
