@@ -290,6 +290,19 @@ export function useOSMData({ drawingSourceRef, addLayer, osmCategoryConfigs }: U
           throw new Error("No hay entidades en las capas OSM para exportar como Shapefile.");
         }
         
+        // Defensive check for FeatureCollection structure
+        for (const fileNameKey in geoJsonDataForShpExport) {
+            if (Object.prototype.hasOwnProperty.call(geoJsonDataForShpExport, fileNameKey)) {
+                const fc = geoJsonDataForShpExport[fileNameKey];
+                if (!fc || typeof fc !== 'object' || fc.type !== "FeatureCollection" || !Array.isArray(fc.features)) {
+                    console.error(`Estructura de FeatureCollection incorrecta para ${fileNameKey}:`, fc);
+                    toast(`Error interno: Datos malformados para la capa de exportación '${fileNameKey}'. Falta la matriz 'features'.`);
+                    setIsDownloading(false);
+                    return; 
+                }
+            }
+        }
+        
         const shpWriteOptions = { folder: 'shapefiles_osm', types: typesForShpExport };
         const zipContentBase64 = await shpwrite.zip(geoJsonDataForShpExport, shpWriteOptions);
         const byteString = atob(zipContentBase64);
@@ -319,6 +332,3 @@ export function useOSMData({ drawingSourceRef, addLayer, osmCategoryConfigs }: U
     handleDownloadOSMLayers,
   };
 }
-
-
-    
