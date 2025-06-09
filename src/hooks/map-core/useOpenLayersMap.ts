@@ -20,14 +20,15 @@ export function useOpenLayersMap() {
   const setMapInstanceAndElement = useCallback((mapInstance: OLMap, element: HTMLDivElement) => {
     mapRef.current = mapInstance;
     mapElementRef.current = element;
-    setIsMapReady(true);
 
     if (!mapRef.current) {
       console.error("setMapInstanceAndElement called but mapRef.current is null.");
       return;
     }
 
-    if (!drawingLayerRef.current) {
+    let drawingLayerSuccessfullySetup = false;
+
+    if (!drawingLayerRef.current) { // Create drawing layer only if it doesn't exist
       try {
         if (!drawingSourceRef.current) {
              drawingSourceRef.current = new VectorSource({ wrapX: false });
@@ -36,26 +37,27 @@ export function useOpenLayersMap() {
         if (!drawingSourceRef.current) {
             console.error("CRITICAL: drawingSourceRef.current is null after attempting initialization. Cannot create drawing layer.");
             setTimeout(() => {
-              toast("Error Crítico: No se pudo inicializar la fuente de la capa de dibujo.");
+              toast({description: "Error Crítico: No se pudo inicializar la fuente de la capa de dibujo."});
             }, 0);
-            return;
+            return; // Do not proceed if source is not created
         }
 
         drawingLayerRef.current = new VectorLayer({
             source: drawingSourceRef.current,
             style: new Style({
-            fill: new Fill({ color: 'rgba(0, 150, 255, 0.2)' }),
-            stroke: new Stroke({ color: '#007bff', width: 2 }),
-            image: new CircleStyle({
-                radius: 7,
-                fill: new Fill({ color: '#007bff' }),
-                stroke: new Stroke({ color: '#ffffff', width: 1.5 })
+              fill: new Fill({ color: 'rgba(0, 150, 255, 0.2)' }),
+              stroke: new Stroke({ color: '#007bff', width: 2 }),
+              image: new CircleStyle({
+                  radius: 7,
+                  fill: new Fill({ color: '#007bff' }),
+                  stroke: new Stroke({ color: '#ffffff', width: 1.5 })
+              }),
             }),
-            }),
-            zIndex: 1000 
+            zIndex: 1000 // Set zIndex at creation
         });
         mapRef.current.addLayer(drawingLayerRef.current);
-        console.log("Drawing layer added to map.");
+        drawingLayerSuccessfullySetup = true;
+        console.log("Drawing layer added to map with zIndex 1000.");
 
       } catch (e: any) {
         console.error("Error during drawing layer/source INSTANTIATION or map ADDITION:", e.message, {
@@ -63,18 +65,30 @@ export function useOpenLayersMap() {
           drawingLayerRef_current_value_exists: !!drawingLayerRef.current,
         });
         setTimeout(() => {
-          toast("Error Crítico: No se pudo inicializar la capa de dibujo (instantiation).");
+          toast({description: "Error Crítico: No se pudo inicializar la capa de dibujo (instantiation)."});
         }, 0);
+        return; // Do not proceed if layer creation fails
       }
-    }
-  }, [toast]);
-
-    useEffect(() => {
-        if (mapRef.current && drawingLayerRef.current) {
+    } else {
+        // Drawing layer already exists, ensure it's on map and zIndex is correct
+        if (mapRef.current.getLayers().getArray().includes(drawingLayerRef.current)) {
+            drawingLayerRef.current.setZIndex(1000);
+        } else {
+            // This case should be rare if MapView is not re-initializing
+            console.warn("Drawing layer instance existed but was not on the map. Re-adding.");
+            mapRef.current.addLayer(drawingLayerRef.current);
             drawingLayerRef.current.setZIndex(1000);
         }
-    }, [isMapReady]);
+        drawingLayerSuccessfullySetup = true; // It was already initialized or successfully re-managed
+    }
+    
+    if (drawingLayerSuccessfullySetup) {
+        setIsMapReady(true); // Set map as ready only if drawing layer setup was successful
+    }
 
+  }, [toast]);
+
+  // Removed the separate useEffect for zIndex as it's now handled in setMapInstanceAndElement
 
   return {
     mapRef,
