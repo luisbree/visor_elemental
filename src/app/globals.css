@@ -23,11 +23,11 @@ body {
     --border: 210 30% 85%; /* Light grayish blue border */
     --input: 210 30% 92%; /* Light input background */
 
-    --primary: 210 50% 60%; /* Muted blue (#6699CC) */
+    --primary: 209 30% 41%; /* Petroleum blue (approx #47698A, from screenshot) */
     --primary-foreground: 0 0% 98%; /* White/very light for text on primary */
 
-    --secondary: 210 50% 85%; /* Lighter shade of primary */
-    --secondary-foreground: 210 50% 30%; /* Darker shade of primary for text on secondary */
+    --secondary: 210 50% 85%; /* Lighter shade of original primary */
+    --secondary-foreground: 210 50% 30%; /* Darker shade of original primary for text on secondary */
 
     --accent: 280 26% 65%; /* Pale violet (#B08BBF) */
     --accent-foreground: 0 0% 98%; /* White/very light for text on accent */
@@ -35,7 +35,7 @@ body {
     --destructive: 0 72% 51%; /* A standard red for destructive actions */
     --destructive-foreground: 0 0% 98%; /* White/very light for text on destructive */
 
-    --ring: 210 50% 65%; /* Slightly lighter primary for rings */
+    --ring: 209 30% 46%; /* Based on new petroleum blue primary for rings */
 
     --radius: 0.5rem;
 
@@ -73,8 +73,8 @@ body {
     --border: 210 25% 30%; /* Dark grayish blue border */
     --input: 210 25% 25%; /* Dark input background */
 
-    --primary: 210 50% 60%; /* Muted blue (can be same as light or adjusted) */
-    --primary-foreground: 210 30% 10%; /* Dark blue for text on primary */
+    --primary: 210 50% 60%; /* Muted blue (can be same as light or adjusted for dark mode) */
+    --primary-foreground: 210 30% 10%; /* Dark blue for text on primary in dark mode */
 
     --secondary: 210 50% 30%; /* Darker shade of primary */
     --secondary-foreground: 210 50% 85%; /* Lighter shade of primary for text on secondary */
