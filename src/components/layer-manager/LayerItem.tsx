@@ -5,6 +5,7 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Eye, EyeOff, ZoomIn, Table2, Trash2 } from 'lucide-react';
 import type { MapLayer } from '@/lib/types';
+import VectorLayer from 'ol/layer/Vector'; // Import VectorLayer
 
 interface LayerItemProps {
   layer: MapLayer;
@@ -47,7 +48,8 @@ const LayerItem: React.FC<LayerItemProps> = ({
         >
           <ZoomIn className="h-3.5 w-3.5" />
         </Button>
-        {layer.olLayer.get('isVectorLayer') !== false && !(layer.olLayer instanceof (window as any).ol?.layer?.Tile) && ( // Heuristic check for vector-like layers
+        {/* Check if the layer is an instance of VectorLayer to show the table button */}
+        {layer.olLayer instanceof VectorLayer && (
            <Button
              variant="ghost"
              size="icon"
