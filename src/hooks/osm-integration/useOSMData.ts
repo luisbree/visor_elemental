@@ -218,7 +218,7 @@ export function useOSMData({ drawingSourceRef, addLayer, osmCategoryConfigs }: U
 
       } else if (downloadFormat === 'shp') {
         const geoJsonDataForShpExport: { [fileName: string]: GeoJSON.FeatureCollection } = {};
-        const typesForShpExport: { [fileName: string]: 'point' | 'line' | 'polygon' } = {};
+        const typesForShpExport: { [fileName: string]: 'POINT' | 'POLYLINE' | 'POLYGON' } = {};
         let featuresFoundForShp = false;
 
         const sanitizeProperties = (olFeature: OLFeature<any>): Record<string, any> => {
@@ -268,19 +268,19 @@ export function useOSMData({ drawingSourceRef, addLayer, osmCategoryConfigs }: U
                 if (points.length > 0) {
                     const fileName = `${baseLayerFileName}_points`;
                     geoJsonDataForShpExport[fileName] = { type: "FeatureCollection", features: points };
-                    typesForShpExport[fileName] = 'point';
+                    typesForShpExport[fileName] = 'POINT';
                     featuresFoundForShp = true;
                 }
                 if (lines.length > 0) {
                     const fileName = `${baseLayerFileName}_lines`;
                     geoJsonDataForShpExport[fileName] = { type: "FeatureCollection", features: lines };
-                    typesForShpExport[fileName] = 'line';
+                    typesForShpExport[fileName] = 'POLYLINE';
                     featuresFoundForShp = true;
                 }
                 if (polygons.length > 0) {
                     const fileName = `${baseLayerFileName}_polygons`;
                     geoJsonDataForShpExport[fileName] = { type: "FeatureCollection", features: polygons };
-                    typesForShpExport[fileName] = 'polygon';
+                    typesForShpExport[fileName] = 'POLYGON';
                     featuresFoundForShp = true;
                 }
             }
@@ -332,3 +332,4 @@ export function useOSMData({ drawingSourceRef, addLayer, osmCategoryConfigs }: U
     handleDownloadOSMLayers,
   };
 }
+
