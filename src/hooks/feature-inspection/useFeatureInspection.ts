@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { Map as OLMap, Feature as OLFeature } from 'ol'; // Changed from type import
+import { Map as OLMap, Feature as OLFeature } from 'ol';
 import type VectorLayerType from 'ol/layer/Vector';
 import type VectorSourceType from 'ol/source/Vector';
 import TileLayer from 'ol/layer/Tile';
@@ -78,8 +78,6 @@ export function useFeatureInspection({
   const handleMapClick = useCallback((event: any) => {
     if (!isInspectModeActive || !mapRef.current || activeDrawTool) return;
 
-    // Prevent click processing if it's part of a drag operation by DragBox
-    // This checks the type of the OpenLayers event which might be different from the original DOM event type.
     if (dragBoxInteractionRef.current && (event.type === 'pointerdrag' || event.dragging)) {
       return;
     }
@@ -106,11 +104,10 @@ export function useFeatureInspection({
 
   }, [isInspectModeActive, activeDrawTool, mapRef, processAndDisplayFeatures, layers]);
 
-  const handleDragBoxEnd = useCallback((event: any) // DragBoxEvent is not exported, using 'any'
-    ) => {
+  const handleDragBoxEnd = useCallback((event: any) => { // DragBoxEvent is not exported, using 'any'
     if (!mapRef.current || !isInspectModeActive) return;
     
-    const dragBoxInteraction = event.target as DragBox; // The event target is the DragBox interaction
+    const dragBoxInteraction = event.target as DragBox; 
     const extent = dragBoxInteraction.getGeometry().getExtent();
     const foundFeatures: OLFeature<any>[] = [];
 
@@ -163,15 +160,12 @@ export function useFeatureInspection({
 
         if (dragBoxInteractionRef.current) {
             currentMap.removeInteraction(dragBoxInteractionRef.current);
-            dragBoxInteractionRef.current.dispose(); // Explicitly dispose
+            dragBoxInteractionRef.current.dispose(); 
             dragBoxInteractionRef.current = null;
         }
 
-        // Restore original DragZoom state
         if (originalDragZoomInteractionRef.current) {
             originalDragZoomInteractionRef.current.setActive(wasDragZoomOriginallyActiveRef.current);
-            // Do not nullify originalDragZoomInteractionRef.current here, 
-            // so we can restore it again if inspect mode is re-enabled.
         }
     };
 
@@ -180,7 +174,6 @@ export function useFeatureInspection({
         
         currentMap.on('singleclick', handleMapClick);
 
-        // Disable default DragZoom if it exists and store its original state ONCE
         if (!originalDragZoomInteractionRef.current) { 
             currentMap.getInteractions().forEach(interaction => {
                 if (interaction instanceof DragZoom) {
@@ -189,8 +182,13 @@ export function useFeatureInspection({
                     interaction.setActive(false); 
                 }
             });
-        } else { // If already stored, ensure it's disabled (could have been re-enabled by other logic)
-             originalDragZoomInteractionRef.current.setActive(false);
+        } else { 
+             if (originalDragZoomInteractionRef.current.getActive()) { // Only update if it's somehow active
+                wasDragZoomOriginallyActiveRef.current = true; // Store that it was active
+                originalDragZoomInteractionRef.current.setActive(false);
+            } else {
+                // If it was already inactive, wasDragZoomOriginallyActiveRef.current should retain its previous value.
+            }
         }
 
 
@@ -205,14 +203,11 @@ export function useFeatureInspection({
         cleanupInspectionInteractions();
     }
 
-    // Cleanup function for when component unmounts or dependencies change
     return () => {
       cleanupInspectionInteractions();
-      // Ensure the original DragZoom is restored on final cleanup as well
        if (originalDragZoomInteractionRef.current) {
            originalDragZoomInteractionRef.current.setActive(wasDragZoomOriginallyActiveRef.current);
-           // Nullify here as component is unmounting or map is no longer ready
-           originalDragZoomInteractionRef.current = null; 
+           // Don't nullify originalDragZoomInteractionRef.current here if you might re-enter inspect mode without re-initializing it
        }
     };
 
