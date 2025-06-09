@@ -193,7 +193,7 @@ export default function GeoMapperClient() {
     <div className="flex h-screen w-screen flex-col bg-background text-foreground">
       <header className="bg-gray-800/60 backdrop-blur-md text-white p-4 shadow-md flex items-center">
         <MapPin className="mr-3 h-7 w-7 text-primary" />
-        <h1 className="text-2xl font-semibold">Visor DEAS</h1>
+        <h1 className="text-2xl font-semibold">Departamento de Estudios Ambientales y Sociales</h1>
       </header>
       <div ref={mapAreaRef} className="relative flex-1 overflow-hidden">
         <MapView
@@ -265,9 +265,13 @@ export default function GeoMapperClient() {
           onMouseDownHeader={(e) => handlePanelMouseDown(e, 'geoserver')}
           geoServerUrlInput={geoServerUrlInput}
           onGeoServerUrlChange={setGeoServerUrlInput}
-          onFetchGeoServerLayers={handleFetchGeoServerLayers}
+          onFetchGeoServerLayers={async () => {
+            const discovered = await handleFetchGeoServerLayers();
+            setGeoServerDiscoveredLayers(discovered); // Actualiza el estado local con las capas descubiertas
+            return discovered;
+          }}
           geoServerDiscoveredLayers={geoServerDiscoveredLayers}
-          setGeoServerDiscoveredLayers={setGeoServerDiscoveredLayers} 
+          setGeoServerDiscoveredLayers={setGeoServerDiscoveredLayers}
           isLoadingGeoServerLayers={isLoadingGeoServerLayers}
           onAddGeoServerLayerToMap={handleAddGeoServerLayerToMap}
         />
