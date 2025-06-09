@@ -2,21 +2,21 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { Map as OLMap, Feature as OLFeature } from 'ol';
-import VectorLayer from 'ol/layer/Vector';
-import type VectorSourceType from 'ol/source/Vector';
-import TileLayer from 'ol/layer/Tile';
-import DragBox from 'ol/interaction/DragBox';
-import DragZoom from 'ol/interaction/DragZoom'; // Import DragZoom
+import { Map as OLMap, Feature as OLFeature } from 'ol'; // Value imports
+import VectorLayer from 'ol/layer/Vector'; // Value import
+import TileLayer from 'ol/layer/Tile'; // Value import
+import DragBox, { type DragBoxEvent } from 'ol/interaction/DragBox';
+import DragZoom from 'ol/interaction/DragZoom';
 import { platformModifierKeyOnly } from 'ol/events/condition';
 import { toast } from "@/hooks/use-toast";
 import type { MapLayer } from '@/lib/types';
+import type VectorSourceType from 'ol/source/Vector'; // Keep as type if only used for types
 
 interface UseFeatureInspectionProps {
   mapRef: React.RefObject<OLMap | null>;
   mapElementRef: React.RefObject<HTMLDivElement | null>;
   isMapReady: boolean;
-  layers: MapLayer[]; // Will be updated via a dedicated function
+  // layers: MapLayer[]; // Managed internally via updateLayers
   drawingSourceRef: React.RefObject<VectorSourceType<OLFeature<any>> | null>;
   drawingLayerRef: React.RefObject<VectorLayer<VectorSourceType<OLFeature<any>>> | null>;
   activeDrawTool: string | null;
@@ -27,7 +27,7 @@ export function useFeatureInspection({
   mapRef,
   mapElementRef,
   isMapReady,
-  layers: initialLayers, // Renamed to avoid confusion
+  // layers: initialLayers,
   drawingSourceRef,
   drawingLayerRef,
   activeDrawTool,
@@ -37,8 +37,7 @@ export function useFeatureInspection({
   const [selectedFeatureAttributes, setSelectedFeatureAttributes] = useState<Record<string, any>[] | null>(null);
   const [isFeatureAttributesPanelVisible, setIsFeatureAttributesPanelVisible] = useState(false);
   const [currentInspectedLayerName, setCurrentInspectedLayerName] = useState<string | null>(null);
-  const [currentLayers, setCurrentLayers] = useState<MapLayer[]>(initialLayers);
-
+  const [currentLayers, setCurrentLayers] = useState<MapLayer[]>([]);
 
   const dragBoxInteractionRef = useRef<DragBox | null>(null);
   const olMapDragZoomInteractionRef = useRef<DragZoom | null>(null);
@@ -52,15 +51,24 @@ export function useFeatureInspection({
     if (foundFeatures.length > 0) {
         const allAttributes = foundFeatures
           .map(feature => {
-            if (!(feature instanceof OLFeature)) return null;
+            if (!(feature instanceof OLFeature)) {
+              console.warn('Encountered non-OLFeature in foundFeatures:', feature);
+              return null;
+            }
             const properties = feature.getProperties();
             const attributesToShow: Record<string, any> = {};
-            const geometryName = feature.getGeometryName();
+            const geometryName = feature.getGeometryName(); // Default is 'geometry'
 
             for (const key in properties) {
               if (Object.prototype.hasOwnProperty.call(properties, key)) {
-                if (key !== 'geometry' && key !== geometryName) {
-                  attributesToShow[key] = properties[key];
+                if (key !== geometryName) { // Only exclude the actual geometry value
+                  const value = properties[key];
+                  // Attempt to convert objects to string representation for display
+                  if (typeof value === 'object' && value !== null) {
+                     attributesToShow[key] = String(value); // Will show [object Object] for complex ones
+                  } else {
+                    attributesToShow[key] = value; // Primitives, null, undefined
+                  }
                 }
               }
             }
@@ -84,6 +92,10 @@ export function useFeatureInspection({
         setSelectedFeatureAttributes(null);
         setIsFeatureAttributesPanelVisible(false);
         setCurrentInspectedLayerName(null);
+        // Optional: toast if click yielded no features at all?
+        // setTimeout(() => {
+        //   toast({ description: "No se encontraron entidades en el punto de inspección." });
+        // }, 0);
       }
   }, [toast]);
 
@@ -91,6 +103,7 @@ export function useFeatureInspection({
   const handleMapClick = useCallback((event: any) => {
     if (!isInspectModeActive || !mapRef.current || activeDrawTool) return;
 
+    // Prevent click processing if it's likely part of a drag box operation
     if (dragBoxInteractionRef.current && (event.type === 'pointerdrag' || event.dragging || event.originalEvent.metaKey || event.originalEvent.ctrlKey || event.originalEvent.shiftKey) ) {
       return;
     }
@@ -102,26 +115,26 @@ export function useFeatureInspection({
     mapRef.current.forEachFeatureAtPixel(clickedPixel, (featureOrLayer, layer) => {
         if (featureOrLayer instanceof OLFeature) {
             featuresAtPixel.push(featureOrLayer);
-            if (layer && drawingLayerRef && layer === drawingLayerRef.current) {
+             // Determine layer name for the panel title
+            if (layer && drawingLayerRef.current && layer === drawingLayerRef.current) {
                 clickedLayerName = "Capa de Dibujo";
-            } else if (layer && typeof layer.get === 'function' && layer.get('title')) {
+            } else if (layer && typeof layer.get === 'function' && layer.get('title')) { // For WMS layers etc.
                 clickedLayerName = layer.get('title');
-            } else {
+            } else { // For vector layers managed by useLayerManager
                  const appLayer = currentLayers.find(l => l.olLayer === layer);
                  if (appLayer) clickedLayerName = appLayer.name;
             }
         }
-        return false;
+        return false; // continue checking other features/layers at pixel
     }, { hitTolerance: 5, layerFilter: (layerCandidate) => !(layerCandidate instanceof TileLayer) });
 
-    setCurrentInspectedLayerName(clickedLayerName || null);
     processAndDisplayFeatures(featuresAtPixel, clickedLayerName);
 
   }, [isInspectModeActive, activeDrawTool, mapRef, processAndDisplayFeatures, currentLayers, drawingLayerRef]);
 
+
   const handleDragBoxEnd = useCallback(
-    (event: any) => {
-      // DragBoxEvent is not exported from 'ol/interaction/DragBox', using 'any' for event type
+    (event: DragBoxEvent) => { // Use DragBoxEvent if available, otherwise any
       if (!mapRef.current || !isInspectModeActive) return;
 
       const dragBoxInteractionInstance = event.target as DragBox;
@@ -151,13 +164,10 @@ export function useFeatureInspection({
           }
         });
       }
-
-      setCurrentInspectedLayerName(firstLayerNameWithFeatures || null);
       processAndDisplayFeatures(foundFeatures, firstLayerNameWithFeatures);
     },
     [mapRef, currentLayers, drawingSourceRef, isInspectModeActive, processAndDisplayFeatures]
   );
-
 
   const cleanupInspectionInteractions = useCallback(() => {
     if (mapRef.current) {
@@ -166,15 +176,16 @@ export function useFeatureInspection({
 
       if (dragBoxInteractionRef.current) {
         mapRef.current.removeInteraction(dragBoxInteractionRef.current);
-        dragBoxInteractionRef.current.dispose();
+        dragBoxInteractionRef.current.dispose(); // Important to dispose
         dragBoxInteractionRef.current = null;
       }
-
+      // Restore original DragZoom state
       if (olMapDragZoomInteractionRef.current) {
         olMapDragZoomInteractionRef.current.setActive(wasDragZoomOriginallyActive.current);
       }
     }
   }, [mapRef, mapElementRef, handleMapClick]);
+
 
   useEffect(() => {
     if (!isMapReady || !mapRef.current) return;
@@ -184,7 +195,8 @@ export function useFeatureInspection({
         if (mapElementRef.current) mapElementRef.current.classList.add('cursor-crosshair');
         currentMap.on('singleclick', handleMapClick);
 
-        if (!olMapDragZoomInteractionRef.current) {
+        // Manage DragZoom: Deactivate if it exists
+        if (!olMapDragZoomInteractionRef.current) { // Find it only once
             currentMap.getInteractions().forEach(interaction => {
                 if (interaction instanceof DragZoom) {
                     olMapDragZoomInteractionRef.current = interaction;
@@ -193,22 +205,24 @@ export function useFeatureInspection({
             });
         }
         if (olMapDragZoomInteractionRef.current) {
-            olMapDragZoomInteractionRef.current.setActive(false);
+            olMapDragZoomInteractionRef.current.setActive(false); // Deactivate for inspection
         }
 
+        // Add DragBox for area selection
         if (!dragBoxInteractionRef.current) {
             dragBoxInteractionRef.current = new DragBox({ condition: platformModifierKeyOnly });
             currentMap.addInteraction(dragBoxInteractionRef.current);
-            dragBoxInteractionRef.current.on('boxend', handleDragBoxEnd);
+            dragBoxInteractionRef.current.on('boxend', handleDragBoxEnd as (event: Event | DragBoxEvent) => void); // Cast if types mismatch
         }
     } else {
         cleanupInspectionInteractions();
     }
-
-    return () => {
-        cleanupInspectionInteractions();
-    };
+    // Cleanup on hook unmount or when dependencies change causing this effect to re-run
+    // return () => {
+    //     cleanupInspectionInteractions();
+    // };
   }, [isInspectModeActive, activeDrawTool, isMapReady, mapRef, mapElementRef, handleMapClick, handleDragBoxEnd, cleanupInspectionInteractions]);
+  // Removed handleMapClick, handleDragBoxEnd from deps as they are useCallback
 
 
   const toggleInspectMode = useCallback(() => {
@@ -216,21 +230,24 @@ export function useFeatureInspection({
     setIsInspectModeActive(newInspectModeState);
 
     if (newInspectModeState && activeDrawTool) {
-      stopDrawingTool();
+      stopDrawingTool(); // If activating inspect, stop any active drawing tool
     }
 
-    if (!newInspectModeState) {
+    if (!newInspectModeState) { // If deactivating inspect mode
       setIsFeatureAttributesPanelVisible(false);
       setSelectedFeatureAttributes(null);
       setCurrentInspectedLayerName(null);
+      // Interactions are cleaned up by the useEffect above
     }
   }, [isInspectModeActive, activeDrawTool, stopDrawingTool]);
 
 
   const closeFeatureAttributesPanel = useCallback(() => {
     setIsFeatureAttributesPanelVisible(false);
-    setSelectedFeatureAttributes(null);
-    setCurrentInspectedLayerName(null);
+    // Optionally, also deactivate inspect mode when panel is explicitly closed:
+    // setIsInspectModeActive(false); 
+    // However, current behavior is to keep inspect mode active, just hide panel.
+    // If inspect mode were deactivated, the useEffect would handle cleanup.
   }, []);
 
   return {
@@ -241,6 +258,6 @@ export function useFeatureInspection({
     currentInspectedLayerName,
     closeFeatureAttributesPanel,
     processAndDisplayFeatures,
-    updateLayers, // Expose the updateLayers function
+    updateLayers,
   };
 }

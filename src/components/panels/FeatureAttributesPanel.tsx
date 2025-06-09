@@ -2,23 +2,22 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-import DraggablePanel from './DraggablePanel'; // Using the new generic DraggablePanel
+import DraggablePanel from './DraggablePanel'; 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { ScrollArea } from '@/components/ui/scroll-area'; // Keep for internal table scroll if needed
+// Removed import { ScrollArea } from '@/components/ui/scroll-area'; as DraggablePanel handles it
 
 interface FeatureAttributesPanelProps {
   featuresAttributes: Record<string, any>[] | null;
   isVisible: boolean;
   layerName?: string | null;
   onClose: () => void;
-  // Props for DraggablePanel positioning, if managed by parent
   panelRef: React.RefObject<HTMLDivElement>;
   initialPosition: { x: number; y: number };
   onMouseDownHeader: (e: React.MouseEvent<HTMLDivElement>) => void;
-  isPanelCollapsed: boolean; // Renamed to avoid conflict if DraggablePanel has its own collapse state
-  onTogglePanelCollapse: () => void; // Renamed
+  isPanelCollapsed: boolean; 
+  onTogglePanelCollapse: () => void; 
 }
 
 const ITEMS_PER_PAGE = 50;
@@ -52,7 +51,7 @@ const FeatureAttributesPanel: React.FC<FeatureAttributesPanelProps> = ({
   const currentVisibleFeatures = featuresAttributes.slice(startIndex, endIndex);
 
   const allKeys = Array.from(
-    new Set(featuresAttributes.flatMap(attrs => Object.keys(attrs)))
+    new Set(currentVisibleFeatures.flatMap(attrs => Object.keys(attrs))) // Derive keys from current page for efficiency
   ).sort();
 
   const handleNextPage = () => setCurrentPage((prev) => Math.min(prev + 1, totalPages));
@@ -66,21 +65,20 @@ const FeatureAttributesPanel: React.FC<FeatureAttributesPanelProps> = ({
     <DraggablePanel
       title={panelTitle}
       panelRef={panelRef}
-      initialPosition={initialPosition} // Pass through for DraggablePanel's style
-      onMouseDownHeader={onMouseDownHeader} // Pass through for DraggablePanel
+      initialPosition={initialPosition}
+      onMouseDownHeader={onMouseDownHeader}
       isCollapsed={isPanelCollapsed}
       onToggleCollapse={onTogglePanelCollapse}
       onClose={onClose}
-      initialSize={{ width: 450, height: 350 }} // Default size for this specific panel
+      initialSize={{ width: 450, height: 350 }}
       minSize={{ width: 300, height: 250 }}
-      style={{ top: `${initialPosition.y}px`, left: `${initialPosition.x}px` }} // Explicitly set top/left
-      overflowY="hidden" // DraggablePanel's CardContent uses ScrollArea, so hide overflow here
+      style={{ top: `${initialPosition.y}px`, left: `${initialPosition.x}px` }}
+      overflowY="auto" // Allow DraggablePanel's ScrollArea to scroll vertically
     >
-      {/* Content for the FeatureAttributesPanel */}
-      <div className="flex-grow flex flex-col overflow-hidden h-full">
-         <ScrollArea className="flex-grow h-0 w-full">
+      {/* Content for the FeatureAttributesPanel - DraggablePanel's ScrollArea will handle scrolling */}
+      <div className="flex-grow flex flex-col h-full"> {/* Ensure this div takes up space */}
           {allKeys.length > 0 && currentVisibleFeatures.length > 0 ? (
-            <div className="overflow-x-auto"> {/* Table itself might need horizontal scroll */}
+            <div className="overflow-x-auto flex-grow"> {/* Table itself might need horizontal scroll, and let it grow */}
               <Table className="min-w-full"> 
                 <TableHeader>
                   <TableRow className="bg-gray-800/50 hover:bg-gray-800/70 sticky top-0 z-10">
@@ -100,7 +98,7 @@ const FeatureAttributesPanel: React.FC<FeatureAttributesPanelProps> = ({
                       {allKeys.map(key => (
                         <TableCell
                           key={key}
-                          className="px-3 py-1.5 text-xs text-black dark:text-slate-200 border-b border-gray-700/50 whitespace-normal break-words"
+                          className="px-3 py-1.5 text-xs text-slate-200 dark:text-slate-200 border-b border-gray-700/50 whitespace-normal break-words"
                         >
                           {String(attrs[key] === null || attrs[key] === undefined ? '' : attrs[key])}
                         </TableCell>
@@ -111,13 +109,17 @@ const FeatureAttributesPanel: React.FC<FeatureAttributesPanelProps> = ({
               </Table>
             </div>
           ) : (
-            <p className="p-4 text-sm text-center text-gray-400">
-              {featuresAttributes.length > 0 ? 'No hay atributos para mostrar en esta página.' : 'No hay atributos para mostrar.'}
-            </p>
+            <div className="flex-grow flex items-center justify-center p-3"> {/* Centered message */}
+                <p className="text-sm text-center text-gray-300">
+                {featuresAttributes.length > 0 
+                    ? 'No hay atributos para mostrar para la selección actual.' 
+                    : 'No se encontraron atributos para las entidades seleccionadas.'}
+                </p>
+            </div>
           )}
-        </ScrollArea>
+        
         {totalPages > 1 && (
-          <div className="flex items-center justify-between p-2 border-t border-gray-700/50 bg-gray-800/50 mt-auto">
+          <div className="flex items-center justify-between p-2 border-t border-gray-700/50 bg-gray-800/50 mt-auto shrink-0"> {/* Pagination should not grow */}
             <Button
               variant="outline"
               size="sm"
