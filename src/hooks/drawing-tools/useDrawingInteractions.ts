@@ -8,7 +8,6 @@ import Draw, { type DrawEvent } from 'ol/interaction/Draw';
 import KML from 'ol/format/KML';
 import { toast } from "@/hooks/use-toast";
 
-// Helper function for downloads
 function triggerDownload(content: string, fileName: string, contentType: string) {
   const blob = new Blob([content], { type: contentType });
   const link = document.createElement('a');
@@ -24,8 +23,8 @@ interface UseDrawingInteractionsProps {
   mapRef: React.RefObject<OLMap | null>;
   isMapReady: boolean;
   drawingSourceRef: React.RefObject<VectorSourceType<OLFeature<any>> | null>;
-  isInspectModeActive: boolean; // From useFeatureInspection
-  toggleInspectMode: () => void; // From useFeatureInspection
+  isInspectModeActive: boolean; 
+  toggleInspectMode: () => void; 
 }
 
 export function useDrawingInteractions({
@@ -33,7 +32,7 @@ export function useDrawingInteractions({
   isMapReady,
   drawingSourceRef,
   isInspectModeActive,
-  toggleInspectMode, // To turn off inspection when drawing starts
+  toggleInspectMode, 
 }: UseDrawingInteractionsProps) {
   const [activeDrawTool, setActiveDrawTool] = useState<string | null>(null);
   const drawInteractionRef = useRef<Draw | null>(null);
@@ -41,26 +40,24 @@ export function useDrawingInteractions({
   const toggleDrawingTool = useCallback((toolType: 'Polygon' | 'LineString' | 'Point') => {
     if (!mapRef.current || !drawingSourceRef.current || !isMapReady) return;
 
-    if (activeDrawTool === toolType) { // Toggle off
+    if (activeDrawTool === toolType) { 
       if (drawInteractionRef.current) {
         mapRef.current.removeInteraction(drawInteractionRef.current);
-        drawInteractionRef.current.dispose(); // Clean up interaction
+        drawInteractionRef.current.dispose(); 
         drawInteractionRef.current = null;
       }
       setActiveDrawTool(null);
       return;
     }
 
-    // If another tool is active, remove it first
     if (drawInteractionRef.current) {
       mapRef.current.removeInteraction(drawInteractionRef.current);
       drawInteractionRef.current.dispose();
       drawInteractionRef.current = null;
     }
 
-    // Turn off inspect mode if it's active
     if (isInspectModeActive) {
-      toggleInspectMode(); // This will set isInspectModeActive to false
+      toggleInspectMode(); 
     }
 
     const newDrawInteraction = new Draw({
@@ -71,15 +68,13 @@ export function useDrawingInteractions({
     drawInteractionRef.current = newDrawInteraction;
     setActiveDrawTool(toolType);
 
-    // Optional: Listen for drawend to potentially auto-stop or provide feedback
     newDrawInteraction.on('drawend', (event: DrawEvent) => {
-        // console.log('Feature drawn:', event.feature);
-        // If you want to stop drawing after one feature:
-        // stopDrawingTool();
-        toast(`${toolType} dibujado.`);
+        setTimeout(() => {
+          toast(`${toolType} dibujado.`);
+        }, 0);
     });
 
-  }, [mapRef, drawingSourceRef, activeDrawTool, isInspectModeActive, toggleInspectMode, isMapReady]);
+  }, [mapRef, drawingSourceRef, activeDrawTool, isInspectModeActive, toggleInspectMode, isMapReady, toast]);
 
   const stopDrawingTool = useCallback(() => {
     if (mapRef.current && drawInteractionRef.current) {
@@ -93,31 +88,38 @@ export function useDrawingInteractions({
   const clearDrawnFeatures = useCallback(() => {
     if (drawingSourceRef.current) {
       drawingSourceRef.current.clear();
-      toast("Todos los dibujos han sido eliminados.");
+      setTimeout(() => {
+        toast("Todos los dibujos han sido eliminados.");
+      }, 0);
     }
-  }, [drawingSourceRef]);
+  }, [drawingSourceRef, toast]);
 
   const saveDrawnFeaturesAsKML = useCallback(() => {
     if (!drawingSourceRef.current || drawingSourceRef.current.getFeatures().length === 0) {
-      toast("Nada dibujado para guardar.");
+      setTimeout(() => {
+        toast("Nada dibujado para guardar.");
+      }, 0);
       return;
     }
     const features = drawingSourceRef.current.getFeatures();
     const kmlFormat = new KML();
     try {
       const kmlString = kmlFormat.writeFeatures(features, {
-        dataProjection: 'EPSG:4326', // KML is typically geographic
-        featureProjection: 'EPSG:3857', // Assuming map is in Web Mercator
+        dataProjection: 'EPSG:4326', 
+        featureProjection: 'EPSG:3857', 
       });
       triggerDownload(kmlString, 'drawings.kml', 'application/vnd.google-earth.kml+xml;charset=utf-8');
-      toast("Dibujos guardados como drawings.kml.");
+      setTimeout(() => {
+        toast("Dibujos guardados como drawings.kml.");
+      }, 0);
     } catch (error) {
       console.error("Error guardando KML:", error);
-      toast("No se pudieron guardar los dibujos KML.");
+      setTimeout(() => {
+        toast("No se pudieron guardar los dibujos KML.");
+      }, 0);
     }
-  }, [drawingSourceRef]);
+  }, [drawingSourceRef, toast]);
   
-  // Cleanup interaction when component unmounts or map changes
   useEffect(() => {
     return () => {
       if (mapRef.current && drawInteractionRef.current) {

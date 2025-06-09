@@ -18,15 +18,18 @@ interface UseGeoServerLayersProps {
 export function useGeoServerLayers({ mapRef, isMapReady, addLayer, onLayerStateUpdate }: UseGeoServerLayersProps) {
   const [geoServerUrlInput, setGeoServerUrlInput] = useState<string>('');
   const [isLoadingGeoServerLayers, setIsLoadingGeoServerLayers] = useState<boolean>(false);
-  // This hook doesn't own geoServerDiscoveredLayers, it's managed by GeoMapperClient and passed to GeoServerPanel
 
   const handleFetchGeoServerLayers = useCallback(async (): Promise<GeoServerDiscoveredLayer[]> => {
     if (!geoServerUrlInput.trim()) {
-      toast("Por favor, ingrese la URL de GeoServer.");
+      setTimeout(() => {
+        toast("Por favor, ingrese la URL de GeoServer.");
+      }, 0);
       return [];
     }
     setIsLoadingGeoServerLayers(true);
-    toast("Conectando a GeoServer...");
+    setTimeout(() => {
+      toast("Conectando a GeoServer...");
+    }, 0);
 
     try {
       let url = geoServerUrlInput.trim();
@@ -93,26 +96,32 @@ export function useGeoServerLayers({ mapRef, isMapReady, addLayer, onLayerStateU
              console.error("GeoServer OGC Exception:", ogcExceptionNode.textContent);
              throw new Error(`Error de GeoServer (OGC): ${ogcExceptionNode.textContent}`);
         }
-        const rawXmlForDebugging = xmlDoc.documentElement.outerHTML;
-        // console.warn("GeoServer GetCapabilities XML structure might be unexpected or empty. Response snippet:", rawXmlForDebugging.substring(0, 1000));
-        toast("No se encontraron capas publicadas en GeoServer o la estructura XML no es la esperada.");
+        setTimeout(() => {
+          toast("No se encontraron capas publicadas en GeoServer o la estructura XML no es la esperada.");
+        }, 0);
       } else if (discovered.length > 0) {
-        toast(`${discovered.length} capas encontradas en GeoServer.`);
+        setTimeout(() => {
+          toast(`${discovered.length} capas encontradas en GeoServer.`);
+        }, 0);
       }
       return discovered;
 
     } catch (error: any) {
       console.error("Error conectando a GeoServer:", error);
-      toast(error.message || "Ocurrió un error desconocido al conectar con GeoServer.");
+      setTimeout(() => {
+        toast(error.message || "Ocurrió un error desconocido al conectar con GeoServer.");
+      }, 0);
       return [];
     } finally {
       setIsLoadingGeoServerLayers(false);
     }
-  }, [geoServerUrlInput]);
+  }, [geoServerUrlInput, toast]);
 
   const handleAddGeoServerLayerToMap = useCallback((layerName: string, layerTitle: string) => {
     if (!isMapReady || !mapRef.current || !geoServerUrlInput.trim()) {
-        toast("El mapa o la URL de GeoServer no están disponibles.");
+        setTimeout(() => {
+          toast("El mapa o la URL de GeoServer no están disponibles.");
+        }, 0);
         return;
     }
 
@@ -136,7 +145,7 @@ export function useGeoServerLayers({ mapRef, isMapReady, addLayer, onLayerStateU
 
     const newOlLayer = new TileLayer({
         source: wmsSource,
-        properties: { 'title': layerTitle } // Store title for potential use
+        properties: { 'title': layerTitle } 
     });
 
     const mapLayerId = `geoserver-${layerName}-${Date.now()}`;
@@ -147,10 +156,12 @@ export function useGeoServerLayers({ mapRef, isMapReady, addLayer, onLayerStateU
       visible: true,
       isGeoServerLayer: true,
     });
-    onLayerStateUpdate(layerName, true); // Notify parent to update the discovered layer state
-    toast(`Capa "${layerTitle || layerName}" añadida al mapa.`);
+    onLayerStateUpdate(layerName, true); 
+    setTimeout(() => {
+      toast(`Capa "${layerTitle || layerName}" añadida al mapa.`);
+    }, 0);
 
-  }, [geoServerUrlInput, addLayer, mapRef, isMapReady, onLayerStateUpdate]);
+  }, [geoServerUrlInput, addLayer, mapRef, isMapReady, onLayerStateUpdate, toast]);
 
   return {
     geoServerUrlInput,

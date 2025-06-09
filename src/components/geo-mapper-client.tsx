@@ -172,13 +172,19 @@ export default function GeoMapperClient() {
             duration: 1000,
             maxZoom: 17, 
             });
-            toast("Ubicación encontrada y centrada en el mapa.");
+            setTimeout(() => {
+              toast({ description: "Ubicación encontrada y centrada en el mapa." });
+            }, 0);
         } else {
-            toast("No se pudo determinar una extensión válida para la ubicación.");
+            setTimeout(() => {
+              toast({ description: "No se pudo determinar una extensión válida para la ubicación." });
+            }, 0);
         }
     } catch (error) {
         console.error("Error transforming extent or fitting view:", error);
-        toast("Error al procesar la ubicación seleccionada.");
+        setTimeout(() => {
+          toast({ description: "Error al procesar la ubicación seleccionada." });
+        }, 0);
     }
   }, [mapRef, toast]);
 

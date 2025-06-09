@@ -6,15 +6,14 @@ import type { Feature as OLFeature } from 'ol';
 import type VectorSourceType from 'ol/source/Vector';
 import { transformExtent } from 'ol/proj';
 import osmtogeojson from 'osmtogeojson';
-import { GeoJSON as GeoJSONFormat, KML } from 'ol/format'; // Renamed GeoJSON to GeoJSONFormat to avoid conflict
+import { GeoJSON as GeoJSONFormat, KML } from 'ol/format'; 
 import VectorLayer from 'ol/layer/Vector';
 import VectorSource from 'ol/source/Vector';
-import shpwrite from 'shp-write'; // For SHP export
+import shpwrite from 'shp-write'; 
 import { toast } from "@/hooks/use-toast";
 import type { MapLayer, OSMCategoryConfig } from '@/lib/types';
-import type * as GeoJSON from 'geojson'; // Import GeoJSON types for better type safety
+import type * as GeoJSON from 'geojson'; 
 
-// Helper function for downloads
 function triggerDownload(content: string, fileName: string, contentType: string) {
   const blob = new Blob([content], { type: contentType });
   const link = document.createElement('a');
@@ -39,8 +38,8 @@ function triggerDownloadArrayBuffer(content: ArrayBuffer, fileName: string, cont
 
 interface UseOSMDataProps {
   drawingSourceRef: React.RefObject<VectorSourceType<OLFeature<any>> | null>;
-  addLayer: (layer: MapLayer) => void; // from useLayerManager
-  osmCategoryConfigs: OSMCategoryConfig[]; // Pass the full config array
+  addLayer: (layer: MapLayer) => void; 
+  osmCategoryConfigs: OSMCategoryConfig[]; 
 }
 
 export function useOSMData({ drawingSourceRef, addLayer, osmCategoryConfigs }: UseOSMDataProps) {
@@ -55,29 +54,39 @@ export function useOSMData({ drawingSourceRef, addLayer, osmCategoryConfigs }: U
 
   const fetchOSMData = useCallback(async () => {
     if (!drawingSourceRef.current) {
-        toast("La capa de dibujo no está inicializada.");
+        setTimeout(() => {
+          toast("La capa de dibujo no está inicializada.");
+        }, 0);
         return;
     }
     const drawnFeatures = drawingSourceRef.current.getFeatures();
     if (drawnFeatures.length === 0) {
-        toast("Por favor, dibuje una entidad en el mapa primero.");
+        setTimeout(() => {
+          toast("Por favor, dibuje una entidad en el mapa primero.");
+        }, 0);
         return;
     }
     const lastDrawnFeature = drawnFeatures[drawnFeatures.length - 1];
 
     if (selectedOSMCategoryIdsRef.current.length === 0) {
-        toast("Por favor, seleccione al menos una categoría OSM para descargar.");
+        setTimeout(() => {
+          toast("Por favor, seleccione al menos una categoría OSM para descargar.");
+        }, 0);
         return;
     }
 
     const geometry = lastDrawnFeature.getGeometry();
     if (!geometry || geometry.getType() !== 'Polygon') {
-        toast("La descarga de datos OSM requiere un polígono dibujado. Por favor, dibuje un polígono.");
+        setTimeout(() => {
+          toast("La descarga de datos OSM requiere un polígono dibujado. Por favor, dibuje un polígono.");
+        }, 0);
         return;
     }
 
     setIsFetchingOSM(true);
-    toast("Descargando datos de OpenStreetMap...");
+    setTimeout(() => {
+      toast("Descargando datos de OpenStreetMap...");
+    }, 0);
 
     try {
       const extent3857 = geometry.getExtent();
@@ -98,7 +107,7 @@ export function useOSMData({ drawingSourceRef, addLayer, osmCategoryConfigs }: U
       if (n_coord < s_coord) {
           throw new Error(`Error de Bounding Box (N < S): Norte ${n_coord} es menor que Sur ${s_coord}. BBox original: ${extent4326_transformed.join(', ')}`);
       }
-      if (e_coord < w_coord && Math.abs(e_coord - w_coord) < 180) { // Check for anti-meridian crossing for small extents
+      if (e_coord < w_coord && Math.abs(e_coord - w_coord) < 180) { 
           throw new Error(`Error de Bounding Box (E < W): Este ${e_coord} es menor que Oeste ${w_coord} (sin cruzar anti-meridiano). BBox original: ${extent4326_transformed.join(', ')}`);
       }
       
@@ -132,7 +141,7 @@ export function useOSMData({ drawingSourceRef, addLayer, osmCategoryConfigs }: U
       }
 
       const osmData = await response.json();
-      const geojsonData = osmtogeojson(osmData) as GeoJSON.FeatureCollection; // Cast to typed GeoJSON
+      const geojsonData = osmtogeojson(osmData) as GeoJSON.FeatureCollection; 
 
       let featuresAddedCount = 0;
       categoriesToFetch.forEach(category => {
@@ -151,7 +160,7 @@ export function useOSMData({ drawingSourceRef, addLayer, osmCategoryConfigs }: U
             const vectorSource = new VectorSource({ features: olFeatures });
             const vectorLayer = new VectorLayer({
               source: vectorSource,
-              style: category.style // Apply category-specific style
+              style: category.style 
             });
             const layerId = `osm-${category.id}-${Date.now()}`;
             addLayer({ id: layerId, name: `${category.name} (${olFeatures.length})`, olLayer: vectorLayer, visible: true });
@@ -161,26 +170,36 @@ export function useOSMData({ drawingSourceRef, addLayer, osmCategoryConfigs }: U
       });
 
       if (featuresAddedCount > 0) {
-        toast(`${featuresAddedCount} entidades OSM añadidas al mapa.`);
+        setTimeout(() => {
+          toast(`${featuresAddedCount} entidades OSM añadidas al mapa.`);
+        }, 0);
       } else {
-        toast("Ninguna entidad OSM coincidió con sus criterios en el área seleccionada.");
+        setTimeout(() => {
+          toast("Ninguna entidad OSM coincidió con sus criterios en el área seleccionada.");
+        }, 0);
       }
 
     } catch (error: any) {
       console.error("Error en fetchOSMData (procesamiento o API):", error);
-      toast(error.message || "Ocurrió un error desconocido obteniendo datos OSM.");
+      setTimeout(() => {
+        toast(error.message || "Ocurrió un error desconocido obteniendo datos OSM.");
+      }, 0);
     } finally {
       setIsFetchingOSM(false);
     }
-  }, [drawingSourceRef, addLayer, osmCategoryConfigs]);
+  }, [drawingSourceRef, addLayer, osmCategoryConfigs, toast]);
 
   const handleDownloadOSMLayers = useCallback(async (layersToDownload: MapLayer[]) => {
     setIsDownloading(true);
-    toast(`Procesando descarga: ${downloadFormat.toUpperCase()}...`);
+    setTimeout(() => {
+      toast(`Procesando descarga: ${downloadFormat.toUpperCase()}...`);
+    }, 0);
 
     const osmLayers = layersToDownload.filter(layer => layer.id.startsWith('osm-') && layer.olLayer instanceof VectorLayer);
     if (osmLayers.length === 0) {
-      toast("No hay capas OSM (vectoriales) para descargar.");
+      setTimeout(() => {
+        toast("No hay capas OSM (vectoriales) para descargar.");
+      }, 0);
       setIsDownloading(false);
       return;
     }
@@ -203,7 +222,9 @@ export function useOSMData({ drawingSourceRef, addLayer, osmCategoryConfigs }: U
           }
         });
         triggerDownload(geojsonString, 'osm_data.geojson', 'application/geo+json;charset=utf-8');
-        toast("Entidades OSM descargadas como GeoJSON.");
+        setTimeout(() => {
+          toast("Entidades OSM descargadas como GeoJSON.");
+        }, 0);
 
       } else if (downloadFormat === 'kml') {
         const allFeatures: OLFeature<any>[] = [];
@@ -214,7 +235,9 @@ export function useOSMData({ drawingSourceRef, addLayer, osmCategoryConfigs }: U
         if (allFeatures.length === 0) throw new Error("No hay entidades en las capas OSM seleccionadas.");
         const kmlString = new KML().writeFeatures(allFeatures, { dataProjection: 'EPSG:4326', featureProjection: 'EPSG:3857' });
         triggerDownload(kmlString, 'osm_data.kml', 'application/vnd.google-earth.kml+xml;charset=utf-8');
-        toast("Entidades OSM descargadas como KML.");
+        setTimeout(() => {
+          toast("Entidades OSM descargadas como KML.");
+        }, 0);
 
       } else if (downloadFormat === 'shp') {
         const geoJsonDataForShpExport: { [fileName: string]: GeoJSON.FeatureCollection } = {};
@@ -225,51 +248,42 @@ export function useOSMData({ drawingSourceRef, addLayer, osmCategoryConfigs }: U
           const originalProps = olFeature.getProperties();
           const sanitizedProps: Record<string, any> = {};
           const geometryName = olFeature.getGeometryName();
+          let keyCounter = 0; 
 
           for (const key in originalProps) {
             if (Object.prototype.hasOwnProperty.call(originalProps, key) && key !== geometryName) {
               let value = originalProps[key];
-
-              // Sanitize Key
               let sanitizedKey = key.replace(/[^a-zA-Z0-9_]/g, '').substring(0, 10);
-              if (sanitizedKey.length === 0) {
-                // Create a generic key if sanitization results in an empty string
-                let i = 0;
-                do {
-                  sanitizedKey = `prop${i}`;
-                  i++;
-                } while (Object.prototype.hasOwnProperty.call(sanitizedProps, sanitizedKey));
-              } else {
-                // Ensure key uniqueness if truncated key already exists
-                let baseKey = sanitizedKey;
-                let counter = 0;
-                while (Object.prototype.hasOwnProperty.call(sanitizedProps, sanitizedKey)) {
+
+              if (sanitizedKey.length === 0) sanitizedKey = `prop${keyCounter++}`;
+              
+              let baseKey = sanitizedKey;
+              let counter = 0;
+              while (Object.prototype.hasOwnProperty.call(sanitizedProps, sanitizedKey)) {
                   counter++;
-                  // Shorten baseKey to make room for counter, ensuring it doesn't exceed 10 chars
                   const availableLength = 10 - String(counter).length;
-                  if (availableLength <= 0) { // Should not happen with reasonable counter
-                     console.warn(`Property key '${key}' cannot be uniquely sanitized within 10 characters.`);
-                     sanitizedKey = `prop_err${counter}`; // Fallback for extremely long conflicting keys
-                     break;
+                  if (availableLength <= 0) {
+                     baseKey = "prop"; // fallback further
+                     sanitizedKey = `${baseKey.substring(0, Math.max(1, 10 - String(counter).length))}${counter}`;
+                     if(Object.prototype.hasOwnProperty.call(sanitizedProps, sanitizedKey)) { // Extremely unlikely collision
+                        sanitizedKey = `p${Date.now().toString().slice(-3)}${counter}`; // even more unique
+                     }
+                     break; 
                   }
                   baseKey = baseKey.substring(0, availableLength);
                   sanitizedKey = `${baseKey}${counter}`;
-                }
               }
               
-              // Sanitize Value
               if (value === null || value === undefined) {
-                value = ""; // Convert null/undefined to empty string for DBF
+                value = ""; 
               } else if (typeof value === 'boolean') {
-                value = value ? "T" : "F"; // Or 1 and 0, "T" / "F" are common for logical
-              } else if (typeof value === 'object') {
-                value = JSON.stringify(value); // Convert objects/arrays to JSON string
-              } else if (typeof value === 'number') {
-                // Numbers are generally fine, shp-write should handle them.
-                // No specific change here unless issues arise with number precision/type.
+                value = value ? "T" : "F"; 
+              } else if (typeof value === 'object' || Array.isArray(value)) {
+                try {
+                  value = JSON.stringify(value);
+                } catch (e) { value = "SerializationError"; }
               }
               
-              // Ensure string value is not excessively long (DBF field limit for strings)
               if (typeof value === 'string' && value.length > 254) {
                 value = value.substring(0, 254);
               }
@@ -285,23 +299,19 @@ export function useOSMData({ drawingSourceRef, addLayer, osmCategoryConfigs }: U
             const olFeatures = source ? source.getFeatures() : [];
 
             if (olFeatures.length > 0) {
-                const baseLayerFileName = layer.name.replace(/[^\w-]/g, '_').replace(/\s+/g, '_').substring(0, 50); // Sanitize and shorten layer name for filename
+                const baseLayerFileName = layer.name.replace(/[^\w-]/g, '_').replace(/\s+/g, '_').substring(0, 50); 
                 
                 const points: GeoJSON.Feature[] = [];
                 const lines: GeoJSON.Feature[] = [];
                 const polygons: GeoJSON.Feature[] = [];
 
                 olFeatures.forEach(olFeature => {
-                    if (!olFeature.getGeometry()) {
+                    const olGeometry = olFeature.getGeometry();
+                    if (!olGeometry) {
                         console.warn(`Skipping feature with null OpenLayers geometry in layer ${layer.name}. Feature ID: ${olFeature.getId()}`);
                         return; 
                     }
-                    // Create a fresh GeoJSON feature object for shp-write
-                    // This ensures we are not passing OpenLayers specific properties or complex objects shp-write can't handle
-                    const olGeometry = olFeature.getGeometry();
-                    if (!olGeometry) return;
-
-                    // Transform geometry to GeoJSON format in EPSG:4326
+                    
                     const geoJsonGeometry = JSON.parse(new GeoJSONFormat().writeGeometry(olGeometry.clone().transform('EPSG:3857', 'EPSG:4326'))) as GeoJSON.Geometry;
 
                     if (!geoJsonGeometry) {
@@ -312,7 +322,7 @@ export function useOSMData({ drawingSourceRef, addLayer, osmCategoryConfigs }: U
                     const geoJsonFeature: GeoJSON.Feature = {
                         type: "Feature",
                         geometry: geoJsonGeometry,
-                        properties: sanitizeProperties(olFeature) // Use our robust sanitizer
+                        properties: sanitizeProperties(olFeature)
                     };
                     
                     const geomType = geoJsonFeature.geometry?.type;
@@ -350,18 +360,18 @@ export function useOSMData({ drawingSourceRef, addLayer, osmCategoryConfigs }: U
           throw new Error("No se encontraron entidades válidas en las capas OSM para exportar como Shapefile después de filtrar geometrías nulas.");
         }
         
-        // Final check for empty feature collections before passing to shpwrite
         for (const fileNameKey in geoJsonDataForShpExport) {
             if (Object.prototype.hasOwnProperty.call(geoJsonDataForShpExport, fileNameKey)) {
                 const fc = geoJsonDataForShpExport[fileNameKey];
                 if (!fc || typeof fc !== 'object' || fc.type !== "FeatureCollection" || !Array.isArray(fc.features)) {
                     console.error(`Estructura de FeatureCollection incorrecta para ${fileNameKey}:`, fc);
-                    toast(`Error interno: Datos malformados para la capa de exportación '${fileNameKey}'.`);
+                     setTimeout(() => {
+                        toast(`Error interno: Datos malformados para la capa de exportación '${fileNameKey}'.`);
+                    }, 0);
                     setIsDownloading(false);
                     return; 
                 }
                  if (fc.features.length === 0) { 
-                    console.warn(`FeatureCollection para ${fileNameKey} está vacía y será eliminada antes de la exportación SHP.`);
                     delete geoJsonDataForShpExport[fileNameKey]; 
                     delete typesForShpExport[fileNameKey]; 
                 }
@@ -379,15 +389,19 @@ export function useOSMData({ drawingSourceRef, addLayer, osmCategoryConfigs }: U
         const uint8Array = new Uint8Array(arrayBuffer);
         for (let i = 0; i < byteString.length; i++) uint8Array[i] = byteString.charCodeAt(i);
         triggerDownloadArrayBuffer(arrayBuffer, 'osm_shapefiles.zip', 'application/zip');
-        toast("Entidades OSM descargadas como Shapefile (ZIP).");
+        setTimeout(() => {
+          toast("Entidades OSM descargadas como Shapefile (ZIP).");
+        }, 0);
       }
     } catch (error: any) {
       console.error("Error descargando capas OSM:", error);
-      toast(error.message || "No se pudieron descargar las capas.");
+      setTimeout(() => {
+        toast(error.message || "No se pudieron descargar las capas.");
+      }, 0);
     } finally {
       setIsDownloading(false);
     }
-  }, [downloadFormat]);
+  }, [downloadFormat, toast]);
 
 
   return {
@@ -401,6 +415,3 @@ export function useOSMData({ drawingSourceRef, addLayer, osmCategoryConfigs }: U
     handleDownloadOSMLayers,
   };
 }
-
-
-    

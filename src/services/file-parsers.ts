@@ -10,13 +10,13 @@ import type VectorSourceType from 'ol/source/Vector';
 import type VectorLayerType from 'ol/layer/Vector';
 
 import type { MapLayer } from '@/lib/types';
-import type { ToastSignature } from '@/hooks/use-toast'; // Assuming useToast exports its signature
+import type { toast as ToastSignatureType } from '@/hooks/use-toast';
 
 interface FileUploadOptions {
   selectedFile: File | null;
   selectedMultipleFiles: FileList | null;
   onAddLayer: (layer: MapLayer) => void;
-  toast: ToastSignature; // Or the specific type from your useToast hook
+  toast: typeof ToastSignatureType; 
   uniqueIdPrefix?: string;
 }
 
@@ -28,7 +28,9 @@ export async function handleFileUpload({
   uniqueIdPrefix = 'file'
 }: FileUploadOptions): Promise<boolean> {
   if (!selectedFile && (!selectedMultipleFiles || selectedMultipleFiles.length === 0)) {
-    toast("No se seleccionó ningún archivo.");
+    setTimeout(() => {
+      toast({ description: "No se seleccionó ningún archivo." });
+    }, 0);
     return false;
   }
   
@@ -123,10 +125,14 @@ export async function handleFileUpload({
       const vectorLayer = new VectorLayer({ source: vectorSource });
       const newLayerId = `${uniqueFileId}-${layerName.replace(/\s/g, '_')}`;
       onAddLayer({ id: newLayerId, name: layerName, olLayer: vectorLayer as VectorLayerType<VectorSourceType<OLFeature<any>>>, visible: true });
-      toast(`${layerName} añadido exitosamente al mapa.`);
+      setTimeout(() => {
+        toast({ description: `${layerName} añadido exitosamente al mapa.` });
+      }, 0);
       return true;
     } else if (features) { 
-       toast(`No se encontraron entidades en el archivo cargado.`);
+       setTimeout(() => {
+         toast({ description: `No se encontraron entidades en el archivo cargado.` });
+       }, 0);
        return false;
     } else {
         throw new Error("No se pudieron procesar las entidades del archivo.");
@@ -134,7 +140,9 @@ export async function handleFileUpload({
 
   } catch (parseError: any) {
     console.error("Error procesando archivo:", parseError);
-    toast(parseError.message || "Error de Procesamiento: Ocurrió un error desconocido.");
+    setTimeout(() => {
+      toast({ description: parseError.message || "Error de Procesamiento: Ocurrió un error desconocido." });
+    }, 0);
     return false;
   }
 }

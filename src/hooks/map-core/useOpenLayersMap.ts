@@ -35,7 +35,9 @@ export function useOpenLayersMap() {
 
         if (!drawingSourceRef.current) {
             console.error("CRITICAL: drawingSourceRef.current is null after attempting initialization. Cannot create drawing layer.");
-            toast("Error Crítico: No se pudo inicializar la fuente de la capa de dibujo.");
+            setTimeout(() => {
+              toast("Error Crítico: No se pudo inicializar la fuente de la capa de dibujo.");
+            }, 0);
             return;
         }
 
@@ -50,7 +52,7 @@ export function useOpenLayersMap() {
                 stroke: new Stroke({ color: '#ffffff', width: 1.5 })
             }),
             }),
-            zIndex: 1000 // A high zIndex for the drawing layer
+            zIndex: 1000 
         });
         mapRef.current.addLayer(drawingLayerRef.current);
         console.log("Drawing layer added to map.");
@@ -60,16 +62,15 @@ export function useOpenLayersMap() {
           drawingSourceRef_current_value_exists: !!drawingSourceRef.current,
           drawingLayerRef_current_value_exists: !!drawingLayerRef.current,
         });
-        toast("Error Crítico: No se pudo inicializar la capa de dibujo (instantiation).");
+        setTimeout(() => {
+          toast("Error Crítico: No se pudo inicializar la capa de dibujo (instantiation).");
+        }, 0);
       }
     }
-  }, []);
+  }, [toast]);
 
-  // Ensure drawing layer is always on top of other vector layers (but below base layers potentially)
     useEffect(() => {
         if (mapRef.current && drawingLayerRef.current) {
-            // This ZIndex might need adjustment based on how other layers are indexed.
-            // Max ZIndex for vector layers + 1
             drawingLayerRef.current.setZIndex(1000);
         }
     }, [isMapReady]);
