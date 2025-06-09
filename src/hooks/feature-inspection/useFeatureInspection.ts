@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef } from 'react';
-import type { Map as OLMap, Feature as OLFeature } from 'ol';
+import { Map as OLMap, Feature as OLFeature } from 'ol'; // Changed from type import
 import type VectorLayerType from 'ol/layer/Vector';
 import type VectorSourceType from 'ol/source/Vector';
 import TileLayer from 'ol/layer/Tile';
@@ -37,7 +37,6 @@ export function useFeatureInspection({
   const [currentInspectedLayerName, setCurrentInspectedLayerName] = useState<string | null>(null);
 
   const dragBoxInteractionRef = useRef<DragBox | null>(null);
-  // Refs to store the original DragZoom interaction and its active state
   const originalDragZoomInteractionRef = useRef<DragZoom | null>(null);
   const wasDragZoomOriginallyActiveRef = useRef<boolean>(false);
 
@@ -79,12 +78,13 @@ export function useFeatureInspection({
   const handleMapClick = useCallback((event: any) => {
     if (!isInspectModeActive || !mapRef.current || activeDrawTool) return;
 
-    const clickedPixel = mapRef.current.getEventPixel(event.originalEvent);
-     // Prevent click processing if it's part of a drag operation by DragBox
-    if (dragBoxInteractionRef.current && (event.originalEvent.type === 'pointermove' || event.originalEvent.type === 'mousemove' || event.type === 'pointerdrag')) {
-        return;
+    // Prevent click processing if it's part of a drag operation by DragBox
+    // This checks the type of the OpenLayers event which might be different from the original DOM event type.
+    if (dragBoxInteractionRef.current && (event.type === 'pointerdrag' || event.dragging)) {
+      return;
     }
-
+    
+    const clickedPixel = mapRef.current.getEventPixel(event.originalEvent);
     const featuresAtPixel: OLFeature<any>[] = [];
     let clickedLayerName: string | undefined;
 
@@ -106,10 +106,12 @@ export function useFeatureInspection({
 
   }, [isInspectModeActive, activeDrawTool, mapRef, processAndDisplayFeatures, layers]);
 
-  const handleDragBoxEnd = useCallback((event: any) => {
+  const handleDragBoxEnd = useCallback((event: any) // DragBoxEvent is not exported, using 'any'
+    ) => {
     if (!mapRef.current || !isInspectModeActive) return;
-    // event.target here is the DragBox interaction itself
-    const extent = event.target.getGeometry().getExtent();
+    
+    const dragBoxInteraction = event.target as DragBox; // The event target is the DragBox interaction
+    const extent = dragBoxInteraction.getGeometry().getExtent();
     const foundFeatures: OLFeature<any>[] = [];
 
     layers.forEach(layer => {
@@ -136,13 +138,13 @@ export function useFeatureInspection({
 
   const toggleInspectMode = useCallback(() => {
     const newInspectModeState = !isInspectModeActive;
-    setIsInspectModeActive(newInspectModeState); // Update state first
+    setIsInspectModeActive(newInspectModeState); 
 
-    if (newInspectModeState && activeDrawTool) { // If activating inspect mode and a draw tool is active
-      stopDrawingTool(); // Ensure drawing is stopped
+    if (newInspectModeState && activeDrawTool) { 
+      stopDrawingTool(); 
     }
     
-    if (!newInspectModeState) { // When turning off inspect mode
+    if (!newInspectModeState) { 
       setIsFeatureAttributesPanelVisible(false);
       setSelectedFeatureAttributes(null);
       setCurrentInspectedLayerName(null);
@@ -160,15 +162,16 @@ export function useFeatureInspection({
         currentMap.un('singleclick', handleMapClick);
 
         if (dragBoxInteractionRef.current) {
-            // dragBoxInteractionRef.current.un('boxend', handleDragBoxEnd); // Handled by removing interaction
             currentMap.removeInteraction(dragBoxInteractionRef.current);
+            dragBoxInteractionRef.current.dispose(); // Explicitly dispose
             dragBoxInteractionRef.current = null;
         }
 
         // Restore original DragZoom state
         if (originalDragZoomInteractionRef.current) {
             originalDragZoomInteractionRef.current.setActive(wasDragZoomOriginallyActiveRef.current);
-            originalDragZoomInteractionRef.current = null; // Clear ref after restoring
+            // Do not nullify originalDragZoomInteractionRef.current here, 
+            // so we can restore it again if inspect mode is re-enabled.
         }
     };
 
@@ -177,34 +180,41 @@ export function useFeatureInspection({
         
         currentMap.on('singleclick', handleMapClick);
 
-        // Disable default DragZoom if it exists and store its original state
-        if (!originalDragZoomInteractionRef.current) { // Check if we haven't already stored it
+        // Disable default DragZoom if it exists and store its original state ONCE
+        if (!originalDragZoomInteractionRef.current) { 
             currentMap.getInteractions().forEach(interaction => {
                 if (interaction instanceof DragZoom) {
                     originalDragZoomInteractionRef.current = interaction;
                     wasDragZoomOriginallyActiveRef.current = interaction.getActive();
-                    interaction.setActive(false); // Disable it
+                    interaction.setActive(false); 
                 }
             });
-        } else if (originalDragZoomInteractionRef.current) { // If already stored, ensure it's disabled
+        } else { // If already stored, ensure it's disabled (could have been re-enabled by other logic)
              originalDragZoomInteractionRef.current.setActive(false);
         }
 
 
         if (!dragBoxInteractionRef.current) {
             dragBoxInteractionRef.current = new DragBox({
-                condition: platformModifierKeyOnly, // e.g., Shift key
+                condition: platformModifierKeyOnly, 
             });
             currentMap.addInteraction(dragBoxInteractionRef.current);
             dragBoxInteractionRef.current.on('boxend', handleDragBoxEnd);
         }
     } else {
-        // This block runs if inspect mode is turned OFF, OR if a drawing tool becomes active
         cleanupInspectionInteractions();
     }
 
-    // Cleanup function for when component unmounts or dependencies change before next effect run
-    return cleanupInspectionInteractions;
+    // Cleanup function for when component unmounts or dependencies change
+    return () => {
+      cleanupInspectionInteractions();
+      // Ensure the original DragZoom is restored on final cleanup as well
+       if (originalDragZoomInteractionRef.current) {
+           originalDragZoomInteractionRef.current.setActive(wasDragZoomOriginallyActiveRef.current);
+           // Nullify here as component is unmounting or map is no longer ready
+           originalDragZoomInteractionRef.current = null; 
+       }
+    };
 
   }, [isInspectModeActive, activeDrawTool, handleMapClick, handleDragBoxEnd, mapRef, mapElementRef, isMapReady]);
 
@@ -224,4 +234,3 @@ export function useFeatureInspection({
     processAndDisplayFeatures 
   };
 }
-
