@@ -2,8 +2,10 @@
 "use client";
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { MapPin, Server as ServerIcon } from 'lucide-react'; // ChevronDown, ChevronUp, Loader2
+import { MapPin, Server as ServerIcon } from 'lucide-react'; 
 import { Style, Fill, Stroke, Circle as CircleStyle } from 'ol/style';
+import { transformExtent } from 'ol/proj'; 
+import type { Extent } from 'ol/extent';   
 
 import MapView, { BASE_LAYER_DEFINITIONS } from '@/components/map-view';
 import FeatureAttributesPanel from '@/components/panels/FeatureAttributesPanel';
@@ -18,10 +20,10 @@ import { useDrawingInteractions } from '@/hooks/drawing-tools/useDrawingInteract
 import { useOSMData } from '@/hooks/osm-integration/useOSMData';
 import { useGeoServerLayers } from '@/hooks/geoserver-connection/useGeoServerLayers';
 import { useFloatingPanels } from '@/hooks/panels/useFloatingPanels';
+import { useToast } from "@/hooks/use-toast";
 
 import type { OSMCategoryConfig, GeoServerDiscoveredLayer, BaseLayerOptionForSelect } from '@/lib/types';
 
-// OSM Configuration (moved from old GeoMapperClient)
 const osmCategoryConfig: OSMCategoryConfig[] = [
   {
     id: 'watercourses', name: 'OSM Cursos de Agua',
@@ -89,21 +91,21 @@ export default function GeoMapperClient() {
   const layersPanelRef = useRef<HTMLDivElement>(null);
   const toolsPanelRef = useRef<HTMLDivElement>(null);
   const geoServerPanelRef = useRef<HTMLDivElement>(null);
-  const featureAttributesPanelRef = useRef<HTMLDivElement>(null); // For FeatureAttributesPanel
+  const featureAttributesPanelRef = useRef<HTMLDivElement>(null); 
 
   const { mapRef, mapElementRef, drawingSourceRef, drawingLayerRef, setMapInstanceAndElement, isMapReady } = useOpenLayersMap();
+  const { toast } = useToast();
   
   const [activeBaseLayerId, setActiveBaseLayerId] = useState<string>(BASE_LAYER_DEFINITIONS[0].id);
   const handleChangeBaseLayer = useCallback((newBaseLayerId: string) => {
     setActiveBaseLayerId(newBaseLayerId);
-    // Visibility is handled by MapView's internal effect based on activeBaseLayerId prop
   }, []);
 
   const {
     isInspectModeActive, toggleInspectMode, selectedFeatureAttributes,
     isFeatureAttributesPanelVisible, currentInspectedLayerName,
     closeFeatureAttributesPanel, processAndDisplayFeatures,
-  } = useFeatureInspection({ mapRef, mapElementRef, isMapReady, layers: [], drawingSourceRef, activeDrawTool: null, stopDrawingTool: () => {} }); // Temp empty/nulls
+  } = useFeatureInspection({ mapRef, mapElementRef, isMapReady, layers: [], drawingSourceRef, activeDrawTool: null, stopDrawingTool: () => {} }); 
 
   const {
     layers, addLayer, removeLayer, toggleLayerVisibility, zoomToLayerExtent, handleShowLayerTable,
@@ -132,22 +134,16 @@ export default function GeoMapperClient() {
       }
   });
 
-
-  // Update feature inspection hook with actual layers and draw tool state
   const featureInspectionHook = useFeatureInspection({
     mapRef, mapElementRef, isMapReady, layers, drawingSourceRef, activeDrawTool, stopDrawingTool
   });
-
 
   const { panels, handlePanelMouseDown, togglePanelCollapse } = useFloatingPanels({
     layersPanelRef, toolsPanelRef, geoServerPanelRef, mapAreaRef, panelWidth: PANEL_WIDTH, panelPadding: PANEL_PADDING
   });
   
-  // Panel position for FeatureAttributesPanel (example fixed position, can be made dynamic)
   const [attrPanelPosition, setAttrPanelPosition] = useState({ x: 50, y: 50 });
   const handleAttrPanelMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-      // Simplified drag for attribute panel for this example
-      // In a real app, this would integrate with useFloatingPanels or have its own logic
       const panel = featureAttributesPanelRef.current;
       if (!panel) return;
       const startX = e.clientX - panel.offsetLeft;
@@ -163,6 +159,28 @@ export default function GeoMapperClient() {
       document.addEventListener('mouseup', handleMouseUp);
   }, []);
   const [isAttrPanelCollapsed, setIsAttrPanelCollapsed] = useState(false);
+
+  const zoomToBoundingBox = useCallback((bbox: [number, number, number, number]) => { 
+    if (!mapRef.current) return;
+    const extent4326: Extent = [bbox[0], bbox[1], bbox[2], bbox[3]];
+    try {
+        const extent3857 = transformExtent(extent4326, 'EPSG:4326', 'EPSG:3857');
+        
+        if (extent3857 && extent3857.every(isFinite) && (extent3857[2] - extent3857[0] > 0.000001) && (extent3857[3] - extent3857[1] > 0.000001)) {
+            mapRef.current.getView().fit(extent3857, {
+            padding: [50, 50, 50, 50],
+            duration: 1000,
+            maxZoom: 17, 
+            });
+            toast("Ubicación encontrada y centrada en el mapa.");
+        } else {
+            toast("No se pudo determinar una extensión válida para la ubicación.");
+        }
+    } catch (error) {
+        console.error("Error transforming extent or fitting view:", error);
+        toast("Error al procesar la ubicación seleccionada.");
+    }
+  }, [mapRef, toast]);
 
 
   return (
@@ -186,8 +204,8 @@ export default function GeoMapperClient() {
           panelRef={featureAttributesPanelRef}
           initialPosition={attrPanelPosition}
           onMouseDownHeader={handleAttrPanelMouseDown}
-          isPanelCollapsed={isAttrPanelCollapsed} // Example state
-          onTogglePanelCollapse={() => setIsAttrPanelCollapsed(!isAttrPanelCollapsed)} // Example toggle
+          isPanelCollapsed={isAttrPanelCollapsed} 
+          onTogglePanelCollapse={() => setIsAttrPanelCollapsed(!isAttrPanelCollapsed)} 
         />
 
         <LayersPanel
@@ -208,6 +226,7 @@ export default function GeoMapperClient() {
           isInspectModeActive={featureInspectionHook.isInspectModeActive}
           onToggleInspectMode={featureInspectionHook.toggleInspectMode}
           isActiveDrawToolPresent={!!activeDrawTool}
+          onZoomToBoundingBox={zoomToBoundingBox}
         />
 
         <ToolsPanel
@@ -229,7 +248,7 @@ export default function GeoMapperClient() {
           downloadFormat={downloadFormat}
           onDownloadFormatChange={setDownloadFormat}
           isDownloading={isDownloading}
-          onDownloadOSMLayers={() => handleDownloadOSMLayers(layers)} // Pass current layers
+          onDownloadOSMLayers={() => handleDownloadOSMLayers(layers)} 
         />
         
         <GeoServerPanel
@@ -242,7 +261,7 @@ export default function GeoMapperClient() {
           onGeoServerUrlChange={setGeoServerUrlInput}
           onFetchGeoServerLayers={handleFetchGeoServerLayers}
           geoServerDiscoveredLayers={geoServerDiscoveredLayers}
-          setGeoServerDiscoveredLayers={setGeoServerDiscoveredLayers} // Pass setter
+          setGeoServerDiscoveredLayers={setGeoServerDiscoveredLayers} 
           isLoadingGeoServerLayers={isLoadingGeoServerLayers}
           onAddGeoServerLayerToMap={handleAddGeoServerLayerToMap}
         />
@@ -250,5 +269,3 @@ export default function GeoMapperClient() {
     </div>
   );
 }
-
-    
