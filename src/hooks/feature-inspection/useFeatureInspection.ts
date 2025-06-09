@@ -2,12 +2,12 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { Map as OLMap, Feature as OLFeature } from 'ol'; // Value imports
-import type VectorLayerType from 'ol/layer/Vector';
-import type VectorSourceType from 'ol/source/Vector';
+import { Map as OLMap, Feature as OLFeature } from 'ol';
+import VectorLayer from 'ol/layer/Vector'; // Changed from VectorLayerType
+import type VectorSourceType from 'ol/source/Vector'; // Keep as type if only used for type hints
 import TileLayer from 'ol/layer/Tile';
 import DragBox from 'ol/interaction/DragBox';
-import DragZoom from 'ol/interaction/DragZoom';
+import DragZoom from 'ol/interaction/DragZoom'; // Import DragZoom
 import { platformModifierKeyOnly } from 'ol/events/condition';
 import { toast } from "@/hooks/use-toast";
 import type { MapLayer } from '@/lib/types';
@@ -16,10 +16,10 @@ interface UseFeatureInspectionProps {
   mapRef: React.RefObject<OLMap | null>;
   mapElementRef: React.RefObject<HTMLDivElement | null>;
   isMapReady: boolean;
-  layers: MapLayer[]; 
+  layers: MapLayer[];
   drawingSourceRef: React.RefObject<VectorSourceType<OLFeature<any>> | null>;
-  activeDrawTool: string | null; 
-  stopDrawingTool: () => void; 
+  activeDrawTool: string | null;
+  stopDrawingTool: () => void;
 }
 
 export function useFeatureInspection({
@@ -37,11 +37,10 @@ export function useFeatureInspection({
   const [currentInspectedLayerName, setCurrentInspectedLayerName] = useState<string | null>(null);
 
   const dragBoxInteractionRef = useRef<DragBox | null>(null);
-  const originalDragZoomInteractionRef = useRef<DragZoom | null>(null);
-  const wasDragZoomOriginallyActiveRef = useRef<boolean>(false);
+  const olMapDragZoomInteractionRef = useRef<DragZoom | null>(null);
+  const wasDragZoomOriginallyActive = useRef<boolean>(false);
 
-
-  const processAndDisplayFeatures = useCallback((foundFeatures: OLFeature<any>[], layerName?: string) => {
+  const processAndDisplayFeatures = useCallback((foundFeatures: OLFeature[], layerName?: string) => {
     if (foundFeatures.length > 0) {
         const allAttributes = foundFeatures
           .map(feature => {
@@ -66,7 +65,7 @@ export function useFeatureInspection({
           setIsFeatureAttributesPanelVisible(false);
           setCurrentInspectedLayerName(null);
           setTimeout(() => {
-            toast("La(s) entidad(es) seleccionada(s) no tienen atributos visibles.");
+            toast({ description: "La(s) entidad(es) seleccionada(s) no tienen atributos visibles." });
           }, 0);
         }
       } else {
@@ -74,20 +73,20 @@ export function useFeatureInspection({
         setIsFeatureAttributesPanelVisible(false);
         setCurrentInspectedLayerName(null);
         setTimeout(() => {
-          toast("Ninguna entidad encontrada para inspeccionar.");
+          toast({ description: "Ninguna entidad encontrada para inspeccionar." });
         }, 0);
       }
   }, [toast]);
 
   const handleMapClick = useCallback((event: any) => {
     if (!isInspectModeActive || !mapRef.current || activeDrawTool) return;
-
-    if (dragBoxInteractionRef.current && (event.type === 'pointerdrag' || event.dragging)) {
+    
+    if (dragBoxInteractionRef.current && (event.type === 'pointerdrag' || event.dragging || event.originalEvent.metaKey || event.originalEvent.ctrlKey || event.originalEvent.shiftKey) ) {
       return;
     }
     
     const clickedPixel = mapRef.current.getEventPixel(event.originalEvent);
-    const featuresAtPixel: OLFeature<any>[] = [];
+    const featuresAtPixel: OLFeature[] = [];
     let clickedLayerName: string | undefined;
 
     mapRef.current.forEachFeatureAtPixel(clickedPixel, (featureOrLayer, layer) => {
@@ -109,16 +108,18 @@ export function useFeatureInspection({
   }, [isInspectModeActive, activeDrawTool, mapRef, processAndDisplayFeatures, layers]);
 
   const handleDragBoxEnd = useCallback(
-    (event: any) => { // DragBoxEvent is not exported from 'ol/interaction/DragBox', using 'any'
+    (event: any) => { 
+      // DragBoxEvent is not exported from 'ol/interaction/DragBox', using 'any' for event
       if (!mapRef.current || !isInspectModeActive) return;
     
       const dragBoxInteraction = event.target as DragBox; 
       const extent = dragBoxInteraction.getGeometry().getExtent();
-      const foundFeatures: OLFeature<any>[] = [];
+      const foundFeatures: OLFeature[] = [];
 
       layers.forEach(layer => {
-        if (layer.visible && layer.olLayer && typeof (layer.olLayer as VectorLayerType<any>).getSource === 'function') { // Check if it's a vector-like layer
-          const source = (layer.olLayer as VectorLayerType<any>).getSource();
+        // Use VectorLayer for instanceof check
+        if (layer.visible && layer.olLayer instanceof VectorLayer && typeof (layer.olLayer as VectorLayer<any>).getSource === 'function') { 
+          const source = (layer.olLayer as VectorLayer<any>).getSource();
           if (source && typeof source.forEachFeatureIntersectingExtent === 'function') {
             source.forEachFeatureIntersectingExtent(extent, (feature) => {
               if (feature instanceof OLFeature) foundFeatures.push(feature);
@@ -161,41 +162,25 @@ export function useFeatureInspection({
     const currentMap = mapRef.current;
     const mapDiv = mapElementRef.current;
 
-    const cleanupInspectionInteractions = () => {
-        if (mapDiv) mapDiv.classList.remove('cursor-crosshair');
-        currentMap.un('singleclick', handleMapClick);
-
-        if (dragBoxInteractionRef.current) {
-            currentMap.removeInteraction(dragBoxInteractionRef.current);
-            dragBoxInteractionRef.current.dispose(); 
-            dragBoxInteractionRef.current = null;
-        }
-        // Restore original DragZoom state if it was modified
-        if (originalDragZoomInteractionRef.current) {
-            originalDragZoomInteractionRef.current.setActive(wasDragZoomOriginallyActiveRef.current);
-        }
-    };
-
     if (isInspectModeActive && !activeDrawTool) {
+        // Inspect mode is active
         if (mapDiv) mapDiv.classList.add('cursor-crosshair');
-        
         currentMap.on('singleclick', handleMapClick);
 
-        // Manage DragZoom interaction
-        if (!originalDragZoomInteractionRef.current) { 
+        // Find and manage the map's default DragZoom interaction
+        if (!olMapDragZoomInteractionRef.current) { // Find it once
             currentMap.getInteractions().forEach(interaction => {
                 if (interaction instanceof DragZoom) {
-                    originalDragZoomInteractionRef.current = interaction;
-                    wasDragZoomOriginallyActiveRef.current = interaction.getActive();
-                    interaction.setActive(false); // Deactivate while inspecting
+                    olMapDragZoomInteractionRef.current = interaction;
                 }
             });
-        } else if (originalDragZoomInteractionRef.current.getActive()) {
-            // If it somehow got re-activated, ensure it's off for inspect mode
-            originalDragZoomInteractionRef.current.setActive(false);
+        }
+        if (olMapDragZoomInteractionRef.current) { // If found
+            wasDragZoomOriginallyActive.current = olMapDragZoomInteractionRef.current.getActive(); // Store its current state
+            olMapDragZoomInteractionRef.current.setActive(false); // Deactivate it for inspect mode
         }
 
-
+        // Add DragBox for inspect mode selection
         if (!dragBoxInteractionRef.current) {
             dragBoxInteractionRef.current = new DragBox({
                 condition: platformModifierKeyOnly, 
@@ -203,15 +188,41 @@ export function useFeatureInspection({
             currentMap.addInteraction(dragBoxInteractionRef.current);
             dragBoxInteractionRef.current.on('boxend', handleDragBoxEnd);
         }
-    } else { // Not inspect mode OR a draw tool is active
-        cleanupInspectionInteractions();
+    } else { 
+        // Cleanup when inspect mode is off OR a draw tool is active
+        if (mapDiv) mapDiv.classList.remove('cursor-crosshair');
+        currentMap.un('singleclick', handleMapClick);
+
+        if (dragBoxInteractionRef.current) {
+            currentMap.removeInteraction(dragBoxInteractionRef.current);
+            dragBoxInteractionRef.current.dispose(); // Dispose the interaction
+            dragBoxInteractionRef.current = null;
+        }
+
+        // Restore map's default DragZoom interaction to its original state
+        if (olMapDragZoomInteractionRef.current) {
+            olMapDragZoomInteractionRef.current.setActive(wasDragZoomOriginallyActive.current);
+        }
     }
 
-    return () => { // Cleanup on unmount or when dependencies change causing re-run
-      cleanupInspectionInteractions();
+    return () => { // Cleanup function for when the component unmounts or dependencies change
+        if (mapDiv) mapDiv.classList.remove('cursor-crosshair');
+        if (currentMap) { // Check if map instance still exists
+            currentMap.un('singleclick', handleMapClick);
+            if (dragBoxInteractionRef.current) {
+                currentMap.removeInteraction(dragBoxInteractionRef.current);
+                // dragBoxInteractionRef.current.dispose(); // Consider if dispose is needed and safe here
+                dragBoxInteractionRef.current = null;
+            }
+            // Restore DragZoom on cleanup if it was managed
+            if (olMapDragZoomInteractionRef.current) {
+                olMapDragZoomInteractionRef.current.setActive(wasDragZoomOriginallyActive.current);
+            }
+        }
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isInspectModeActive, activeDrawTool, mapRef, mapElementRef, isMapReady]); // Removed handleMapClick, handleDragBoxEnd from deps as they are stable
 
-  }, [isInspectModeActive, activeDrawTool, handleMapClick, handleDragBoxEnd, mapRef, mapElementRef, isMapReady]);
 
   const closeFeatureAttributesPanel = useCallback(() => {
     setIsFeatureAttributesPanelVisible(false);
@@ -229,3 +240,5 @@ export function useFeatureInspection({
     processAndDisplayFeatures 
   };
 }
+
+    
