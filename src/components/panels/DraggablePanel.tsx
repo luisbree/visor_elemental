@@ -66,9 +66,9 @@ const DraggablePanel: React.FC<DraggablePanelProps> = ({
       ref={panelRef}
       className={`absolute bg-gray-800/70 backdrop-blur-md text-white shadow-xl rounded-lg border border-gray-700/80 flex flex-col ${className}`}
       style={{
-        ...style, // This should include top, left, and potentially width/height if controlled by parent
-        width: isCollapsed ? 'auto' : `${currentSize.width}px`, // Apply width from state unless collapsed
-        height: isCollapsed ? 'auto' : `${currentSize.height}px`, // Apply height from state unless collapsed
+        ...style, // This should include top, left
+        width: `${currentSize.width}px`, // Maintain width even when collapsed
+        height: isCollapsed ? 'auto' : `${currentSize.height}px`, // Adjust height when collapsed
         minWidth: `${minSize.width}px`,
         minHeight: isCollapsed ? 'auto' : `${minSize.height}px`,
         maxWidth: maxSize.width ? `${maxSize.width}px` : '90vw',
