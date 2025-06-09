@@ -37,8 +37,10 @@ export function useFeatureInspection({
   const [currentInspectedLayerName, setCurrentInspectedLayerName] = useState<string | null>(null);
 
   const dragBoxInteractionRef = useRef<DragBox | null>(null);
-  const defaultDragZoomInteractionRef = useRef<DragZoom | null>(null);
-  const wasDragZoomActiveRef = useRef<boolean>(false);
+  // Refs to store the original DragZoom interaction and its active state
+  const originalDragZoomInteractionRef = useRef<DragZoom | null>(null);
+  const wasDragZoomOriginallyActiveRef = useRef<boolean>(false);
+
 
   const processAndDisplayFeatures = useCallback((foundFeatures: OLFeature<any>[], layerName?: string) => {
     if (foundFeatures.length > 0) {
@@ -78,7 +80,8 @@ export function useFeatureInspection({
     if (!isInspectModeActive || !mapRef.current || activeDrawTool) return;
 
     const clickedPixel = mapRef.current.getEventPixel(event.originalEvent);
-    if (dragBoxInteractionRef.current && (event.originalEvent.type === 'pointermove' || event.originalEvent.type === 'mousemove')) {
+     // Prevent click processing if it's part of a drag operation by DragBox
+    if (dragBoxInteractionRef.current && (event.originalEvent.type === 'pointermove' || event.originalEvent.type === 'mousemove' || event.type === 'pointerdrag')) {
         return;
     }
 
@@ -88,14 +91,14 @@ export function useFeatureInspection({
     mapRef.current.forEachFeatureAtPixel(clickedPixel, (featureOrLayer, layer) => {
         if (featureOrLayer instanceof OLFeature) {
             featuresAtPixel.push(featureOrLayer);
-            if (layer && typeof layer.get === 'function' && layer.get('title')) { // ol/layer/Layer has get method
+            if (layer && typeof layer.get === 'function' && layer.get('title')) { 
                 clickedLayerName = layer.get('title');
             } else {
                  const appLayer = layers.find(l => l.olLayer === layer);
                  if (appLayer) clickedLayerName = appLayer.name;
             }
         }
-        return false; // Continue checking
+        return false; 
     }, { hitTolerance: 5, layerFilter: (layer) => !(layer instanceof TileLayer) });
 
     setCurrentInspectedLayerName(clickedLayerName || null);
@@ -105,6 +108,7 @@ export function useFeatureInspection({
 
   const handleDragBoxEnd = useCallback((event: any) => {
     if (!mapRef.current || !isInspectModeActive) return;
+    // event.target here is the DragBox interaction itself
     const extent = event.target.getGeometry().getExtent();
     const foundFeatures: OLFeature<any>[] = [];
 
@@ -125,23 +129,26 @@ export function useFeatureInspection({
       });
     }
     
-    // For drag box, it's hard to determine a single layer name if features are from multiple.
     setCurrentInspectedLayerName(null); 
     processAndDisplayFeatures(foundFeatures);
   }, [mapRef, layers, drawingSourceRef, isInspectModeActive, processAndDisplayFeatures]);
 
+
   const toggleInspectMode = useCallback(() => {
     const newInspectModeState = !isInspectModeActive;
-    setIsInspectModeActive(newInspectModeState);
-    if (activeDrawTool && newInspectModeState) {
-      stopDrawingTool();
+    setIsInspectModeActive(newInspectModeState); // Update state first
+
+    if (newInspectModeState && activeDrawTool) { // If activating inspect mode and a draw tool is active
+      stopDrawingTool(); // Ensure drawing is stopped
     }
-    if (!newInspectModeState) { // When turning off
+    
+    if (!newInspectModeState) { // When turning off inspect mode
       setIsFeatureAttributesPanelVisible(false);
       setSelectedFeatureAttributes(null);
       setCurrentInspectedLayerName(null);
     }
   }, [isInspectModeActive, activeDrawTool, stopDrawingTool]);
+
 
   useEffect(() => {
     if (!isMapReady || !mapRef.current) return;
@@ -150,28 +157,18 @@ export function useFeatureInspection({
 
     const cleanupInspectionInteractions = () => {
         if (mapDiv) mapDiv.classList.remove('cursor-crosshair');
-        if (!currentMap) return;
-
         currentMap.un('singleclick', handleMapClick);
 
         if (dragBoxInteractionRef.current) {
-            dragBoxInteractionRef.current.un('boxend', handleDragBoxEnd);
-            const interactionsArray = currentMap.getInteractions().getArray();
-            if (interactionsArray.includes(dragBoxInteractionRef.current)) {
-                currentMap.removeInteraction(dragBoxInteractionRef.current);
-            }
-            // dragBoxInteractionRef.current.dispose(); // dispose might not be needed if removed
+            // dragBoxInteractionRef.current.un('boxend', handleDragBoxEnd); // Handled by removing interaction
+            currentMap.removeInteraction(dragBoxInteractionRef.current);
             dragBoxInteractionRef.current = null;
         }
 
-        if (defaultDragZoomInteractionRef.current) {
-             const dragZoomInteraction = currentMap.getInteractions().getArray().find(
-                (interaction) => interaction === defaultDragZoomInteractionRef.current
-             ) as DragZoom | undefined;
-             if (dragZoomInteraction) {
-                dragZoomInteraction.setActive(wasDragZoomActiveRef.current);
-             }
-            defaultDragZoomInteractionRef.current = null;
+        // Restore original DragZoom state
+        if (originalDragZoomInteractionRef.current) {
+            originalDragZoomInteractionRef.current.setActive(wasDragZoomOriginallyActiveRef.current);
+            originalDragZoomInteractionRef.current = null; // Clear ref after restoring
         }
     };
 
@@ -180,29 +177,33 @@ export function useFeatureInspection({
         
         currentMap.on('singleclick', handleMapClick);
 
-        if (!defaultDragZoomInteractionRef.current) {
+        // Disable default DragZoom if it exists and store its original state
+        if (!originalDragZoomInteractionRef.current) { // Check if we haven't already stored it
             currentMap.getInteractions().forEach(interaction => {
                 if (interaction instanceof DragZoom) {
-                    defaultDragZoomInteractionRef.current = interaction;
-                    wasDragZoomActiveRef.current = interaction.getActive();
-                    interaction.setActive(false); // Disable default drag zoom
+                    originalDragZoomInteractionRef.current = interaction;
+                    wasDragZoomOriginallyActiveRef.current = interaction.getActive();
+                    interaction.setActive(false); // Disable it
                 }
             });
+        } else if (originalDragZoomInteractionRef.current) { // If already stored, ensure it's disabled
+             originalDragZoomInteractionRef.current.setActive(false);
         }
+
 
         if (!dragBoxInteractionRef.current) {
             dragBoxInteractionRef.current = new DragBox({
-                condition: platformModifierKeyOnly,
+                condition: platformModifierKeyOnly, // e.g., Shift key
             });
             currentMap.addInteraction(dragBoxInteractionRef.current);
+            dragBoxInteractionRef.current.on('boxend', handleDragBoxEnd);
         }
-        dragBoxInteractionRef.current.un('boxend', handleDragBoxEnd); // Remove previous if any
-        dragBoxInteractionRef.current.on('boxend', handleDragBoxEnd);
-
     } else {
+        // This block runs if inspect mode is turned OFF, OR if a drawing tool becomes active
         cleanupInspectionInteractions();
     }
 
+    // Cleanup function for when component unmounts or dependencies change before next effect run
     return cleanupInspectionInteractions;
 
   }, [isInspectModeActive, activeDrawTool, handleMapClick, handleDragBoxEnd, mapRef, mapElementRef, isMapReady]);
@@ -220,6 +221,7 @@ export function useFeatureInspection({
     isFeatureAttributesPanelVisible,
     currentInspectedLayerName,
     closeFeatureAttributesPanel,
-    processAndDisplayFeatures // Exporting this for handleShowLayerTable
+    processAndDisplayFeatures 
   };
 }
+
