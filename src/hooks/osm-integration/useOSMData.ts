@@ -6,12 +6,13 @@ import type { Feature as OLFeature } from 'ol';
 import type VectorSourceType from 'ol/source/Vector';
 import { transformExtent } from 'ol/proj';
 import osmtogeojson from 'osmtogeojson';
-import { GeoJSON, KML } from 'ol/format';
+import { GeoJSON as GeoJSONFormat, KML } from 'ol/format'; // Renamed GeoJSON to GeoJSONFormat to avoid conflict
 import VectorLayer from 'ol/layer/Vector';
 import VectorSource from 'ol/source/Vector';
 import shpwrite from 'shp-write'; // For SHP export
 import { toast } from "@/hooks/use-toast";
 import type { MapLayer, OSMCategoryConfig } from '@/lib/types';
+import type * as GeoJSON from 'geojson'; // Import GeoJSON types for better type safety
 
 // Helper function for downloads
 function triggerDownload(content: string, fileName: string, contentType: string) {
@@ -131,17 +132,17 @@ export function useOSMData({ drawingSourceRef, addLayer, osmCategoryConfigs }: U
       }
 
       const osmData = await response.json();
-      const geojsonData = osmtogeojson(osmData) as any; // Cast to any to access .features
+      const geojsonData = osmtogeojson(osmData) as GeoJSON.FeatureCollection; // Cast to typed GeoJSON
 
       let featuresAddedCount = 0;
       categoriesToFetch.forEach(category => {
-        const categoryFeaturesGeoJSON = {
+        const categoryFeaturesGeoJSON: GeoJSON.FeatureCollection = {
           type: "FeatureCollection",
-          features: geojsonData.features.filter((feature: any) => category.matcher(feature.properties))
+          features: geojsonData.features.filter((feature: GeoJSON.Feature) => category.matcher(feature.properties))
         };
 
         if (categoryFeaturesGeoJSON.features.length > 0) {
-          const olFeatures = new GeoJSON().readFeatures(categoryFeaturesGeoJSON, {
+          const olFeatures = new GeoJSONFormat().readFeatures(categoryFeaturesGeoJSON, {
             dataProjection: 'EPSG:4326',
             featureProjection: 'EPSG:3857',
           });
@@ -184,7 +185,7 @@ export function useOSMData({ drawingSourceRef, addLayer, osmCategoryConfigs }: U
       return;
     }
 
-    const geoJsonFormatter = new GeoJSON();
+    const olGeoJsonFormatter = new GeoJSONFormat();
 
     try {
       if (downloadFormat === 'geojson') {
@@ -194,7 +195,7 @@ export function useOSMData({ drawingSourceRef, addLayer, osmCategoryConfigs }: U
           if (source) allFeatures.push(...source.getFeatures());
         });
         if (allFeatures.length === 0) throw new Error("No hay entidades en las capas OSM seleccionadas.");
-        const geojsonString = geoJsonFormatter.writeFeatures(allFeatures, {
+        const geojsonString = olGeoJsonFormatter.writeFeatures(allFeatures, {
           dataProjection: 'EPSG:4326', featureProjection: 'EPSG:3857',
           featureProperties: (feature: OLFeature<any>) => {
             const props = { ...feature.getProperties() };
@@ -216,11 +217,11 @@ export function useOSMData({ drawingSourceRef, addLayer, osmCategoryConfigs }: U
         toast("Entidades OSM descargadas como KML.");
 
       } else if (downloadFormat === 'shp') {
-        const geoJsonDataForShpWrite: { [key: string]: any } = {};
-        const customTypesForShpWrite: { [key: string]: { points: any[], lines: any[], polygons: any[] } } = {};
+        const geoJsonDataForShpExport: { [fileName: string]: GeoJSON.FeatureCollection } = {};
+        const typesForShpExport: { [fileName: string]: 'point' | 'line' | 'polygon' } = {};
         let featuresFoundForShp = false;
 
-        const sanitizeProperties = (olFeature: OLFeature<any>) => {
+        const sanitizeProperties = (olFeature: OLFeature<any>): Record<string, any> => {
           const props = { ...olFeature.getProperties() };
           delete props[olFeature.getGeometryName() as string];
           const sanitizedProps: Record<string, any> = {};
@@ -228,7 +229,7 @@ export function useOSMData({ drawingSourceRef, addLayer, osmCategoryConfigs }: U
             let sanitizedKey = key.replace(/[^a-zA-Z0-9_]/g, '').substring(0, 10);
             if(sanitizedKey.length === 0) sanitizedKey = `prop${Object.keys(sanitizedProps).length}`;
             let counter = 0; let finalKey = sanitizedKey;
-            while(finalKey in sanitizedProps) {
+            while(Object.prototype.hasOwnProperty.call(sanitizedProps, finalKey)) { // Ensure unique key
                 counter++; finalKey = `${sanitizedKey.substring(0, 10 - String(counter).length)}${counter}`;
             }
             sanitizedProps[finalKey] = props[key];
@@ -239,27 +240,58 @@ export function useOSMData({ drawingSourceRef, addLayer, osmCategoryConfigs }: U
         osmLayers.forEach(layer => {
             const source = (layer.olLayer as VectorLayer<VectorSource<OLFeature<any>>>).getSource();
             const olFeatures = source ? source.getFeatures() : [];
+
             if (olFeatures.length > 0) {
-                featuresFoundForShp = true;
-                const layerFileName = layer.name.replace(/[^a-zA-Z0-9_]/g, '_').replace(/\s+/g, '_');
-                const layerGeoJsonFeatures = olFeatures.map(olFeature => {
-                    const geoJsonFeature = geoJsonFormatter.writeFeatureObject(olFeature, { dataProjection: 'EPSG:4326', featureProjection: 'EPSG:3857' });
-                    geoJsonFeature.properties = sanitizeProperties(olFeature); return geoJsonFeature;
-                });
-                geoJsonDataForShpWrite[layerFileName] = { type: "FeatureCollection", features: layerGeoJsonFeatures };
-                customTypesForShpWrite[layerFileName] = { points: [], lines: [], polygons: [] };
-                layerGeoJsonFeatures.forEach(geoJsonFeature => {
+                const baseLayerFileName = layer.name.replace(/[^a-zA-Z0-9_]/g, '_').replace(/\s+/g, '_');
+                
+                const points: GeoJSON.Feature[] = [];
+                const lines: GeoJSON.Feature[] = [];
+                const polygons: GeoJSON.Feature[] = [];
+
+                olFeatures.forEach(olFeature => {
+                    const geoJsonFeature = olGeoJsonFormatter.writeFeatureObject(olFeature, {
+                        dataProjection: 'EPSG:4326',
+                        featureProjection: 'EPSG:3857'
+                    }) as GeoJSON.Feature;
+                    geoJsonFeature.properties = sanitizeProperties(olFeature);
+
                     const geomType = geoJsonFeature.geometry?.type;
-                    if (geomType === 'Point' || geomType === 'MultiPoint') customTypesForShpWrite[layerFileName].points.push(geoJsonFeature);
-                    else if (geomType === 'LineString' || geomType === 'MultiLineString') customTypesForShpWrite[layerFileName].lines.push(geoJsonFeature);
-                    else if (geomType === 'Polygon' || geomType === 'MultiPolygon') customTypesForShpWrite[layerFileName].polygons.push(geoJsonFeature);
+                    if (geomType === 'Point' || geomType === 'MultiPoint') {
+                        points.push(geoJsonFeature);
+                    } else if (geomType === 'LineString' || geomType === 'MultiLineString') {
+                        lines.push(geoJsonFeature);
+                    } else if (geomType === 'Polygon' || geomType === 'MultiPolygon') {
+                        polygons.push(geoJsonFeature);
+                    }
                 });
+
+                if (points.length > 0) {
+                    const fileName = `${baseLayerFileName}_points`;
+                    geoJsonDataForShpExport[fileName] = { type: "FeatureCollection", features: points };
+                    typesForShpExport[fileName] = 'point';
+                    featuresFoundForShp = true;
+                }
+                if (lines.length > 0) {
+                    const fileName = `${baseLayerFileName}_lines`;
+                    geoJsonDataForShpExport[fileName] = { type: "FeatureCollection", features: lines };
+                    typesForShpExport[fileName] = 'line';
+                    featuresFoundForShp = true;
+                }
+                if (polygons.length > 0) {
+                    const fileName = `${baseLayerFileName}_polygons`;
+                    geoJsonDataForShpExport[fileName] = { type: "FeatureCollection", features: polygons };
+                    typesForShpExport[fileName] = 'polygon';
+                    featuresFoundForShp = true;
+                }
             }
         });
 
-        if (!featuresFoundForShp) throw new Error("No hay entidades en las capas OSM para exportar como Shapefile.");
-        const shpWriteOptions = { folder: 'shapefiles_osm', types: customTypesForShpWrite };
-        const zipContentBase64 = await shpwrite.zip(geoJsonDataForShpWrite, shpWriteOptions);
+        if (!featuresFoundForShp) {
+          throw new Error("No hay entidades en las capas OSM para exportar como Shapefile.");
+        }
+        
+        const shpWriteOptions = { folder: 'shapefiles_osm', types: typesForShpExport };
+        const zipContentBase64 = await shpwrite.zip(geoJsonDataForShpExport, shpWriteOptions);
         const byteString = atob(zipContentBase64);
         const arrayBuffer = new ArrayBuffer(byteString.length);
         const uint8Array = new Uint8Array(arrayBuffer);
@@ -287,3 +319,6 @@ export function useOSMData({ drawingSourceRef, addLayer, osmCategoryConfigs }: U
     handleDownloadOSMLayers,
   };
 }
+
+
+    
