@@ -249,10 +249,20 @@ export function useOSMData({ drawingSourceRef, addLayer, osmCategoryConfigs }: U
                 const polygons: GeoJSON.Feature[] = [];
 
                 olFeatures.forEach(olFeature => {
+                    if (!olFeature.getGeometry()) {
+                        console.warn(`Skipping feature with null OpenLayers geometry in layer ${layer.name}. Feature ID: ${olFeature.getId()}`);
+                        return; 
+                    }
                     const geoJsonFeature = olGeoJsonFormatter.writeFeatureObject(olFeature, {
                         dataProjection: 'EPSG:4326',
                         featureProjection: 'EPSG:3857'
                     }) as GeoJSON.Feature;
+
+                    if (!geoJsonFeature.geometry) {
+                        console.warn(`Skipping feature with null GeoJSON geometry in layer ${layer.name}. Feature ID: ${olFeature.getId()}`);
+                        return;
+                    }
+                    
                     geoJsonFeature.properties = sanitizeProperties(olFeature);
 
                     const geomType = geoJsonFeature.geometry?.type;
@@ -287,7 +297,7 @@ export function useOSMData({ drawingSourceRef, addLayer, osmCategoryConfigs }: U
         });
 
         if (!featuresFoundForShp) {
-          throw new Error("No hay entidades en las capas OSM para exportar como Shapefile.");
+          throw new Error("No se encontraron entidades válidas en las capas OSM para exportar como Shapefile después de filtrar geometrías nulas.");
         }
         
         // Defensive check for FeatureCollection structure
@@ -296,11 +306,20 @@ export function useOSMData({ drawingSourceRef, addLayer, osmCategoryConfigs }: U
                 const fc = geoJsonDataForShpExport[fileNameKey];
                 if (!fc || typeof fc !== 'object' || fc.type !== "FeatureCollection" || !Array.isArray(fc.features)) {
                     console.error(`Estructura de FeatureCollection incorrecta para ${fileNameKey}:`, fc);
-                    toast(`Error interno: Datos malformados para la capa de exportación '${fileNameKey}'. Falta la matriz 'features'.`);
+                    toast(`Error interno: Datos malformados para la capa de exportación '${fileNameKey}'. Falta la matriz 'features' o el tipo es incorrecto.`);
                     setIsDownloading(false);
                     return; 
                 }
+                 if (fc.features.length === 0) { // Check if features array is empty
+                    console.warn(`FeatureCollection para ${fileNameKey} está vacía. No se incluirá en el SHP.`);
+                    delete geoJsonDataForShpExport[fileNameKey]; // Remove empty feature collection
+                    delete typesForShpExport[fileNameKey]; // Remove corresponding type
+                }
             }
+        }
+        
+        if (Object.keys(geoJsonDataForShpExport).length === 0) {
+            throw new Error("No hay FeatureCollections con entidades para exportar a Shapefile después de procesar.");
         }
         
         const shpWriteOptions = { folder: 'shapefiles_osm', types: typesForShpExport };
