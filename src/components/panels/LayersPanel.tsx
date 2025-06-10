@@ -10,7 +10,7 @@ import InspectToolToggle from '@/components/feature-inspection/InspectToolToggle
 import LocationSearch, { type NominatimResult } from '@/components/location-search/LocationSearch';
 import { Separator } from '@/components/ui/separator';
 import type { MapLayer, BaseLayerOptionForSelect } from '@/lib/types';
-import { Layers as LayersIcon, Search } from 'lucide-react'; 
+import { Layers as LayersIcon } from 'lucide-react'; 
 import {
   Accordion,
   AccordionContent,
@@ -63,7 +63,7 @@ const LayersPanel: React.FC<LayersPanelProps> = ({
   onZoomToBoundingBox
 }) => {
   
-  const [openAccordionItems, setOpenAccordionItems] = React.useState<string[]>(['location-search-section', 'layers-section']);
+  const [openAccordionItems, setOpenAccordionItems] = React.useState<string[]>(['layers-section']);
   const prevLayersLengthRef = React.useRef(layers.length);
 
    React.useEffect(() => {
@@ -90,26 +90,9 @@ const LayersPanel: React.FC<LayersPanelProps> = ({
       showCloseButton={false} 
     >
       <div className="space-y-3">
-         <Accordion 
-          type="multiple" 
-          value={openAccordionItems}
-          onValueChange={setOpenAccordionItems}
-          className="w-full space-y-1"
-        >
-           <AccordionItem value="location-search-section" className="border-b-0 bg-white/5 rounded-md">
-              <AccordionTrigger className="p-3 hover:no-underline hover:bg-white/10 rounded-t-md data-[state=open]:rounded-b-none">
-                <SectionHeader 
-                  title="Buscador de Ubicaciones"
-                  description="Encuentre lugares en el mapa."
-                  icon={Search} 
-                />
-              </AccordionTrigger>
-              <AccordionContent className="p-3 pt-2 border-t border-white/10 bg-transparent rounded-b-md">
-                 <LocationSearch onLocationSelect={handleLocationSelection} />
-              </AccordionContent>
-            </AccordionItem>
-        </Accordion>
-
+        <LocationSearch onLocationSelect={handleLocationSelection} />
+        {/* Removed Accordion wrapper for LocationSearch */}
+        
         <BaseLayerSelector
           availableBaseLayers={availableBaseLayers}
           activeBaseLayerId={activeBaseLayerId}
@@ -128,14 +111,11 @@ const LayersPanel: React.FC<LayersPanelProps> = ({
         
         <Accordion 
           type="multiple" 
-          value={openAccordionItems.includes('layers-section') ? ['layers-section'] : []} // Keep only layers-section if it was open
-          onValueChange={(value) => { // Handle multiple items correctly
+          value={openAccordionItems.includes('layers-section') ? ['layers-section'] : []}
+          onValueChange={(value) => { 
              const newItems = new Set(openAccordionItems);
              if (value.includes('layers-section') && !newItems.has('layers-section')) newItems.add('layers-section');
              else if (!value.includes('layers-section') && newItems.has('layers-section')) newItems.delete('layers-section');
-             // For other sections if added in future
-             // value.forEach(item => newItems.add(item));
-             // openAccordionItems.filter(item => !value.includes(item)).forEach(item => newItems.delete(item));
              setOpenAccordionItems(Array.from(newItems));
           }}
           className="w-full space-y-1"
