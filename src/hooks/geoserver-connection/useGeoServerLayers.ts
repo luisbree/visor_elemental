@@ -25,15 +25,11 @@ export function useGeoServerLayers({ mapRef, isMapReady, addLayer, onLayerStateU
 
   const handleFetchGeoServerLayers = useCallback(async (): Promise<GeoServerDiscoveredLayer[]> => {
     if (!geoServerUrlInput.trim()) {
-      setTimeout(() => {
-        toast({ description: "Por favor, ingrese la URL de GeoServer." });
-      }, 0);
+      toast({ description: "Por favor, ingrese la URL de GeoServer." });
       return [];
     }
     setIsLoadingGeoServerLayers(true);
-    setTimeout(() => {
-      toast({ description: "Conectando a GeoServer..." });
-    }, 0);
+    toast({ description: "Conectando a GeoServer..." });
 
     try {
       let url = geoServerUrlInput.trim();
@@ -100,32 +96,24 @@ export function useGeoServerLayers({ mapRef, isMapReady, addLayer, onLayerStateU
              console.error("GeoServer OGC Exception:", ogcExceptionNode.textContent);
              throw new Error(`Error de GeoServer (OGC): ${ogcExceptionNode.textContent}`);
         }
-        setTimeout(() => {
-          toast({ description: "No se encontraron capas publicadas en GeoServer o la estructura XML no es la esperada." });
-        }, 0);
+        toast({ description: "No se encontraron capas publicadas en GeoServer o la estructura XML no es la esperada." });
       } else if (discovered.length > 0) {
-        setTimeout(() => {
-          toast({ description: `${discovered.length} capas encontradas en GeoServer.` });
-        }, 0);
+        toast({ description: `${discovered.length} capas encontradas en GeoServer.` });
       }
       return discovered;
 
     } catch (error: any) {
       console.error("Error conectando a GeoServer:", error);
-      setTimeout(() => {
-        toast({ description: error.message || "Ocurrió un error desconocido al conectar con GeoServer.", variant: "destructive" });
-      }, 0);
+      toast({ description: error.message || "Ocurrió un error desconocido al conectar con GeoServer.", variant: "destructive" });
       return [];
     } finally {
       setIsLoadingGeoServerLayers(false);
     }
-  }, [geoServerUrlInput, toast]);
+  }, [geoServerUrlInput]);
 
   const handleAddGeoServerLayerToMap = useCallback((layerName: string, layerTitle: string) => { // This is for WMS
     if (!isMapReady || !mapRef.current || !geoServerUrlInput.trim()) {
-        setTimeout(() => {
-          toast({ description: "El mapa o la URL de GeoServer no están disponibles." });
-        }, 0);
+        toast({ description: "El mapa o la URL de GeoServer no están disponibles." });
         return;
     }
 
@@ -162,21 +150,15 @@ export function useGeoServerLayers({ mapRef, isMapReady, addLayer, onLayerStateU
       originType: 'wms',
     });
     onLayerStateUpdate(layerName, true, 'wms'); 
-    setTimeout(() => {
-      toast({ description: `Capa WMS "${layerTitle || layerName}" añadida al mapa.` });
-    }, 0);
-  }, [geoServerUrlInput, addLayer, mapRef, isMapReady, onLayerStateUpdate, toast]);
+    toast({ description: `Capa WMS "${layerTitle || layerName}" añadida al mapa.` });
+  }, [geoServerUrlInput, addLayer, mapRef, isMapReady, onLayerStateUpdate]);
 
   const handleAddGeoServerLayerAsWFS = useCallback(async (layerName: string, layerTitle: string) => {
     if (!isMapReady || !mapRef.current || !geoServerUrlInput.trim()) {
-      setTimeout(() => {
-        toast({ description: "El mapa o la URL de GeoServer no están disponibles.", variant: "destructive" });
-      }, 0);
+      toast({ description: "El mapa o la URL de GeoServer no están disponibles.", variant: "destructive" });
       return;
     }
-    setTimeout(() => {
-      toast({ description: `Solicitando capa WFS "${layerTitle || layerName}"...` });
-    }, 0);
+    toast({ description: `Solicitando capa WFS "${layerTitle || layerName}"...` });
 
     let geoserverBaseUrl = geoServerUrlInput.trim();
      if (!geoserverBaseUrl.toLowerCase().startsWith('http://') && !geoserverBaseUrl.toLowerCase().startsWith('https://')) {
@@ -222,12 +204,12 @@ export function useGeoServerLayers({ mapRef, isMapReady, addLayer, onLayerStateU
         const errorText = await response.text();
         let errorMessage = `Error ${response.status} al obtener capa WFS.`;
         
-        console.error("WFS GetFeature error from proxy/GeoServer:", {
-            status: response.status,
-            statusText: response.statusText,
-            contentType: contentType,
-            body: errorText.substring(0, 500) // Log first 500 chars of error body
-        });
+        console.error(
+            "WFS GetFeature error from proxy/GeoServer. Status:", response.status,
+            "StatusText:", response.statusText,
+            "ContentType:", contentType,
+            "Body snippet:", errorText.substring(0, 200)
+        );
 
         if (contentType?.toLowerCase().includes('xml') || errorText.trim().startsWith('<')) { 
             try {
@@ -254,26 +236,20 @@ export function useGeoServerLayers({ mapRef, isMapReady, addLayer, onLayerStateU
              errorMessage += ` Respuesta inesperada del servidor: ${errorText.substring(0, 200)}${errorText.length > 200 ? '...' : ''}`;
         }
         
-        setTimeout(() => { // Ensure toast is called outside the immediate promise chain if possible
-          toast({ description: errorMessage, variant: "destructive" });
-        }, 0);
-        return; // Gracefully exit after toasting
+        toast({ description: errorMessage, variant: "destructive" });
+        return; 
       }
 
       const geojsonData = await response.json() as GeoJSON.FeatureCollection;
 
       if (!geojsonData || !geojsonData.features || geojsonData.features.length === 0) {
-        setTimeout(() => {
-          toast({ description: `La capa WFS "${layerTitle || layerName}" no contiene entidades o está vacía.` });
-        }, 0);
+        toast({ description: `La capa WFS "${layerTitle || layerName}" no contiene entidades o está vacía.` });
         return;
       }
       
-      setTimeout(() => {
-        if (geojsonData.features.length > 1000) {
-             toast({ description: `Cargando ${geojsonData.features.length} entidades WFS. Esto podría tomar un momento...` });
-        }
-      },0);
+      if (geojsonData.features.length > 1000) {
+           toast({ description: `Cargando ${geojsonData.features.length} entidades WFS. Esto podría tomar un momento...` });
+      }
 
       const olFeatures = new GeoJSONFormat().readFeatures(geojsonData, {
         dataProjection: 'EPSG:4326',
@@ -281,11 +257,7 @@ export function useGeoServerLayers({ mapRef, isMapReady, addLayer, onLayerStateU
       });
 
       if (!olFeatures || olFeatures.length === 0) {
-          // This case should ideally be caught by geojsonData.features.length === 0,
-          // but if conversion fails silently, this is a fallback.
-          setTimeout(() => {
-            toast({ description: "No se pudieron convertir las entidades GeoJSON a formato OpenLayers.", variant: "destructive"});
-          }, 0);
+          toast({ description: "No se pudieron convertir las entidades GeoJSON a formato OpenLayers.", variant: "destructive"});
           return;
       }
 
@@ -302,17 +274,13 @@ export function useGeoServerLayers({ mapRef, isMapReady, addLayer, onLayerStateU
         originType: 'wfs',
       });
       onLayerStateUpdate(layerName, true, 'wfs');
-      setTimeout(() => {
-        toast({ description: `Capa WFS "${layerTitle || layerName}" (${olFeatures.length} entidades) añadida.` });
-      }, 0);
+      toast({ description: `Capa WFS "${layerTitle || layerName}" (${olFeatures.length} entidades) añadida.` });
 
     } catch (error: any) {
       console.error("Error cargando capa WFS (inesperado):", error);
-      setTimeout(() => {
-        toast({ description: error.message || `Error desconocido al cargar capa WFS.`, variant: "destructive" });
-      }, 0);
+      toast({ description: error.message || `Error desconocido al cargar capa WFS.`, variant: "destructive" });
     }
-  }, [geoServerUrlInput, addLayer, mapRef, isMapReady, onLayerStateUpdate, toast]);
+  }, [geoServerUrlInput, addLayer, mapRef, isMapReady, onLayerStateUpdate]);
 
 
   return {
@@ -324,5 +292,3 @@ export function useGeoServerLayers({ mapRef, isMapReady, addLayer, onLayerStateU
     handleAddGeoServerLayerAsWFS, // WFS
   };
 }
-
-    
