@@ -113,7 +113,7 @@ export function useGeoServerLayers({ mapRef, isMapReady, addLayer, onLayerStateU
     } catch (error: any) {
       console.error("Error conectando a GeoServer:", error);
       setTimeout(() => {
-        toast({ description: error.message || "Ocurrió un error desconocido al conectar con GeoServer." });
+        toast({ description: error.message || "Ocurrió un error desconocido al conectar con GeoServer.", variant: "destructive" });
       }, 0);
       return [];
     } finally {
@@ -170,7 +170,7 @@ export function useGeoServerLayers({ mapRef, isMapReady, addLayer, onLayerStateU
   const handleAddGeoServerLayerAsWFS = useCallback(async (layerName: string, layerTitle: string) => {
     if (!isMapReady || !mapRef.current || !geoServerUrlInput.trim()) {
       setTimeout(() => {
-        toast({ description: "El mapa o la URL de GeoServer no están disponibles." });
+        toast({ description: "El mapa o la URL de GeoServer no están disponibles.", variant: "destructive" });
       }, 0);
       return;
     }
@@ -220,9 +220,15 @@ export function useGeoServerLayers({ mapRef, isMapReady, addLayer, onLayerStateU
 
       if (!response.ok || (contentType && !contentType.toLowerCase().includes('application/json'))) {
         const errorText = await response.text();
-        console.error("WFS GetFeature error from proxy:", errorText, {status: response.status, statusText: response.statusText, contentType});
-        
         let errorMessage = `Error ${response.status} al obtener capa WFS.`;
+        
+        console.error("WFS GetFeature error from proxy/GeoServer:", {
+            status: response.status,
+            statusText: response.statusText,
+            contentType: contentType,
+            body: errorText.substring(0, 500) // Log first 500 chars of error body
+        });
+
         if (contentType?.toLowerCase().includes('xml') || errorText.trim().startsWith('<')) { 
             try {
                 const parser = new DOMParser();
@@ -234,7 +240,7 @@ export function useGeoServerLayers({ mapRef, isMapReady, addLayer, onLayerStateU
             } catch (e) {
                  errorMessage += ` Detalles (error al parsear XML): ${errorText.substring(0, 200)}${errorText.length > 200 ? '...' : ''}`;
             }
-        } else if (contentType?.toLowerCase().includes('json')) { // Should be an error JSON
+        } else if (contentType?.toLowerCase().includes('json')) { 
             try {
                 const errorJson = JSON.parse(errorText);
                 if (errorJson.error?.message) errorMessage += ` Detalles: ${errorJson.error.message}`;
@@ -247,7 +253,11 @@ export function useGeoServerLayers({ mapRef, isMapReady, addLayer, onLayerStateU
         } else {
              errorMessage += ` Respuesta inesperada del servidor: ${errorText.substring(0, 200)}${errorText.length > 200 ? '...' : ''}`;
         }
-        throw new Error(errorMessage);
+        
+        setTimeout(() => { // Ensure toast is called outside the immediate promise chain if possible
+          toast({ description: errorMessage, variant: "destructive" });
+        }, 0);
+        return; // Gracefully exit after toasting
       }
 
       const geojsonData = await response.json() as GeoJSON.FeatureCollection;
@@ -271,7 +281,12 @@ export function useGeoServerLayers({ mapRef, isMapReady, addLayer, onLayerStateU
       });
 
       if (!olFeatures || olFeatures.length === 0) {
-          throw new Error("No se pudieron convertir las entidades GeoJSON a formato OpenLayers.");
+          // This case should ideally be caught by geojsonData.features.length === 0,
+          // but if conversion fails silently, this is a fallback.
+          setTimeout(() => {
+            toast({ description: "No se pudieron convertir las entidades GeoJSON a formato OpenLayers.", variant: "destructive"});
+          }, 0);
+          return;
       }
 
       const vectorSource = new VectorSource({ features: olFeatures });
@@ -292,9 +307,9 @@ export function useGeoServerLayers({ mapRef, isMapReady, addLayer, onLayerStateU
       }, 0);
 
     } catch (error: any) {
-      console.error("Error cargando capa WFS:", error);
+      console.error("Error cargando capa WFS (inesperado):", error);
       setTimeout(() => {
-        toast({ description: error.message || `Error desconocido al cargar capa WFS.` });
+        toast({ description: error.message || `Error desconocido al cargar capa WFS.`, variant: "destructive" });
       }, 0);
     }
   }, [geoServerUrlInput, addLayer, mapRef, isMapReady, onLayerStateUpdate, toast]);
