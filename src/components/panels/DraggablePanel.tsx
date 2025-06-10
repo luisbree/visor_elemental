@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ChevronDown, ChevronUp, X as LucideX, GripVertical } from 'lucide-react'; // Added GripVertical for drag handle hint
+import { ChevronDown, ChevronUp, X as LucideX } from 'lucide-react'; // Removed GripVertical
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface DraggablePanelProps {
@@ -24,6 +24,7 @@ interface DraggablePanelProps {
   showCloseButton?: boolean;
   overflowX?: 'auto' | 'hidden' | 'visible';
   overflowY?: 'auto' | 'hidden' | 'visible';
+  icon?: React.ElementType; // Optional icon for the panel header
 }
 
 const DraggablePanel: React.FC<DraggablePanelProps> = ({
@@ -43,6 +44,7 @@ const DraggablePanel: React.FC<DraggablePanelProps> = ({
   showCloseButton = true,
   overflowX = 'hidden',
   overflowY = 'auto',
+  icon: IconComponent,
 }) => {
   const [currentSize, setCurrentSize] = useState(initialSize);
 
@@ -84,7 +86,8 @@ const DraggablePanel: React.FC<DraggablePanelProps> = ({
         onMouseDown={onMouseDownHeader}
       >
         <div className="flex items-center">
-          <GripVertical className="h-4 w-4 mr-1 text-gray-400/70" />
+          {/* Icono de agarre eliminado */}
+          {IconComponent && <IconComponent className="h-4 w-4 mr-2 text-primary" />}
           <CardTitle className="text-sm font-semibold text-white truncate" title={title}>{title}</CardTitle>
         </div>
         <div className="flex items-center">

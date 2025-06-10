@@ -23,7 +23,7 @@ body {
     --border: 210 30% 85%; /* Light grayish blue border */
     --input: 210 30% 92%; /* Light input background */
 
-    --primary: 209 30% 41%; /* Petroleum blue (approx #47698A, from screenshot) */
+    --primary: 200 44% 35%; /* Azul petróleo #316781 */
     --primary-foreground: 0 0% 98%; /* White/very light for text on primary */
 
     --secondary: 210 50% 85%; /* Lighter shade of original primary */
@@ -35,19 +35,19 @@ body {
     --destructive: 0 72% 51%; /* A standard red for destructive actions */
     --destructive-foreground: 0 0% 98%; /* White/very light for text on destructive */
 
-    --ring: 209 30% 46%; /* Based on new petroleum blue primary for rings */
+    --ring: 200 44% 38%; /* Based on new petroleum blue primary for rings */
 
     --radius: 0.5rem;
 
     /* Sidebar specific variables - can be themed similarly if a sidebar is added later */
     --sidebar-background: 210 40% 95%;
     --sidebar-foreground: 210 30% 25%;
-    --sidebar-primary: 210 50% 60%;
+    --sidebar-primary: 200 44% 35%;
     --sidebar-primary-foreground: 0 0% 98%;
     --sidebar-accent: 280 26% 65%;
     --sidebar-accent-foreground: 0 0% 98%;
     --sidebar-border: 210 30% 80%;
-    --sidebar-ring: 210 50% 65%;
+    --sidebar-ring: 200 44% 38%;
 
     /* Chart colors (can be customized further) */
     --chart-1: 210 60% 55%;
@@ -73,8 +73,8 @@ body {
     --border: 210 25% 30%; /* Dark grayish blue border */
     --input: 210 25% 25%; /* Dark input background */
 
-    --primary: 210 50% 60%; /* Muted blue (can be same as light or adjusted for dark mode) */
-    --primary-foreground: 210 30% 10%; /* Dark blue for text on primary in dark mode */
+    --primary: 200 44% 35%; /* Azul petróleo #316781 (mantener consistencia o ajustar para dark mode si es necesario) */
+    --primary-foreground: 0 0% 98%; /* Dark blue for text on primary in dark mode */
 
     --secondary: 210 50% 30%; /* Darker shade of primary */
     --secondary-foreground: 210 50% 85%; /* Lighter shade of primary for text on secondary */
@@ -85,17 +85,17 @@ body {
     --destructive: 0 60% 45%; /* Darker red for destructive actions */
     --destructive-foreground: 0 0% 98%; /* White/very light for text on destructive */
 
-    --ring: 210 50% 55%; /* Slightly darker/muted primary for rings in dark mode */
+    --ring: 200 44% 38%; /* Slightly darker/muted primary for rings in dark mode */
 
     /* Sidebar specific variables - dark theme */
     --sidebar-background: 210 25% 15%;
     --sidebar-foreground: 210 30% 85%;
-    --sidebar-primary: 210 50% 60%;
-    --sidebar-primary-foreground: 210 30% 10%;
+    --sidebar-primary: 200 44% 35%;
+    --sidebar-primary-foreground: 0 0% 98%;
     --sidebar-accent: 280 26% 65%;
     --sidebar-accent-foreground: 280 26% 10%;
     --sidebar-border: 210 25% 25%;
-    --sidebar-ring: 210 50% 55%;
+    --sidebar-ring: 200 44% 38%;
 
     /* Chart colors for dark theme */
     --chart-1: 210 60% 65%;
