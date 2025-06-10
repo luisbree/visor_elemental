@@ -4,7 +4,6 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Square, PenLine, Dot, Ban, Eraser, Save } from 'lucide-react';
-import { Separator } from '@/components/ui/separator';
 
 interface DrawingToolbarProps {
   activeDrawTool: string | null;
@@ -21,65 +20,75 @@ const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
   onClearDrawnFeatures,
   onSaveDrawnFeaturesAsKML,
 }) => {
+  const iconButtonBaseClass = "h-8 w-8 p-0 flex items-center justify-center focus-visible:ring-primary";
+  const activeClass = "bg-primary hover:bg-primary/90 text-primary-foreground";
+  const inactiveClass = "border border-white/30 text-white/90 bg-black/20 hover:bg-black/40";
+
   return (
-    <div className="space-y-2">
-      <div className="grid grid-cols-3 gap-2">
+    <div className="flex items-center justify-between w-full gap-2">
+      <div className="flex items-center gap-1">
         <Button 
           onClick={() => onToggleDrawingTool('Polygon')} 
-          className={`text-xs h-8 focus-visible:ring-primary ${
-            activeDrawTool === 'Polygon'
-              ? 'bg-primary hover:bg-primary/90 text-primary-foreground'
-              : 'border border-white/30 text-white/90 bg-black/20 hover:bg-black/40'
+          className={`${iconButtonBaseClass} ${
+            activeDrawTool === 'Polygon' ? activeClass : inactiveClass
           }`}
-          title="Dibujar Polígono (para obtener datos OSM)"
+          title="Dibujar Polígono"
+          aria-label="Dibujar Polígono (para obtener datos OSM)"
         >
-          <Square className="mr-1 h-3 w-3" /> Polígono
+          <Square className="h-4 w-4" />
         </Button>
         <Button 
           onClick={() => onToggleDrawingTool('LineString')} 
-          className={`text-xs h-8 focus-visible:ring-primary ${
-            activeDrawTool === 'LineString'
-              ? 'bg-primary hover:bg-primary/90 text-primary-foreground'
-              : 'border border-white/30 text-white/90 bg-black/20 hover:bg-black/40'
+          className={`${iconButtonBaseClass} ${
+            activeDrawTool === 'LineString' ? activeClass : inactiveClass
           }`}
           title="Dibujar Línea"
+          aria-label="Dibujar Línea"
         >
-          <PenLine className="mr-1 h-3 w-3" /> Línea
+          <PenLine className="h-4 w-4" />
         </Button>
         <Button 
           onClick={() => onToggleDrawingTool('Point')} 
-          className={`text-xs h-8 focus-visible:ring-primary ${
-            activeDrawTool === 'Point'
-              ? 'bg-primary hover:bg-primary/90 text-primary-foreground'
-              : 'border border-white/30 text-white/90 bg-black/20 hover:bg-black/40'
+          className={`${iconButtonBaseClass} ${
+            activeDrawTool === 'Point' ? activeClass : inactiveClass
           }`}
           title="Dibujar Punto"
+          aria-label="Dibujar Punto"
         >
-          <Dot className="mr-1 h-3 w-3" /> Punto
+          <Dot className="h-4 w-4" />
+        </Button>
+        <Button 
+          onClick={onClearDrawnFeatures} 
+          className={`${iconButtonBaseClass} border border-white/30 text-white/90 bg-black/20 hover:bg-red-500/20 hover:text-red-300 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary`}
+          disabled={!!activeDrawTool}
+          title="Limpiar Dibujos"
+          aria-label="Limpiar Dibujos"
+        >
+          <Eraser className="h-4 w-4" />
         </Button>
       </div>
+
       {activeDrawTool && (
         <Button 
           onClick={onStopDrawingTool} 
-          className="w-full text-xs h-8 border border-white/30 hover:bg-white/10 text-white/90 bg-black/20 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary"
+          className="text-xs h-8 px-3 border border-white/30 hover:bg-white/10 text-white/90 bg-black/20 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary"
+          aria-label="Detener Dibujo"
         >
           <Ban className="mr-2 h-3 w-3" /> Detener Dibujo
         </Button>
       )}
-      <Separator className="my-2 bg-white/20" />
-      <Button 
-        onClick={onClearDrawnFeatures} 
-        className="w-full text-xs h-8 border border-white/30 text-white/90 bg-black/20 hover:bg-red-500/20 hover:text-red-300 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary"
-        disabled={!!activeDrawTool}
-      >
-        <Eraser className="mr-2 h-3 w-3" /> Limpiar Dibujos
-      </Button>
+      
+      <div className={`flex-grow ${activeDrawTool ? 'hidden' : ''}`}></div> {/* Spacer to push save button right when stop button is not visible */}
+
+
       <Button 
         onClick={onSaveDrawnFeaturesAsKML} 
-        className="w-full bg-primary hover:bg-primary/90 text-primary-foreground text-xs h-8 mt-2"
+        className={`${iconButtonBaseClass} bg-primary hover:bg-primary/90 text-primary-foreground`}
         disabled={!!activeDrawTool}
+        title="Guardar Dibujos (KML)"
+        aria-label="Guardar Dibujos (KML)"
       >
-        <Save className="mr-2 h-3 w-3" /> Guardar Dibujos (KML)
+        <Save className="h-4 w-4" />
       </Button>
     </div>
   );

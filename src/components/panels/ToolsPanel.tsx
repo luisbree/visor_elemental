@@ -44,7 +44,7 @@ interface ToolsPanelProps {
   downloadFormat: string;
   onDownloadFormatChange: (format: string) => void;
   isDownloading: boolean;
-  onDownloadOSMLayers: () => void; // This component won't know about all layers, so parent should handle this logic.
+  onDownloadOSMLayers: () => void; 
 
 }
 
@@ -65,7 +65,8 @@ const ToolsPanel: React.FC<ToolsPanelProps> = ({
   downloadFormat, onDownloadFormatChange, isDownloading, onDownloadOSMLayers
 }) => {
   
-  const [openAccordionItems, setOpenAccordionItems] = React.useState<string[]>(['drawing-tools-section', 'openstreetmap-section']);
+  // Keep 'openstreetmap-section' open by default, drawing tools are now always visible
+  const [openAccordionItems, setOpenAccordionItems] = React.useState<string[]>(['openstreetmap-section']);
 
   return (
     <DraggablePanel
@@ -78,32 +79,25 @@ const ToolsPanel: React.FC<ToolsPanelProps> = ({
       style={{ top: `${position.y}px`, left: `${position.x}px` }}
       showCloseButton={false}
     >
+        {/* Drawing Toolbar is now directly rendered, without an AccordionItem wrapper */}
+        <div className="p-3 pt-2">
+            <DrawingToolbar
+                activeDrawTool={activeDrawTool}
+                onToggleDrawingTool={onToggleDrawingTool}
+                onStopDrawingTool={onStopDrawingTool}
+                onClearDrawnFeatures={onClearDrawnFeatures}
+                onSaveDrawnFeaturesAsKML={onSaveDrawnFeaturesAsKML}
+            />
+        </div>
+        
+        <Separator className="my-2 mx-3 bg-white/10" />
+
         <Accordion 
           type="multiple" 
-          defaultValue={['drawing-tools-section', 'openstreetmap-section']} // Keep both open by default
-          value={openAccordionItems}
+          value={openAccordionItems} // Controlled state for OSM section
           onValueChange={setOpenAccordionItems}
           className="w-full space-y-1"
         >
-            <AccordionItem value="drawing-tools-section" className="border-b-0 bg-white/5 rounded-md">
-              <AccordionTrigger className="p-3 hover:no-underline hover:bg-white/10 rounded-t-md data-[state=open]:rounded-b-none">
-                <SectionHeader 
-                  title="Herramientas de Dibujo"
-                  description="Dibuje en el mapa y guarde sus trazos."
-                  icon={PenLine} 
-                />
-              </AccordionTrigger>
-              <AccordionContent className="p-3 pt-2 border-t border-white/10 bg-transparent rounded-b-md">
-                <DrawingToolbar
-                    activeDrawTool={activeDrawTool}
-                    onToggleDrawingTool={onToggleDrawingTool}
-                    onStopDrawingTool={onStopDrawingTool}
-                    onClearDrawnFeatures={onClearDrawnFeatures}
-                    onSaveDrawnFeaturesAsKML={onSaveDrawnFeaturesAsKML}
-                />
-              </AccordionContent>
-            </AccordionItem>
-            
             <AccordionItem value="openstreetmap-section" className="border-b-0 bg-white/5 rounded-md">
               <AccordionTrigger className="p-3 hover:no-underline hover:bg-white/10 rounded-t-md data-[state=open]:rounded-b-none">
                 <SectionHeader 
