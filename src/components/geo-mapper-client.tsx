@@ -12,6 +12,7 @@ import FeatureAttributesPanel from '@/components/panels/FeatureAttributesPanel';
 import LayersPanel from '@/components/panels/LayersPanel';
 import ToolsPanel from '@/components/panels/ToolsPanel';
 import GeoServerPanel from '@/components/panels/GeoServerPanel';
+import WfsLoadingIndicator from '@/components/feedback/WfsLoadingIndicator'; // New Import
 
 import { useOpenLayersMap } from '@/hooks/map-core/useOpenLayersMap';
 import { useLayerManager } from '@/hooks/layer-manager/useLayerManager';
@@ -103,11 +104,12 @@ export default function GeoMapperClient() {
 
   const featureInspectionHook = useFeatureInspection({
     mapRef, mapElementRef, isMapReady, drawingSourceRef, drawingLayerRef,
-    activeDrawTool: null, // Will be updated by drawingInteractions.activeDrawTool
-    stopDrawingTool: () => {}, // Will be updated by drawingInteractions.stopDrawingTool
+    activeDrawTool: null, 
+    stopDrawingTool: () => {}, 
   });
 
   const [geoServerDiscoveredLayers, setGeoServerDiscoveredLayers] = useState<GeoServerDiscoveredLayer[]>([]);
+  const [isWfsLoading, setIsWfsLoading] = useState(false); // New state for WFS loading
 
   const {
     layers, addLayer, removeLayer, toggleLayerVisibility, zoomToLayerExtent, handleShowLayerTable,
@@ -146,7 +148,7 @@ export default function GeoMapperClient() {
       mapRef, 
       isMapReady, 
       addLayer,
-      onLayerStateUpdate: (layerName, added, type) => { // Ensure this matches new signature
+      onLayerStateUpdate: (layerName, added, type) => { 
         setGeoServerDiscoveredLayers(prev => prev.map(l => {
             if (l.name === layerName) {
                 if (type === 'wms') return { ...l, wmsAddedToMap: added };
@@ -211,7 +213,6 @@ export default function GeoMapperClient() {
     featureInspectionHook.updateLayers(layers);
   }, [layers, featureInspectionHook]);
 
-  // Update featureInspectionHook with correct drawing tool state
    useEffect(() => {
     featureInspectionHook.activeDrawTool = drawingInteractions.activeDrawTool;
     featureInspectionHook.stopDrawingTool = drawingInteractions.stopDrawingTool;
@@ -229,6 +230,8 @@ export default function GeoMapperClient() {
           setMapInstanceAndElement={setMapInstanceAndElement}
           activeBaseLayerId={activeBaseLayerId}
         />
+
+        <WfsLoadingIndicator isVisible={isWfsLoading} /> {/* Render loading indicator */}
 
         <FeatureAttributesPanel
           featuresAttributes={featureInspectionHook.selectedFeatureAttributes}
@@ -302,7 +305,8 @@ export default function GeoMapperClient() {
           setGeoServerDiscoveredLayers={setGeoServerDiscoveredLayers}
           isLoadingGeoServerLayers={isLoadingGeoServerLayers}
           onAddGeoServerLayerToMap={handleAddGeoServerLayerToMap}
-          onAddGeoServerLayerAsWFS={handleAddGeoServerLayerAsWFS} // Pass new function
+          onAddGeoServerLayerAsWFS={handleAddGeoServerLayerAsWFS}
+          setIsWfsLoading={setIsWfsLoading} // Pass setter to GeoServerPanel
         />
       </div>
     </div>

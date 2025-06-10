@@ -6,33 +6,33 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import type { GeoServerDiscoveredLayer } from '@/lib/types';
-import { Layers, Workflow } from 'lucide-react'; // Workflow for WFS icon
+import { Layers, Workflow } from 'lucide-react'; 
 
 interface GeoServerLayerListProps {
   geoServerDiscoveredLayers: GeoServerDiscoveredLayer[];
-  onAddGeoServerLayerToMap: (layerName: string, layerTitle: string) => void; // For WMS
-  onAddGeoServerLayerAsWFS: (layerName: string, layerTitle: string) => Promise<void>; // For WFS, now returns Promise<void>
+  onAddGeoServerLayerToMap: (layerName: string, layerTitle: string) => void; 
+  onAddGeoServerLayerAsWFS: (layerName: string, layerTitle: string) => Promise<void>; 
+  setIsWfsLoading: (isLoading: boolean) => void; // New prop
 }
 
 const GeoServerLayerList: React.FC<GeoServerLayerListProps> = ({
   geoServerDiscoveredLayers,
   onAddGeoServerLayerToMap,
   onAddGeoServerLayerAsWFS,
+  setIsWfsLoading, // Destructure new prop
 }) => {
   if (!geoServerDiscoveredLayers || geoServerDiscoveredLayers.length === 0) {
     return <p className="text-xs text-gray-400/80 text-center py-2">No hay capas de GeoServer para mostrar. Ingrese una URL y cargue capas.</p>;
   }
 
   const handleAddWFS = async (layerName: string, layerTitle: string) => {
+    setIsWfsLoading(true); // Set loading true
     try {
       await onAddGeoServerLayerAsWFS(layerName, layerTitle);
     } catch (e) {
-      // This catch is a safety net. The onAddGeoServerLayerAsWFS function
-      // should ideally handle its own errors and toast messages.
       console.error("Error invoking onAddGeoServerLayerAsWFS from GeoServerLayerList:", e);
-      // Optionally, show a generic toast here if not handled internally by onAddGeoServerLayerAsWFS
-      // import { toast } from "@/hooks/use-toast";
-      // toast({ description: "Ocurrió un error inesperado al intentar añadir la capa WFS.", variant: "destructive" });
+    } finally {
+      setIsWfsLoading(false); // Set loading false
     }
   };
 
