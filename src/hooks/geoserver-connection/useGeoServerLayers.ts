@@ -17,9 +17,10 @@ interface UseGeoServerLayersProps {
   isMapReady: boolean;
   addLayer: (layer: MapLayer) => void;
   onLayerStateUpdate: (layerName: string, added: boolean, type: 'wms' | 'wfs') => void;
+  setIsWfsLoading: (isLoading: boolean) => void; // Added prop
 }
 
-export function useGeoServerLayers({ mapRef, isMapReady, addLayer, onLayerStateUpdate }: UseGeoServerLayersProps) {
+export function useGeoServerLayers({ mapRef, isMapReady, addLayer, onLayerStateUpdate, setIsWfsLoading }: UseGeoServerLayersProps) {
   const [geoServerUrlInput, setGeoServerUrlInput] = useState<string>('');
   const [isLoadingGeoServerLayers, setIsLoadingGeoServerLayers] = useState<boolean>(false);
 
@@ -158,136 +159,136 @@ export function useGeoServerLayers({ mapRef, isMapReady, addLayer, onLayerStateU
       toast({ description: "El mapa o la URL de GeoServer no están disponibles.", variant: "destructive" });
       return;
     }
+    
+    setIsWfsLoading(true); // Set loading true at the beginning
     toast({ description: `Solicitando capa WFS "${layerTitle || layerName}"...` });
 
-    let geoserverBaseUrl = geoServerUrlInput.trim();
-     if (!geoserverBaseUrl.toLowerCase().startsWith('http://') && !geoserverBaseUrl.toLowerCase().startsWith('https://')) {
-        geoserverBaseUrl = 'http://' + geoserverBaseUrl;
-    }
-    if (geoserverBaseUrl.endsWith('/')) geoserverBaseUrl = geoserverBaseUrl.slice(0, -1);
-    if (geoserverBaseUrl.toLowerCase().endsWith('/web')) geoserverBaseUrl = geoserverBaseUrl.substring(0, geoserverBaseUrl.length - '/web'.length);
-    else if (geoserverBaseUrl.toLowerCase().endsWith('/web/')) geoserverBaseUrl = geoserverBaseUrl.substring(0, geoserverBaseUrl.length - '/web/'.length);
-
-    const workspace = layerName.includes(':') ? layerName.split(':')[0] : undefined;
-    let wfsServiceUrl = `${geoserverBaseUrl}`;
-    if (workspace && !wfsServiceUrl.endsWith(`/${workspace}`) && !wfsServiceUrl.includes(`/${workspace}/`)) {
-        if (wfsServiceUrl.endsWith('/geoserver')) {
-             wfsServiceUrl = `${wfsServiceUrl}/${workspace}/wfs`;
-        } else {
-             wfsServiceUrl = `${wfsServiceUrl}/geoserver/${workspace}/wfs`;
-        }
-    } else if (!wfsServiceUrl.toLowerCase().endsWith('/wfs')) {
-        wfsServiceUrl = `${wfsServiceUrl}/wfs`;
-    }
-
-    if (geoServerUrlInput.toLowerCase().includes('/wfs') && workspace && geoServerUrlInput.toLowerCase().includes(`/${workspace}/`)){
-        wfsServiceUrl = geoServerUrlInput.endsWith('/wfs') ? geoServerUrlInput : `${geoServerUrlInput}/wfs`;
-    }
-
-
-    const params = new URLSearchParams({
-      service: 'WFS',
-      version: '1.1.0',
-      request: 'GetFeature',
-      typeName: layerName,
-      outputFormat: 'application/json',
-      srsName: 'EPSG:4326'
-    });
-    const getFeatureUrl = `${wfsServiceUrl}?${params.toString()}`;
-    const proxyApiUrl = `/api/geoserver-proxy?url=${encodeURIComponent(getFeatureUrl)}`;
-
     try {
-      const response = await fetch(proxyApiUrl);
-      const contentType = response.headers.get('content-type');
-      const responseBodyText = await response.text(); // Read body once for all processing
+        let geoserverBaseUrl = geoServerUrlInput.trim();
+        if (!geoserverBaseUrl.toLowerCase().startsWith('http://') && !geoserverBaseUrl.toLowerCase().startsWith('https://')) {
+            geoserverBaseUrl = 'http://' + geoserverBaseUrl;
+        }
+        if (geoserverBaseUrl.endsWith('/')) geoserverBaseUrl = geoserverBaseUrl.slice(0, -1);
+        if (geoserverBaseUrl.toLowerCase().endsWith('/web')) geoserverBaseUrl = geoserverBaseUrl.substring(0, geoserverBaseUrl.length - '/web'.length);
+        else if (geoserverBaseUrl.toLowerCase().endsWith('/web/')) geoserverBaseUrl = geoserverBaseUrl.substring(0, geoserverBaseUrl.length - '/web/'.length);
 
-      if (!response.ok || (contentType && !contentType.toLowerCase().includes('application/json'))) {
-        let errorMessage = `Error ${response.status} al obtener capa WFS.`;
+        const workspace = layerName.includes(':') ? layerName.split(':')[0] : undefined;
+        let wfsServiceUrl = `${geoserverBaseUrl}`;
+        if (workspace && !wfsServiceUrl.endsWith(`/${workspace}`) && !wfsServiceUrl.includes(`/${workspace}/`)) {
+            if (wfsServiceUrl.endsWith('/geoserver')) {
+                wfsServiceUrl = `${wfsServiceUrl}/${workspace}/wfs`;
+            } else {
+                wfsServiceUrl = `${wfsServiceUrl}/geoserver/${workspace}/wfs`;
+            }
+        } else if (!wfsServiceUrl.toLowerCase().endsWith('/wfs')) {
+            wfsServiceUrl = `${wfsServiceUrl.includes('/geoserver') ? wfsServiceUrl : `${wfsServiceUrl}/geoserver`}/wfs`;
+        }
         
-        // Removed the specific console.error that was causing the Next.js overlay trigger.
-        // The error details will be extracted and shown in the toast.
-
-        if (contentType?.toLowerCase().includes('xml') || responseBodyText.trim().startsWith('<')) {
-            try {
-                const parser = new DOMParser();
-                const xmlDoc = parser.parseFromString(responseBodyText, "text/xml");
-                const parserErrorNode = xmlDoc.querySelector("parsererror");
-                if (parserErrorNode) {
-                    console.warn("XML parsing error by DOMParser:", parserErrorNode.textContent); 
-                    errorMessage += ` (Error al interpretar XML de respuesta: ${parserErrorNode.textContent?.substring(0,100) || 'Error de parseo'})`;
-                } else {
-                    const exceptionNode = xmlDoc.querySelector("ServiceException, ExceptionText, ows\\:ExceptionText, ServiceExceptionReport ServiceException, ows\\:Exception");
-                    const exceptionContent = exceptionNode?.textContent;
-                    if (exceptionContent) {
-                        errorMessage += ` Detalles: ${exceptionContent.trim()}`;
-                    } else {
-                        errorMessage += ` (Respuesta XML no estándar o sin mensaje de error claro: ${responseBodyText.substring(0,100)}${responseBodyText.length > 100 ? '...' : ''})`;
-                    }
-                }
-            } catch (e: any) {
-                 console.warn("Error during manual XML parsing attempt:", e); 
-                 errorMessage += ` (Error crítico al procesar XML de respuesta: ${e.message})`;
-            }
-        } else if (contentType?.toLowerCase().includes('json')) { // Should not happen if !response.ok and is JSON, but good fallback
-            try {
-                const errorJson = JSON.parse(responseBodyText);
-                if (errorJson.error?.message) errorMessage += ` Detalles: ${errorJson.error.message}`;
-                else if (errorJson.error) errorMessage += ` Detalles: ${errorJson.error}`;
-                else if (errorJson.message) errorMessage += ` Detalles: ${errorJson.message}`;
-                else errorMessage += ` Detalles: ${responseBodyText.substring(0, 200)}${responseBodyText.length > 200 ? '...' : ''}`;
-            } catch {
-                errorMessage += ` Detalles (error al parsear JSON): ${responseBodyText.substring(0, 200)}${responseBodyText.length > 200 ? '...' : ''}`;
-            }
-        } else {
-             errorMessage += ` Respuesta inesperada del servidor: ${responseBodyText.substring(0, 200)}${responseBodyText.length > 200 ? '...' : ''}`;
+        if (geoServerUrlInput.toLowerCase().includes('/wfs') && workspace && geoServerUrlInput.toLowerCase().includes(`/${workspace}/`)){
+             wfsServiceUrl = geoServerUrlInput.endsWith('/wfs') ? geoServerUrlInput : `${geoServerUrlInput}/wfs`;
         }
 
-        toast({ description: errorMessage, variant: "destructive" });
-        return; 
-      }
 
-      const geojsonData = JSON.parse(responseBodyText) as GeoJSON.FeatureCollection;
+        const params = new URLSearchParams({
+        service: 'WFS',
+        version: '1.1.0',
+        request: 'GetFeature',
+        typeName: layerName,
+        outputFormat: 'application/json',
+        srsName: 'EPSG:4326'
+        });
+        const getFeatureUrl = `${wfsServiceUrl}?${params.toString()}`;
+        const proxyApiUrl = `/api/geoserver-proxy?url=${encodeURIComponent(getFeatureUrl)}`;
 
-      if (!geojsonData || !geojsonData.features || geojsonData.features.length === 0) {
-        toast({ description: `La capa WFS "${layerTitle || layerName}" no contiene entidades o está vacía.` });
-        return;
-      }
+        const response = await fetch(proxyApiUrl);
+        const contentType = response.headers.get('content-type');
+        const responseBodyText = await response.text(); 
 
-      if (geojsonData.features.length > 1000) {
-           toast({ description: `Cargando ${geojsonData.features.length} entidades WFS. Esto podría tomar un momento...` });
-      }
+        if (!response.ok || (contentType && !contentType.toLowerCase().includes('application/json'))) {
+            let errorMessage = `Error ${response.status} al obtener capa WFS.`;
+            
+            if (contentType?.toLowerCase().includes('xml') || responseBodyText.trim().startsWith('<')) {
+                try {
+                    const parser = new DOMParser();
+                    const xmlDoc = parser.parseFromString(responseBodyText, "text/xml");
+                    const parserErrorNode = xmlDoc.querySelector("parsererror");
+                    if (parserErrorNode) {
+                        console.warn("XML parsing error by DOMParser:", parserErrorNode.textContent); 
+                        errorMessage += ` (Error al interpretar XML: ${parserErrorNode.textContent?.substring(0,100) || 'Error de parseo'})`;
+                    } else {
+                        const exceptionNode = xmlDoc.querySelector("ServiceException, ExceptionText, ows\\:ExceptionText, ServiceExceptionReport ServiceException, ows\\:Exception");
+                        const exceptionContent = exceptionNode?.textContent;
+                        if (exceptionContent) {
+                            errorMessage += ` Detalles: ${exceptionContent.trim()}`;
+                        } else {
+                            errorMessage += ` (XML no estándar: ${responseBodyText.substring(0,100)}${responseBodyText.length > 100 ? '...' : ''})`;
+                        }
+                    }
+                } catch (e: any) {
+                    console.warn("Error during manual XML parsing attempt:", e); 
+                    errorMessage += ` (Error crítico al procesar XML: ${e.message})`;
+                }
+            } else if (contentType?.toLowerCase().includes('json')) { 
+                try {
+                    const errorJson = JSON.parse(responseBodyText);
+                    if (errorJson.error?.message) errorMessage += ` Detalles: ${errorJson.error.message}`;
+                    else if (errorJson.error) errorMessage += ` Detalles: ${errorJson.error}`;
+                    else if (errorJson.message) errorMessage += ` Detalles: ${errorJson.message}`;
+                    else errorMessage += ` Detalles: ${responseBodyText.substring(0, 200)}${responseBodyText.length > 200 ? '...' : ''}`;
+                } catch {
+                    errorMessage += ` Detalles (error al parsear JSON): ${responseBodyText.substring(0, 200)}${responseBodyText.length > 200 ? '...' : ''}`;
+                }
+            } else {
+                errorMessage += ` Respuesta inesperada: ${responseBodyText.substring(0, 200)}${responseBodyText.length > 200 ? '...' : ''}`;
+            }
 
-      const olFeatures = new GeoJSONFormat().readFeatures(geojsonData, {
-        dataProjection: 'EPSG:4326',
-        featureProjection: 'EPSG:3857',
-      });
+            toast({ description: errorMessage, variant: "destructive" });
+            return; 
+        }
 
-      if (!olFeatures || olFeatures.length === 0) {
-          toast({ description: "No se pudieron convertir las entidades GeoJSON a formato OpenLayers.", variant: "destructive"});
-          return;
-      }
+        const geojsonData = JSON.parse(responseBodyText) as GeoJSON.FeatureCollection;
 
-      const vectorSource = new VectorSource({ features: olFeatures });
-      const vectorLayer = new VectorLayer({ source: vectorSource, properties: { 'originalGeoServerName': layerName } });
+        if (!geojsonData || !geojsonData.features || geojsonData.features.length === 0) {
+            toast({ description: `La capa WFS "${layerTitle || layerName}" no contiene entidades o está vacía.` });
+            return;
+        }
 
-      const mapLayerId = `geoserver-wfs-${layerName.replace(/[^a-zA-Z0-9]/g, '_')}-${Date.now()}`;
-      addLayer({
-        id: mapLayerId,
-        name: `${layerTitle || layerName} (WFS)`,
-        olLayer: vectorLayer,
-        visible: true,
-        isGeoServerLayer: true,
-        originType: 'wfs',
-      });
-      onLayerStateUpdate(layerName, true, 'wfs');
-      toast({ description: `Capa WFS "${layerTitle || layerName}" (${olFeatures.length} entidades) añadida.` });
+        if (geojsonData.features.length > 1000) {
+            toast({ description: `Cargando ${geojsonData.features.length} entidades WFS. Esto podría tomar un momento...` });
+        }
+
+        const olFeatures = new GeoJSONFormat().readFeatures(geojsonData, {
+            dataProjection: 'EPSG:4326',
+            featureProjection: 'EPSG:3857',
+        });
+
+        if (!olFeatures || olFeatures.length === 0) {
+            toast({ description: "No se pudieron convertir las entidades GeoJSON a formato OpenLayers.", variant: "destructive"});
+            return;
+        }
+
+        const vectorSource = new VectorSource({ features: olFeatures });
+        const vectorLayer = new VectorLayer({ source: vectorSource, properties: { 'originalGeoServerName': layerName } });
+
+        const mapLayerId = `geoserver-wfs-${layerName.replace(/[^a-zA-Z0-9]/g, '_')}-${Date.now()}`;
+        addLayer({
+            id: mapLayerId,
+            name: `${layerTitle || layerName} (WFS)`,
+            olLayer: vectorLayer,
+            visible: true,
+            isGeoServerLayer: true,
+            originType: 'wfs',
+        });
+        onLayerStateUpdate(layerName, true, 'wfs');
+        toast({ description: `Capa WFS "${layerTitle || layerName}" (${olFeatures.length} entidades) añadida.` });
 
     } catch (error: any) { 
-      console.warn("Error cargando capa WFS (inesperado):", error); // Changed to console.warn
+      console.warn("Error cargando capa WFS (inesperado):", error);
       toast({ description: error.message || `Error desconocido al cargar capa WFS.`, variant: "destructive" });
-      // Do NOT re-throw the error here. Let the function complete.
+    } finally {
+        setIsWfsLoading(false); // Set loading false at the end
     }
-  }, [geoServerUrlInput, addLayer, mapRef, isMapReady, onLayerStateUpdate, toast]);
+  }, [geoServerUrlInput, addLayer, mapRef, isMapReady, onLayerStateUpdate, toast, setIsWfsLoading]);
 
 
   return {
@@ -299,6 +300,3 @@ export function useGeoServerLayers({ mapRef, isMapReady, addLayer, onLayerStateU
     handleAddGeoServerLayerAsWFS, // WFS
   };
 }
-
-
-    

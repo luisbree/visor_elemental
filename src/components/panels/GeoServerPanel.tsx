@@ -30,7 +30,7 @@ interface GeoServerPanelProps {
   isLoadingGeoServerLayers: boolean;
   onAddGeoServerLayerToMap: (layerName: string, layerTitle: string) => void; // WMS
   onAddGeoServerLayerAsWFS: (layerName: string, layerTitle: string) => Promise<void>; // WFS
-  setIsWfsLoading: (isLoading: boolean) => void; // New prop
+  // setIsWfsLoading prop is no longer needed here as it's handled by useGeoServerLayers
 }
 
 
@@ -49,8 +49,7 @@ const GeoServerPanel: React.FC<GeoServerPanelProps> = ({
   panelRef, position, isCollapsed, onToggleCollapse, onMouseDownHeader,
   geoServerUrlInput, onGeoServerUrlChange, onFetchGeoServerLayers, 
   geoServerDiscoveredLayers, setGeoServerDiscoveredLayers, 
-  isLoadingGeoServerLayers, onAddGeoServerLayerToMap, onAddGeoServerLayerAsWFS,
-  setIsWfsLoading // Destructure new prop
+  isLoadingGeoServerLayers, onAddGeoServerLayerToMap, onAddGeoServerLayerAsWFS
 }) => {
 
   const handleFetch = async () => {
@@ -103,7 +102,7 @@ const GeoServerPanel: React.FC<GeoServerPanelProps> = ({
                       geoServerDiscoveredLayers={geoServerDiscoveredLayers}
                       onAddGeoServerLayerToMap={onAddGeoServerLayerToMap}
                       onAddGeoServerLayerAsWFS={onAddGeoServerLayerAsWFS}
-                      setIsWfsLoading={setIsWfsLoading} // Pass down
+                      // setIsWfsLoading prop removed
                     />
                 </>
                 )}

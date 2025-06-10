@@ -12,7 +12,7 @@ import FeatureAttributesPanel from '@/components/panels/FeatureAttributesPanel';
 import LayersPanel from '@/components/panels/LayersPanel';
 import ToolsPanel from '@/components/panels/ToolsPanel';
 import GeoServerPanel from '@/components/panels/GeoServerPanel';
-import WfsLoadingIndicator from '@/components/feedback/WfsLoadingIndicator'; // New Import
+import WfsLoadingIndicator from '@/components/feedback/WfsLoadingIndicator';
 
 import { useOpenLayersMap } from '@/hooks/map-core/useOpenLayersMap';
 import { useLayerManager } from '@/hooks/layer-manager/useLayerManager';
@@ -109,7 +109,7 @@ export default function GeoMapperClient() {
   });
 
   const [geoServerDiscoveredLayers, setGeoServerDiscoveredLayers] = useState<GeoServerDiscoveredLayer[]>([]);
-  const [isWfsLoading, setIsWfsLoading] = useState(false); // New state for WFS loading
+  const [isWfsLoading, setIsWfsLoading] = useState(false); 
 
   const {
     layers, addLayer, removeLayer, toggleLayerVisibility, zoomToLayerExtent, handleShowLayerTable,
@@ -156,7 +156,8 @@ export default function GeoMapperClient() {
             }
             return l;
         }));
-      }
+      },
+      setIsWfsLoading // Pass setIsWfsLoading to the hook
   });
 
   const { panels, handlePanelMouseDown, togglePanelCollapse } = useFloatingPanels({
@@ -231,7 +232,7 @@ export default function GeoMapperClient() {
           activeBaseLayerId={activeBaseLayerId}
         />
 
-        <WfsLoadingIndicator isVisible={isWfsLoading} /> {/* Render loading indicator */}
+        <WfsLoadingIndicator isVisible={isWfsLoading} />
 
         <FeatureAttributesPanel
           featuresAttributes={featureInspectionHook.selectedFeatureAttributes}
@@ -306,7 +307,6 @@ export default function GeoMapperClient() {
           isLoadingGeoServerLayers={isLoadingGeoServerLayers}
           onAddGeoServerLayerToMap={handleAddGeoServerLayerToMap}
           onAddGeoServerLayerAsWFS={handleAddGeoServerLayerAsWFS}
-          setIsWfsLoading={setIsWfsLoading} // Pass setter to GeoServerPanel
         />
       </div>
     </div>

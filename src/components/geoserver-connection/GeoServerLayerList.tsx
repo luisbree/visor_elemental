@@ -12,28 +12,28 @@ interface GeoServerLayerListProps {
   geoServerDiscoveredLayers: GeoServerDiscoveredLayer[];
   onAddGeoServerLayerToMap: (layerName: string, layerTitle: string) => void; 
   onAddGeoServerLayerAsWFS: (layerName: string, layerTitle: string) => Promise<void>; 
-  setIsWfsLoading: (isLoading: boolean) => void; // New prop
 }
 
 const GeoServerLayerList: React.FC<GeoServerLayerListProps> = ({
   geoServerDiscoveredLayers,
   onAddGeoServerLayerToMap,
   onAddGeoServerLayerAsWFS,
-  setIsWfsLoading, // Destructure new prop
 }) => {
   if (!geoServerDiscoveredLayers || geoServerDiscoveredLayers.length === 0) {
     return <p className="text-xs text-gray-400/80 text-center py-2">No hay capas de GeoServer para mostrar. Ingrese una URL y cargue capas.</p>;
   }
 
   const handleAddWFS = async (layerName: string, layerTitle: string) => {
-    setIsWfsLoading(true); // Set loading true
+    // setIsWfsLoading(true); // Removed: Now handled by useGeoServerLayers hook
     try {
       await onAddGeoServerLayerAsWFS(layerName, layerTitle);
     } catch (e) {
+      // Error handling (e.g., toast) is expected to be done within onAddGeoServerLayerAsWFS
       console.error("Error invoking onAddGeoServerLayerAsWFS from GeoServerLayerList:", e);
-    } finally {
-      setIsWfsLoading(false); // Set loading false
-    }
+    } 
+    // finally { // Removed: Now handled by useGeoServerLayers hook
+    //   setIsWfsLoading(false); 
+    // }
   };
 
   return (
