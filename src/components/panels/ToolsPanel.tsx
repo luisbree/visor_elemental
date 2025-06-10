@@ -79,20 +79,17 @@ const ToolsPanel: React.FC<ToolsPanelProps> = ({
       style={{ top: `${position.y}px`, left: `${position.x}px` }}
       showCloseButton={false}
     >
-        {/* Drawing Toolbar is now directly rendered, without an AccordionItem wrapper */}
-        <div className="p-3"> {/* Overall padding for the section in the panel */}
-            <div className="bg-white/5 rounded-md p-2"> {/* Wrapper for DrawingToolbar with desired styling */}
-                <DrawingToolbar
-                    activeDrawTool={activeDrawTool}
-                    onToggleDrawingTool={onToggleDrawingTool}
-                    onStopDrawingTool={onStopDrawingTool}
-                    onClearDrawnFeatures={onClearDrawnFeatures}
-                    onSaveDrawnFeaturesAsKML={onSaveDrawnFeaturesAsKML}
-                />
-            </div>
+        <div className="w-full bg-white/5 rounded-md p-2"> {/* Added w-full here */}
+            <DrawingToolbar
+                activeDrawTool={activeDrawTool}
+                onToggleDrawingTool={onToggleDrawingTool}
+                onStopDrawingTool={onStopDrawingTool}
+                onClearDrawnFeatures={onClearDrawnFeatures}
+                onSaveDrawnFeaturesAsKML={onSaveDrawnFeaturesAsKML}
+            />
         </div>
         
-        <Separator className="my-2 mx-3 bg-white/10" />
+        <Separator className="my-2 bg-white/10" />
 
         <Accordion 
           type="multiple" 
@@ -131,4 +128,3 @@ const ToolsPanel: React.FC<ToolsPanelProps> = ({
 };
 
 export default ToolsPanel;
-
