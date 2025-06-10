@@ -39,7 +39,7 @@ export function useGeoServerLayers({ mapRef, isMapReady, addLayer, onLayerStateU
       if (url.endsWith('/')) url = url.slice(0, -1);
       if (url.toLowerCase().endsWith('/web')) url = url.substring(0, url.length - '/web'.length);
       else if (url.toLowerCase().endsWith('/web/')) url = url.substring(0, url.length - '/web/'.length);
-      
+
       const capabilitiesUrl = `${url}/wms?service=WMS&version=1.3.0&request=GetCapabilities`;
       const proxyApiUrl = `/api/geoserver-proxy?url=${encodeURIComponent(capabilitiesUrl)}`;
       const response = await fetch(proxyApiUrl);
@@ -56,7 +56,7 @@ export function useGeoServerLayers({ mapRef, isMapReady, addLayer, onLayerStateU
       const xmlText = await response.text();
       const parser = new DOMParser();
       const xmlDoc = parser.parseFromString(xmlText, "text/xml");
-      
+
       const errorNode = xmlDoc.querySelector("ServiceExceptionReport ServiceException, ServiceExceptionReport > ServiceException");
       if (errorNode) {
         console.error("GeoServer ServiceException:", errorNode.textContent);
@@ -70,7 +70,7 @@ export function useGeoServerLayers({ mapRef, isMapReady, addLayer, onLayerStateU
 
       const discovered: GeoServerDiscoveredLayer[] = [];
       const layerNodes = xmlDoc.querySelectorAll("Capability > Layer > Layer, WMS_Capabilities > Capability > Layer > Layer");
-      
+
       if (layerNodes.length === 0) {
            const topLayerNodes = xmlDoc.querySelectorAll("Capability > Layer");
             topLayerNodes.forEach(node => {
@@ -109,7 +109,7 @@ export function useGeoServerLayers({ mapRef, isMapReady, addLayer, onLayerStateU
     } finally {
       setIsLoadingGeoServerLayers(false);
     }
-  }, [geoServerUrlInput]);
+  }, [geoServerUrlInput, toast]);
 
   const handleAddGeoServerLayerToMap = useCallback((layerName: string, layerTitle: string) => { // This is for WMS
     if (!isMapReady || !mapRef.current || !geoServerUrlInput.trim()) {
@@ -127,7 +127,7 @@ export function useGeoServerLayers({ mapRef, isMapReady, addLayer, onLayerStateU
     if (!geoserverBaseWmsUrl.toLowerCase().endsWith('/wms')) {
         geoserverBaseWmsUrl = geoserverBaseWmsUrl.includes('/geoserver') ? `${geoserverBaseWmsUrl}/wms` : `${geoserverBaseWmsUrl}/geoserver/wms`; // Ensure /geoserver/wms
     }
-    
+
     const wmsSource = new TileWMS({
         url: geoserverBaseWmsUrl,
         params: { 'LAYERS': layerName, 'TILED': true },
@@ -137,7 +137,7 @@ export function useGeoServerLayers({ mapRef, isMapReady, addLayer, onLayerStateU
 
     const newOlLayer = new TileLayer({
         source: wmsSource,
-        properties: { 'title': layerTitle } 
+        properties: { 'title': layerTitle }
     });
 
     const mapLayerId = `geoserver-wms-${layerName.replace(/[^a-zA-Z0-9]/g, '_')}-${Date.now()}`;
@@ -149,11 +149,11 @@ export function useGeoServerLayers({ mapRef, isMapReady, addLayer, onLayerStateU
       isGeoServerLayer: true,
       originType: 'wms',
     });
-    onLayerStateUpdate(layerName, true, 'wms'); 
+    onLayerStateUpdate(layerName, true, 'wms');
     toast({ description: `Capa WMS "${layerTitle || layerName}" añadida al mapa.` });
-  }, [geoServerUrlInput, addLayer, mapRef, isMapReady, onLayerStateUpdate]);
+  }, [geoServerUrlInput, addLayer, mapRef, isMapReady, onLayerStateUpdate, toast]);
 
-  const handleAddGeoServerLayerAsWFS = useCallback(async (layerName: string, layerTitle: string) => {
+  const handleAddGeoServerLayerAsWFS = useCallback(async (layerName: string, layerTitle: string): Promise<void> => {
     if (!isMapReady || !mapRef.current || !geoServerUrlInput.trim()) {
       toast({ description: "El mapa o la URL de GeoServer no están disponibles.", variant: "destructive" });
       return;
@@ -179,7 +179,7 @@ export function useGeoServerLayers({ mapRef, isMapReady, addLayer, onLayerStateU
     } else if (!wfsServiceUrl.toLowerCase().endsWith('/wfs')) {
         wfsServiceUrl = `${wfsServiceUrl}/wfs`;
     }
-    
+
     if (geoServerUrlInput.toLowerCase().includes('/wfs') && workspace && geoServerUrlInput.toLowerCase().includes(`/${workspace}/`)){
         wfsServiceUrl = geoServerUrlInput.endsWith('/wfs') ? geoServerUrlInput : `${geoServerUrlInput}/wfs`;
     }
@@ -199,54 +199,66 @@ export function useGeoServerLayers({ mapRef, isMapReady, addLayer, onLayerStateU
     try {
       const response = await fetch(proxyApiUrl);
       const contentType = response.headers.get('content-type');
+      const responseBodyText = await response.text();
 
       if (!response.ok || (contentType && !contentType.toLowerCase().includes('application/json'))) {
-        const errorText = await response.text();
         let errorMessage = `Error ${response.status} al obtener capa WFS.`;
-        
-        console.error(
+
+        console.error( // This is the console.error the user's log points to
             "WFS GetFeature error from proxy/GeoServer. Status:", response.status,
             "StatusText:", response.statusText,
             "ContentType:", contentType,
-            "Body snippet:", errorText.substring(0, 200)
+            "Body snippet:", responseBodyText.substring(0, 200)
         );
 
-        if (contentType?.toLowerCase().includes('xml') || errorText.trim().startsWith('<')) { 
+        if (contentType?.toLowerCase().includes('xml') || responseBodyText.trim().startsWith('<')) {
             try {
                 const parser = new DOMParser();
-                const xmlDoc = parser.parseFromString(errorText, "text/xml");
-                const exceptionNode = xmlDoc.querySelector("ServiceException, ExceptionText, ows\\:ExceptionText, ServiceExceptionReport ServiceException");
-                const exceptionContent = exceptionNode?.textContent;
-                if (exceptionContent) errorMessage += ` Detalles: ${exceptionContent.trim()}`;
-                else errorMessage += ` Detalles: ${errorText.substring(0,200)}${errorText.length > 200 ? '...' : '' } (Respuesta XML no estándar)`;
-            } catch (e) {
-                 errorMessage += ` Detalles (error al parsear XML): ${errorText.substring(0, 200)}${errorText.length > 200 ? '...' : ''}`;
+                const xmlDoc = parser.parseFromString(responseBodyText, "text/xml");
+                const parserErrorNode = xmlDoc.querySelector("parsererror");
+                if (parserErrorNode) {
+                    console.warn("XML parsing error by DOMParser:", parserErrorNode.textContent); // Changed to warn
+                    errorMessage += ` (Error al interpretar XML de respuesta: ${parserErrorNode.textContent?.substring(0,100) || 'Error de parseo'})`;
+                } else {
+                    const exceptionNode = xmlDoc.querySelector("ServiceException, ExceptionText, ows\\:ExceptionText, ServiceExceptionReport ServiceException, ows\\:Exception");
+                    const exceptionContent = exceptionNode?.textContent;
+                    if (exceptionContent) {
+                        errorMessage += ` Detalles: ${exceptionContent.trim()}`;
+                    } else {
+                        errorMessage += ` (Respuesta XML no estándar o sin mensaje de error claro: ${responseBodyText.substring(0,100)}${responseBodyText.length > 100 ? '...' : ''})`;
+                    }
+                }
+            } catch (e: any) {
+                 console.warn("Error during manual XML parsing attempt:", e); // Changed to warn
+                 errorMessage += ` (Error crítico al procesar XML de respuesta: ${e.message})`;
             }
-        } else if (contentType?.toLowerCase().includes('json')) { 
+        } else if (contentType?.toLowerCase().includes('json')) {
             try {
-                const errorJson = JSON.parse(errorText);
+                const errorJson = JSON.parse(responseBodyText);
                 if (errorJson.error?.message) errorMessage += ` Detalles: ${errorJson.error.message}`;
                 else if (errorJson.error) errorMessage += ` Detalles: ${errorJson.error}`;
                 else if (errorJson.message) errorMessage += ` Detalles: ${errorJson.message}`;
-                else errorMessage += ` Detalles: ${errorText.substring(0, 200)}${errorText.length > 200 ? '...' : ''}`;
-            } catch { 
-                errorMessage += ` Detalles (error al parsear JSON): ${errorText.substring(0, 200)}${errorText.length > 200 ? '...' : ''}`;
+                else errorMessage += ` Detalles: ${responseBodyText.substring(0, 200)}${responseBodyText.length > 200 ? '...' : ''}`;
+            } catch {
+                errorMessage += ` Detalles (error al parsear JSON): ${responseBodyText.substring(0, 200)}${responseBodyText.length > 200 ? '...' : ''}`;
             }
         } else {
-             errorMessage += ` Respuesta inesperada del servidor: ${errorText.substring(0, 200)}${errorText.length > 200 ? '...' : ''}`;
+             errorMessage += ` Respuesta inesperada del servidor: ${responseBodyText.substring(0, 200)}${responseBodyText.length > 200 ? '...' : ''}`;
         }
-        
+
         toast({ description: errorMessage, variant: "destructive" });
-        return; 
+        return; // Crucial: exit here after toasting the error.
       }
 
-      const geojsonData = await response.json() as GeoJSON.FeatureCollection;
+      // This part is reached if response.ok is true AND contentType is application/json
+      // The responseBodyText has already been read.
+      const geojsonData = JSON.parse(responseBodyText) as GeoJSON.FeatureCollection;
 
       if (!geojsonData || !geojsonData.features || geojsonData.features.length === 0) {
         toast({ description: `La capa WFS "${layerTitle || layerName}" no contiene entidades o está vacía.` });
         return;
       }
-      
+
       if (geojsonData.features.length > 1000) {
            toast({ description: `Cargando ${geojsonData.features.length} entidades WFS. Esto podría tomar un momento...` });
       }
@@ -263,7 +275,7 @@ export function useGeoServerLayers({ mapRef, isMapReady, addLayer, onLayerStateU
 
       const vectorSource = new VectorSource({ features: olFeatures });
       const vectorLayer = new VectorLayer({ source: vectorSource });
-      
+
       const mapLayerId = `geoserver-wfs-${layerName.replace(/[^a-zA-Z0-9]/g, '_')}-${Date.now()}`;
       addLayer({
         id: mapLayerId,
@@ -276,11 +288,14 @@ export function useGeoServerLayers({ mapRef, isMapReady, addLayer, onLayerStateU
       onLayerStateUpdate(layerName, true, 'wfs');
       toast({ description: `Capa WFS "${layerTitle || layerName}" (${olFeatures.length} entidades) añadida.` });
 
-    } catch (error: any) {
+    } catch (error: any) { // This outer catch handles JSON.parse errors or other unexpected issues.
       console.error("Error cargando capa WFS (inesperado):", error);
       toast({ description: error.message || `Error desconocido al cargar capa WFS.`, variant: "destructive" });
+      // An error caught here will mean the promise from handleAddGeoServerLayerAsWFS rejects.
+      // This is why the onClick handler in GeoServerLayerList needs its own try/catch.
+      throw error; // Re-throw to be caught by the calling event handler's try/catch
     }
-  }, [geoServerUrlInput, addLayer, mapRef, isMapReady, onLayerStateUpdate]);
+  }, [geoServerUrlInput, addLayer, mapRef, isMapReady, onLayerStateUpdate, toast]);
 
 
   return {
