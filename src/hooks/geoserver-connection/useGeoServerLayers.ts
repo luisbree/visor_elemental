@@ -186,22 +186,18 @@ export function useGeoServerLayers({ mapRef, isMapReady, addLayer, onLayerStateU
     if (geoserverBaseUrl.toLowerCase().endsWith('/web')) geoserverBaseUrl = geoserverBaseUrl.substring(0, geoserverBaseUrl.length - '/web'.length);
     else if (geoserverBaseUrl.toLowerCase().endsWith('/web/')) geoserverBaseUrl = geoserverBaseUrl.substring(0, geoserverBaseUrl.length - '/web/'.length);
 
-    // Construct WFS GetFeature URL
-    // Example: https://urbasig.gob.gba.gob.ar/geoserver/urbasig/wfs
-    // layerName is typically 'workspace:layername'
     const workspace = layerName.includes(':') ? layerName.split(':')[0] : undefined;
     let wfsServiceUrl = `${geoserverBaseUrl}`;
-    if (workspace && !wfsServiceUrl.endsWith(`/${workspace}`)) { // If workspace not in base url
+    if (workspace && !wfsServiceUrl.endsWith(`/${workspace}`) && !wfsServiceUrl.includes(`/${workspace}/`)) {
         if (wfsServiceUrl.endsWith('/geoserver')) {
              wfsServiceUrl = `${wfsServiceUrl}/${workspace}/wfs`;
         } else {
-             wfsServiceUrl = `${wfsServiceUrl}/geoserver/${workspace}/wfs`; // Default to adding /geoserver/workspace/wfs
+             wfsServiceUrl = `${wfsServiceUrl}/geoserver/${workspace}/wfs`;
         }
-    } else if (!wfsServiceUrl.endsWith('/wfs')) { // If workspace was in base or no workspace in layerName
+    } else if (!wfsServiceUrl.toLowerCase().endsWith('/wfs')) {
         wfsServiceUrl = `${wfsServiceUrl}/wfs`;
     }
     
-    // Use provided URL directly if it seems to be a full WFS endpoint containing the workspace already
     if (geoServerUrlInput.toLowerCase().includes('/wfs') && workspace && geoServerUrlInput.toLowerCase().includes(`/${workspace}/`)){
         wfsServiceUrl = geoServerUrlInput.endsWith('/wfs') ? geoServerUrlInput : `${geoServerUrlInput}/wfs`;
     }
@@ -209,34 +205,47 @@ export function useGeoServerLayers({ mapRef, isMapReady, addLayer, onLayerStateU
 
     const params = new URLSearchParams({
       service: 'WFS',
-      version: '1.1.0', // Using 1.1.0 for broader GeoJSON support
+      version: '1.1.0',
       request: 'GetFeature',
       typeName: layerName,
-      outputFormat: 'application/json', // Request GeoJSON
-      srsName: 'EPSG:4326' // Request data in standard geographic coordinates
+      outputFormat: 'application/json',
+      srsName: 'EPSG:4326'
     });
     const getFeatureUrl = `${wfsServiceUrl}?${params.toString()}`;
     const proxyApiUrl = `/api/geoserver-proxy?url=${encodeURIComponent(getFeatureUrl)}`;
 
     try {
       const response = await fetch(proxyApiUrl);
-      if (!response.ok) {
+      const contentType = response.headers.get('content-type');
+
+      if (!response.ok || (contentType && !contentType.toLowerCase().includes('application/json'))) {
         const errorText = await response.text();
-        console.error("WFS GetFeature error from proxy:", errorText, response.status, response.statusText);
-        const contentType = response.headers.get('content-type');
+        console.error("WFS GetFeature error from proxy:", errorText, {status: response.status, statusText: response.statusText, contentType});
+        
         let errorMessage = `Error ${response.status} al obtener capa WFS.`;
-        if (contentType?.includes('xml') || contentType?.includes('html')) { // GeoServer often returns XML errors
-            const parser = new DOMParser();
-            const xmlDoc = parser.parseFromString(errorText, "text/xml");
-            const exceptionText = xmlDoc.querySelector("ServiceException, ExceptionText, ows\\:ExceptionText")?.textContent;
-            if (exceptionText) errorMessage += ` Detalles: ${exceptionText.trim()}`;
-        } else if (contentType?.includes('json')) {
+        if (contentType?.toLowerCase().includes('xml') || errorText.trim().startsWith('<')) { 
+            try {
+                const parser = new DOMParser();
+                const xmlDoc = parser.parseFromString(errorText, "text/xml");
+                const exceptionNode = xmlDoc.querySelector("ServiceException, ExceptionText, ows\\:ExceptionText, ServiceExceptionReport ServiceException");
+                const exceptionContent = exceptionNode?.textContent;
+                if (exceptionContent) errorMessage += ` Detalles: ${exceptionContent.trim()}`;
+                else errorMessage += ` Detalles: ${errorText.substring(0,200)}${errorText.length > 200 ? '...' : '' } (Respuesta XML no estándar)`;
+            } catch (e) {
+                 errorMessage += ` Detalles (error al parsear XML): ${errorText.substring(0, 200)}${errorText.length > 200 ? '...' : ''}`;
+            }
+        } else if (contentType?.toLowerCase().includes('json')) { // Should be an error JSON
             try {
                 const errorJson = JSON.parse(errorText);
                 if (errorJson.error?.message) errorMessage += ` Detalles: ${errorJson.error.message}`;
                 else if (errorJson.error) errorMessage += ` Detalles: ${errorJson.error}`;
                 else if (errorJson.message) errorMessage += ` Detalles: ${errorJson.message}`;
-            } catch { /* ignore json parse error */ }
+                else errorMessage += ` Detalles: ${errorText.substring(0, 200)}${errorText.length > 200 ? '...' : ''}`;
+            } catch { 
+                errorMessage += ` Detalles (error al parsear JSON): ${errorText.substring(0, 200)}${errorText.length > 200 ? '...' : ''}`;
+            }
+        } else {
+             errorMessage += ` Respuesta inesperada del servidor: ${errorText.substring(0, 200)}${errorText.length > 200 ? '...' : ''}`;
         }
         throw new Error(errorMessage);
       }
@@ -250,15 +259,15 @@ export function useGeoServerLayers({ mapRef, isMapReady, addLayer, onLayerStateU
         return;
       }
       
-      setTimeout(() => { // Toast about potential large data before processing
-        if (geojsonData.features.length > 1000) { // Arbitrary threshold
+      setTimeout(() => {
+        if (geojsonData.features.length > 1000) {
              toast({ description: `Cargando ${geojsonData.features.length} entidades WFS. Esto podría tomar un momento...` });
         }
       },0);
 
       const olFeatures = new GeoJSONFormat().readFeatures(geojsonData, {
-        dataProjection: 'EPSG:4326', // Data from WFS is in EPSG:4326
-        featureProjection: 'EPSG:3857', // Project to map's projection
+        dataProjection: 'EPSG:4326',
+        featureProjection: 'EPSG:3857',
       });
 
       if (!olFeatures || olFeatures.length === 0) {
@@ -300,3 +309,5 @@ export function useGeoServerLayers({ mapRef, isMapReady, addLayer, onLayerStateU
     handleAddGeoServerLayerAsWFS, // WFS
   };
 }
+
+    
