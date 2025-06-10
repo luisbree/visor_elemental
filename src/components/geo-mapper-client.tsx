@@ -101,28 +101,32 @@ export default function GeoMapperClient() {
     setActiveBaseLayerId(newBaseLayerId);
   }, []);
 
-  const { activeDrawTool, toggleDrawingTool, stopDrawingTool, clearDrawnFeatures, saveDrawnFeaturesAsKML } = useDrawingInteractions({
-    mapRef, isMapReady, drawingSourceRef,
-    // Pass toggleInspectMode from the single featureInspectionHook instance
-    isInspectModeActive: false, // Placeholder, will be replaced by featureInspectionHook.isInspectModeActive
-    toggleInspectMode: () => {}, // Placeholder, will be replaced
-  });
-
   const featureInspectionHook = useFeatureInspection({
-    mapRef, mapElementRef, isMapReady, layers: [], // 'layers' will be updated by useLayerManager
-    drawingSourceRef, drawingLayerRef, activeDrawTool, stopDrawingTool,
+    mapRef, mapElementRef, isMapReady, drawingSourceRef, drawingLayerRef,
+    activeDrawTool: null, // Will be updated by drawingInteractions.activeDrawTool
+    stopDrawingTool: () => {}, // Will be updated by drawingInteractions.stopDrawingTool
   });
 
+  const [geoServerDiscoveredLayers, setGeoServerDiscoveredLayers] = useState<GeoServerDiscoveredLayer[]>([]);
 
   const {
     layers, addLayer, removeLayer, toggleLayerVisibility, zoomToLayerExtent, handleShowLayerTable,
-  } = useLayerManager({ mapRef, isMapReady, drawingLayerRef, onShowTableRequest: featureInspectionHook.processAndDisplayFeatures,
-    updateGeoServerDiscoveredLayerState: (layerName, added) => {
-        setGeoServerDiscoveredLayers(prev => prev.map(l => l.name === layerName ? { ...l, addedToMap: added } : l));
+  } = useLayerManager({ 
+    mapRef, 
+    isMapReady, 
+    drawingLayerRef, 
+    onShowTableRequest: featureInspectionHook.processAndDisplayFeatures,
+    updateGeoServerDiscoveredLayerState: (layerName, added, type) => {
+        setGeoServerDiscoveredLayers(prev => prev.map(l => {
+            if (l.name === layerName) {
+                if (type === 'wms') return { ...l, wmsAddedToMap: added };
+                if (type === 'wfs') return { ...l, wfsAddedToMap: added };
+            }
+            return l;
+        }));
     }
   });
   
-  // Re-initialize drawingInteractions with the correct toggleInspectMode
   const drawingInteractions = useDrawingInteractions({
     mapRef, isMapReady, drawingSourceRef,
     isInspectModeActive: featureInspectionHook.isInspectModeActive,
@@ -135,13 +139,21 @@ export default function GeoMapperClient() {
     downloadFormat, setDownloadFormat, isDownloading, handleDownloadOSMLayers,
   } = useOSMData({ drawingSourceRef, addLayer, osmCategoryConfigs: osmCategoryConfig });
 
-  const [geoServerDiscoveredLayers, setGeoServerDiscoveredLayers] = useState<GeoServerDiscoveredLayer[]>([]);
   const {
     geoServerUrlInput, setGeoServerUrlInput, isLoadingGeoServerLayers,
-    handleFetchGeoServerLayers, handleAddGeoServerLayerToMap,
-  } = useGeoServerLayers({ mapRef, isMapReady, addLayer,
-      onLayerStateUpdate: (layerName, added) => {
-        setGeoServerDiscoveredLayers(prev => prev.map(l => l.name === layerName ? { ...l, addedToMap: added } : l));
+    handleFetchGeoServerLayers, handleAddGeoServerLayerToMap, handleAddGeoServerLayerAsWFS
+  } = useGeoServerLayers({ 
+      mapRef, 
+      isMapReady, 
+      addLayer,
+      onLayerStateUpdate: (layerName, added, type) => { // Ensure this matches new signature
+        setGeoServerDiscoveredLayers(prev => prev.map(l => {
+            if (l.name === layerName) {
+                if (type === 'wms') return { ...l, wmsAddedToMap: added };
+                if (type === 'wfs') return { ...l, wfsAddedToMap: added };
+            }
+            return l;
+        }));
       }
   });
 
@@ -195,10 +207,15 @@ export default function GeoMapperClient() {
     }
   }, [mapRef, toast]);
 
-  // Update layers prop for featureInspectionHook when layers change
   useEffect(() => {
     featureInspectionHook.updateLayers(layers);
   }, [layers, featureInspectionHook]);
+
+  // Update featureInspectionHook with correct drawing tool state
+   useEffect(() => {
+    featureInspectionHook.activeDrawTool = drawingInteractions.activeDrawTool;
+    featureInspectionHook.stopDrawingTool = drawingInteractions.stopDrawingTool;
+  }, [drawingInteractions.activeDrawTool, drawingInteractions.stopDrawingTool, featureInspectionHook ]);
 
 
   return (
@@ -211,7 +228,6 @@ export default function GeoMapperClient() {
         <MapView
           setMapInstanceAndElement={setMapInstanceAndElement}
           activeBaseLayerId={activeBaseLayerId}
-          // onMapClick is removed; useFeatureInspection handles its own click listener
         />
 
         <FeatureAttributesPanel
@@ -286,6 +302,7 @@ export default function GeoMapperClient() {
           setGeoServerDiscoveredLayers={setGeoServerDiscoveredLayers}
           isLoadingGeoServerLayers={isLoadingGeoServerLayers}
           onAddGeoServerLayerToMap={handleAddGeoServerLayerToMap}
+          onAddGeoServerLayerAsWFS={handleAddGeoServerLayerAsWFS} // Pass new function
         />
       </div>
     </div>

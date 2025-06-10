@@ -16,7 +16,7 @@ interface UseLayerManagerProps {
   isMapReady: boolean;
   drawingLayerRef: React.RefObject<VectorLayer<VectorSourceType<OLFeature<any>>> | null>;
   onShowTableRequest: (features: OLFeature<any>[], layerName?: string) => void;
-  updateGeoServerDiscoveredLayerState?: (layerName: string, added: boolean) => void;
+  updateGeoServerDiscoveredLayerState?: (layerName: string, added: boolean, type: 'wms' | 'wfs') => void;
 }
 
 export function useLayerManager({ mapRef, isMapReady, drawingLayerRef, onShowTableRequest, updateGeoServerDiscoveredLayerState }: UseLayerManagerProps) {
@@ -29,39 +29,61 @@ export function useLayerManager({ mapRef, isMapReady, drawingLayerRef, onShowTab
         alreadyExists = true;
         return prevLayers;
       }
+      // Ensure new layers are added on top (higher zIndex)
+      const maxZIndex = prevLayers.reduce((max, l) => Math.max(max, l.olLayer.getZIndex() || 0), 0);
+      newLayer.olLayer.setZIndex(maxZIndex + 1);
       return [...prevLayers, newLayer];
     });
 
     if (alreadyExists) {
       setTimeout(() => {
-        toast(`La capa "${newLayer.name}" ya está en el mapa.`);
+        toast({ description: `La capa "${newLayer.name}" ya está en el mapa.` });
       }, 0);
     }
   }, [toast]);
 
   const removeLayer = useCallback((layerId: string) => {
     let layerNameForToast: string | undefined;
+    let layerToRemove: MapLayer | undefined;
 
     setLayers(prevLayers =>
       prevLayers.filter(layer => {
         if (layer.id === layerId) {
+          layerToRemove = layer;
           layerNameForToast = layer.name;
           if (mapRef.current && layer.olLayer) {
             mapRef.current.removeLayer(layer.olLayer);
-          }
-          if (layer.isGeoServerLayer && updateGeoServerDiscoveredLayerState) {
-            const originalLayerName = layer.olLayer.getSource()?.getParams().LAYERS || layer.name;
-            updateGeoServerDiscoveredLayerState(originalLayerName, false);
           }
           return false;
         }
         return true;
       })
     );
+    
+    if (layerToRemove && layerToRemove.isGeoServerLayer && layerToRemove.originType && updateGeoServerDiscoveredLayerState) {
+        // For GeoServer layers, the 'name' property in GeoServerDiscoveredLayer might not have (WMS) or (WFS) suffix
+        // and it's the 'raw' layer name from GetCapabilities.
+        // We need to get this raw name. The TileWMS source stores it in params.LAYERS.
+        // For WFS layers, we'll need to derive it or ensure it's stored appropriately.
+        let originalLayerName = layerToRemove.name.replace(/\s\((WMS|WFS)\)$/, ''); // Attempt to strip suffix
+        if (layerToRemove.originType === 'wms' && layerToRemove.olLayer.getSource() instanceof TileWMS) {
+             originalLayerName = (layerToRemove.olLayer.getSource() as TileWMS).getParams().LAYERS;
+        } else if (layerToRemove.originType === 'wfs' && layerToRemove.olLayer.get('originalGeoServerName')) {
+            // Assume we store originalGeoServerName when creating WFS MapLayer if different from display name
+            originalLayerName = layerToRemove.olLayer.get('originalGeoServerName');
+        }
+         // If originalLayerName is still suffixed, strip it. This is brittle. Better to store it.
+        if (originalLayerName.includes(' (WMS)') || originalLayerName.includes(' (WFS)')) {
+            originalLayerName = originalLayerName.substring(0, originalLayerName.lastIndexOf(' ('));
+        }
+
+        updateGeoServerDiscoveredLayerState(originalLayerName, false, layerToRemove.originType as ('wms' | 'wfs'));
+    }
+
 
     if (layerNameForToast) {
       setTimeout(() => {
-        toast(`Capa "${layerNameForToast}" eliminada del mapa.`);
+        toast({ description: `Capa "${layerNameForToast}" eliminada del mapa.` });
       }, 0);
     }
   }, [mapRef, updateGeoServerDiscoveredLayerState, toast]);
@@ -92,25 +114,25 @@ export function useLayerManager({ mapRef, isMapReady, drawingLayerRef, onShowTab
           if (extent && extent.every(isFinite) && (extent[2] - extent[0] > 0.000001 || extent[2] === extent[0]) && (extent[3] - extent[1] > 0.000001 || extent[3] === extent[1])) {
             mapRef.current.getView().fit(extent, { padding: [50, 50, 50, 50], duration: 1000, maxZoom: 18 });
             setTimeout(() => {
-              toast(`Mostrando extensión de ${layer.name}.`);
+              toast({ description: `Mostrando extensión de ${layer.name}.` });
             }, 0);
           } else {
             setTimeout(() => {
-              toast(`Capa "${layer.name}" podría estar vacía o tener una extensión inválida.`);
+              toast({ description: `Capa "${layer.name}" podría estar vacía o tener una extensión inválida.` });
             }, 0);
           }
         } else {
           setTimeout(() => {
-            toast(`Capa "${layer.name}" no contiene entidades.`);
+            toast({ description: `Capa "${layer.name}" no contiene entidades.` });
           }, 0);
         }
       } else if (layer.olLayer instanceof TileLayer && layer.olLayer.getSource() instanceof TileWMS) {
         setTimeout(() => {
-          toast(`Zoom a extensión no implementado para capa WMS "${layer.name}".`);
+          toast({ description: `Zoom a extensión no implementado para capa WMS "${layer.name}".` });
         }, 0);
       } else {
          setTimeout(() => {
-           toast(`Capa "${layer.name}" no es una capa vectorial con entidades para hacer zoom.`);
+           toast({ description: `Capa "${layer.name}" no es una capa vectorial con entidades para hacer zoom.` });
          }, 0);
       }
     }
@@ -120,7 +142,7 @@ export function useLayerManager({ mapRef, isMapReady, drawingLayerRef, onShowTab
     const layerToShow = layers.find(l => l.id === layerId);
     if (!layerToShow || !layerToShow.olLayer) {
       setTimeout(() => {
-        toast("Error: Capa no encontrada o inválida.");
+        toast({ description: "Error: Capa no encontrada o inválida." });
       }, 0);
       return;
     }
@@ -128,21 +150,21 @@ export function useLayerManager({ mapRef, isMapReady, drawingLayerRef, onShowTab
         const source = layerToShow.olLayer.getSource();
         if (!source) {
           setTimeout(() => {
-            toast(`La capa "${layerToShow.name}" no tiene fuente de datos.`);
+            toast({ description: `La capa "${layerToShow.name}" no tiene fuente de datos.` });
           }, 0);
           return;
         }
         const features = source.getFeatures();
         if (features.length === 0) {
           setTimeout(() => {
-            toast(`La capa "${layerToShow.name}" no contiene entidades.`);
+            toast({ description: `La capa "${layerToShow.name}" no contiene entidades.` });
           }, 0);
           return;
         }
         onShowTableRequest(features, layerToShow.name);
     } else {
       setTimeout(() => {
-        toast(`La capa "${layerToShow.name}" no es una capa vectorial. La visualización de tabla solo está disponible para capas vectoriales.`);
+        toast({ description: `La capa "${layerToShow.name}" no es una capa vectorial. La visualización de tabla solo está disponible para capas vectoriales.` });
       }, 0);
     }
   }, [layers, onShowTableRequest, toast]);
@@ -161,12 +183,15 @@ export function useLayerManager({ mapRef, isMapReady, drawingLayerRef, onShowTab
         }
     });
 
-    layers.forEach((appLayer, index) => {
+    // Sort layers by their original add order to maintain somewhat consistent z-indexing on updates
+    // Or, if MapLayer objects get a zIndex property, sort by that.
+    // For now, OpenLayers adds them in order, and we set explicit z-index in addLayer.
+    layers.forEach((appLayer) => {
       if (!currentMap.getLayers().getArray().includes(appLayer.olLayer)) {
-        currentMap.addLayer(appLayer.olLayer);
+        currentMap.addLayer(appLayer.olLayer); // zIndex should be set on appLayer.olLayer already
       }
       appLayer.olLayer.setVisible(appLayer.visible);
-      appLayer.olLayer.setZIndex(index); 
+      // zIndex is managed when layer is added
     });
 
   }, [layers, isMapReady, mapRef, drawingLayerRef]);

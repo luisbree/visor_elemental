@@ -12,12 +12,14 @@ export interface MapLayer {
   olLayer: VectorLayerType<VectorSourceType<OLFeature<any>>> | TileLayer<TileWMS>;
   visible: boolean;
   isGeoServerLayer?: boolean;
+  originType?: 'wms' | 'wfs' | 'file'; // Added to distinguish layer origin
 }
 
 export interface GeoServerDiscoveredLayer {
   name: string;
   title: string;
-  addedToMap: boolean;
+  wmsAddedToMap: boolean; // Changed from addedToMap
+  wfsAddedToMap: boolean; // New property
 }
 
 export interface OSMCategoryConfig {
@@ -33,9 +35,6 @@ export interface BaseLayerOptionForSelect {
   id: string;
   name: string;
 }
-
-// GeoServerDiscoveredLayerForControls can be the same as GeoServerDiscoveredLayer
-// export type GeoServerDiscoveredLayerForControls = GeoServerDiscoveredLayer;
 
 export interface PanelRenderConfig {
   baseLayers?: boolean;

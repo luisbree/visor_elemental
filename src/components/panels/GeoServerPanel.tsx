@@ -24,11 +24,12 @@ interface GeoServerPanelProps {
 
   geoServerUrlInput: string;
   onGeoServerUrlChange: (url: string) => void;
-  onFetchGeoServerLayers: () => Promise<GeoServerDiscoveredLayer[]>; // Modified to return discovered layers
-  geoServerDiscoveredLayers: GeoServerDiscoveredLayer[]; // Managed by parent
-  setGeoServerDiscoveredLayers: React.Dispatch<React.SetStateAction<GeoServerDiscoveredLayer[]>>; // Managed by parent
+  onFetchGeoServerLayers: () => Promise<GeoServerDiscoveredLayer[]>;
+  geoServerDiscoveredLayers: GeoServerDiscoveredLayer[];
+  setGeoServerDiscoveredLayers: React.Dispatch<React.SetStateAction<GeoServerDiscoveredLayer[]>>;
   isLoadingGeoServerLayers: boolean;
-  onAddGeoServerLayerToMap: (layerName: string, layerTitle: string) => void;
+  onAddGeoServerLayerToMap: (layerName: string, layerTitle: string) => void; // WMS
+  onAddGeoServerLayerAsWFS: (layerName: string, layerTitle: string) => void; // WFS
 }
 
 
@@ -46,13 +47,13 @@ const SectionHeader: React.FC<{ title: string; description?: string; icon: React
 const GeoServerPanel: React.FC<GeoServerPanelProps> = ({
   panelRef, position, isCollapsed, onToggleCollapse, onMouseDownHeader,
   geoServerUrlInput, onGeoServerUrlChange, onFetchGeoServerLayers, 
-  geoServerDiscoveredLayers, setGeoServerDiscoveredLayers, // Receive state and setter
-  isLoadingGeoServerLayers, onAddGeoServerLayerToMap
+  geoServerDiscoveredLayers, setGeoServerDiscoveredLayers, 
+  isLoadingGeoServerLayers, onAddGeoServerLayerToMap, onAddGeoServerLayerAsWFS
 }) => {
 
   const handleFetch = async () => {
     const discovered = await onFetchGeoServerLayers();
-    setGeoServerDiscoveredLayers(discovered); // Update parent's state
+    setGeoServerDiscoveredLayers(discovered);
   };
   
   const [openAccordionItems, setOpenAccordionItems] = React.useState<string[]>(['geoserver-connection-section']);
@@ -74,7 +75,7 @@ const GeoServerPanel: React.FC<GeoServerPanelProps> = ({
           type="single" 
           collapsible 
           defaultValue="geoserver-connection-section"
-          value={openAccordionItems[0]} // Assuming single item for this panel's accordion
+          value={openAccordionItems[0]} 
           onValueChange={(value) => setOpenAccordionItems(value ? [value] : [])}
           className="w-full space-y-1"
         >
@@ -82,7 +83,7 @@ const GeoServerPanel: React.FC<GeoServerPanelProps> = ({
             <AccordionTrigger className="p-3 hover:no-underline hover:bg-white/10 rounded-t-md data-[state=open]:rounded-b-none">
                <SectionHeader 
                   title="GeoServer"
-                  description="Conectar y cargar capas WMS."
+                  description="Conectar y cargar capas WMS/WFS."
                   icon={ServerIcon} 
                 />
             </AccordionTrigger>
@@ -97,8 +98,9 @@ const GeoServerPanel: React.FC<GeoServerPanelProps> = ({
                 <>
                     <Separator className="my-2 bg-white/20" />
                     <GeoServerLayerList
-                    geoServerDiscoveredLayers={geoServerDiscoveredLayers}
-                    onAddGeoServerLayerToMap={onAddGeoServerLayerToMap}
+                      geoServerDiscoveredLayers={geoServerDiscoveredLayers}
+                      onAddGeoServerLayerToMap={onAddGeoServerLayerToMap}
+                      onAddGeoServerLayerAsWFS={onAddGeoServerLayerAsWFS}
                     />
                 </>
                 )}
