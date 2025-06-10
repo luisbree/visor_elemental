@@ -199,17 +199,13 @@ export function useGeoServerLayers({ mapRef, isMapReady, addLayer, onLayerStateU
     try {
       const response = await fetch(proxyApiUrl);
       const contentType = response.headers.get('content-type');
-      const responseBodyText = await response.text();
+      const responseBodyText = await response.text(); // Read body once for all processing
 
       if (!response.ok || (contentType && !contentType.toLowerCase().includes('application/json'))) {
         let errorMessage = `Error ${response.status} al obtener capa WFS.`;
-
-        console.error( // This is the console.error the user's log points to
-            "WFS GetFeature error from proxy/GeoServer. Status:", response.status,
-            "StatusText:", response.statusText,
-            "ContentType:", contentType,
-            "Body snippet:", responseBodyText.substring(0, 200)
-        );
+        
+        // Removed the specific console.error that was causing the Next.js overlay trigger.
+        // The error details will be extracted and shown in the toast.
 
         if (contentType?.toLowerCase().includes('xml') || responseBodyText.trim().startsWith('<')) {
             try {
@@ -217,7 +213,7 @@ export function useGeoServerLayers({ mapRef, isMapReady, addLayer, onLayerStateU
                 const xmlDoc = parser.parseFromString(responseBodyText, "text/xml");
                 const parserErrorNode = xmlDoc.querySelector("parsererror");
                 if (parserErrorNode) {
-                    console.warn("XML parsing error by DOMParser:", parserErrorNode.textContent); // Changed to warn
+                    console.warn("XML parsing error by DOMParser:", parserErrorNode.textContent); 
                     errorMessage += ` (Error al interpretar XML de respuesta: ${parserErrorNode.textContent?.substring(0,100) || 'Error de parseo'})`;
                 } else {
                     const exceptionNode = xmlDoc.querySelector("ServiceException, ExceptionText, ows\\:ExceptionText, ServiceExceptionReport ServiceException, ows\\:Exception");
@@ -229,10 +225,10 @@ export function useGeoServerLayers({ mapRef, isMapReady, addLayer, onLayerStateU
                     }
                 }
             } catch (e: any) {
-                 console.warn("Error during manual XML parsing attempt:", e); // Changed to warn
+                 console.warn("Error during manual XML parsing attempt:", e); 
                  errorMessage += ` (Error crítico al procesar XML de respuesta: ${e.message})`;
             }
-        } else if (contentType?.toLowerCase().includes('json')) {
+        } else if (contentType?.toLowerCase().includes('json')) { // Should not happen if !response.ok and is JSON, but good fallback
             try {
                 const errorJson = JSON.parse(responseBodyText);
                 if (errorJson.error?.message) errorMessage += ` Detalles: ${errorJson.error.message}`;
@@ -247,11 +243,9 @@ export function useGeoServerLayers({ mapRef, isMapReady, addLayer, onLayerStateU
         }
 
         toast({ description: errorMessage, variant: "destructive" });
-        return; // Crucial: exit here after toasting the error.
+        return; 
       }
 
-      // This part is reached if response.ok is true AND contentType is application/json
-      // The responseBodyText has already been read.
       const geojsonData = JSON.parse(responseBodyText) as GeoJSON.FeatureCollection;
 
       if (!geojsonData || !geojsonData.features || geojsonData.features.length === 0) {
@@ -274,7 +268,7 @@ export function useGeoServerLayers({ mapRef, isMapReady, addLayer, onLayerStateU
       }
 
       const vectorSource = new VectorSource({ features: olFeatures });
-      const vectorLayer = new VectorLayer({ source: vectorSource });
+      const vectorLayer = new VectorLayer({ source: vectorSource, properties: { 'originalGeoServerName': layerName } });
 
       const mapLayerId = `geoserver-wfs-${layerName.replace(/[^a-zA-Z0-9]/g, '_')}-${Date.now()}`;
       addLayer({
@@ -288,12 +282,10 @@ export function useGeoServerLayers({ mapRef, isMapReady, addLayer, onLayerStateU
       onLayerStateUpdate(layerName, true, 'wfs');
       toast({ description: `Capa WFS "${layerTitle || layerName}" (${olFeatures.length} entidades) añadida.` });
 
-    } catch (error: any) { // This outer catch handles JSON.parse errors or other unexpected issues.
-      console.error("Error cargando capa WFS (inesperado):", error);
+    } catch (error: any) { 
+      console.warn("Error cargando capa WFS (inesperado):", error); // Changed to console.warn
       toast({ description: error.message || `Error desconocido al cargar capa WFS.`, variant: "destructive" });
-      // An error caught here will mean the promise from handleAddGeoServerLayerAsWFS rejects.
-      // This is why the onClick handler in GeoServerLayerList needs its own try/catch.
-      throw error; // Re-throw to be caught by the calling event handler's try/catch
+      // Do NOT re-throw the error here. Let the function complete.
     }
   }, [geoServerUrlInput, addLayer, mapRef, isMapReady, onLayerStateUpdate, toast]);
 
@@ -307,3 +299,6 @@ export function useGeoServerLayers({ mapRef, isMapReady, addLayer, onLayerStateU
     handleAddGeoServerLayerAsWFS, // WFS
   };
 }
+
+
+    
