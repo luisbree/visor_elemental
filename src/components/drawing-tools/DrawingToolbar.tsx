@@ -3,12 +3,12 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Square, PenLine, Dot, Ban, Eraser, Save } from 'lucide-react';
+import { Square, PenLine, Dot, Eraser, Save } from 'lucide-react'; // Ban icon removed
 
 interface DrawingToolbarProps {
   activeDrawTool: string | null;
   onToggleDrawingTool: (toolType: 'Polygon' | 'LineString' | 'Point') => void;
-  onStopDrawingTool: () => void;
+  // onStopDrawingTool prop is no longer needed by this component directly
   onClearDrawnFeatures: () => void;
   onSaveDrawnFeaturesAsKML: () => void;
 }
@@ -16,7 +16,6 @@ interface DrawingToolbarProps {
 const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
   activeDrawTool,
   onToggleDrawingTool,
-  onStopDrawingTool,
   onClearDrawnFeatures,
   onSaveDrawnFeaturesAsKML,
 }) => {
@@ -32,8 +31,8 @@ const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
           className={`${iconButtonBaseClass} ${
             activeDrawTool === 'Polygon' ? activeClass : inactiveClass
           }`}
-          title="Dibujar Polígono"
-          aria-label="Dibujar Polígono (para obtener datos OSM)"
+          title="Dibujar Polígono / Detener"
+          aria-label="Dibujar Polígono (para obtener datos OSM) o detener dibujo de polígono"
         >
           <Square className="h-4 w-4" />
         </Button>
@@ -42,8 +41,8 @@ const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
           className={`${iconButtonBaseClass} ${
             activeDrawTool === 'LineString' ? activeClass : inactiveClass
           }`}
-          title="Dibujar Línea"
-          aria-label="Dibujar Línea"
+          title="Dibujar Línea / Detener"
+          aria-label="Dibujar Línea o detener dibujo de línea"
         >
           <PenLine className="h-4 w-4" />
         </Button>
@@ -52,8 +51,8 @@ const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
           className={`${iconButtonBaseClass} ${
             activeDrawTool === 'Point' ? activeClass : inactiveClass
           }`}
-          title="Dibujar Punto"
-          aria-label="Dibujar Punto"
+          title="Dibujar Punto / Detener"
+          aria-label="Dibujar Punto o detener dibujo de punto"
         >
           <Dot className="h-4 w-4" />
         </Button>
@@ -68,18 +67,8 @@ const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
         </Button>
       </div>
 
-      {activeDrawTool && (
-        <Button 
-          onClick={onStopDrawingTool} 
-          className="text-xs h-8 px-3 border border-white/30 hover:bg-white/10 text-white/90 bg-black/20 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary"
-          aria-label="Detener Dibujo"
-        >
-          <Ban className="mr-2 h-3 w-3" /> Detener Dibujo
-        </Button>
-      )}
-      
-      <div className={`flex-grow ${activeDrawTool ? 'hidden' : ''}`}></div> {/* Spacer to push save button right when stop button is not visible */}
-
+      {/* Spacer to push save button to the right */}
+      <div className="flex-grow"></div>
 
       <Button 
         onClick={onSaveDrawnFeaturesAsKML} 
