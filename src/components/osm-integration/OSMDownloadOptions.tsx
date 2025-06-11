@@ -3,7 +3,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Loader2 } from 'lucide-react'; // MapPin, Download removed
+import { Loader2 } from 'lucide-react'; 
 import { Separator } from '@/components/ui/separator';
 import { 
   DropdownMenu, 
@@ -47,7 +47,7 @@ const OSMDownloadOptions: React.FC<OSMDownloadOptionsProps> = ({
         <Button 
             onClick={onFetchOSMDataTrigger} 
             size="sm"
-            className="flex-1 min-w-0 bg-primary/70 hover:bg-primary/90 text-primary-foreground text-xs h-8 px-2"
+            className="flex-1 min-w-0 bg-primary/70 hover:bg-primary/90 text-primary-foreground text-xs h-8 px-1"
             disabled={isFetchingOSM || isActiveDrawToolPresent}
             title="Obtener datos OSM del último polígono dibujado"
         >
@@ -59,7 +59,7 @@ const OSMDownloadOptions: React.FC<OSMDownloadOptionsProps> = ({
             <DropdownMenuTrigger asChild>
             <Button 
                 size="sm" 
-                className="flex-1 min-w-0 bg-primary hover:bg-primary/90 text-primary-foreground text-xs h-8 px-2"
+                className="flex-1 min-w-0 bg-primary hover:bg-primary/90 text-primary-foreground text-xs h-8 px-1"
                 disabled={isDownloading}
                 title="Descargar capas OSM importadas"
             >
@@ -94,4 +94,3 @@ const OSMDownloadOptions: React.FC<OSMDownloadOptionsProps> = ({
 };
 
 export default OSMDownloadOptions;
-
