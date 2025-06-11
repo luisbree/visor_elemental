@@ -27,7 +27,7 @@ interface OSMDownloadOptionsProps {
 const OSMDownloadOptions: React.FC<OSMDownloadOptionsProps> = ({
   isFetchingOSM,
   onFetchOSMDataTrigger,
-  isActiveDrawToolPresent,
+  isActiveDrawToolPresent, // This prop is no longer used for the "Obtener OSM" button's disabled state
   downloadFormat, 
   onDownloadFormatChange,
   isDownloading,
@@ -48,7 +48,7 @@ const OSMDownloadOptions: React.FC<OSMDownloadOptionsProps> = ({
             onClick={onFetchOSMDataTrigger} 
             size="sm"
             className="flex-1 min-w-0 bg-primary/70 hover:bg-primary/90 text-primary-foreground text-xs h-8 px-1"
-            disabled={isFetchingOSM || isActiveDrawToolPresent}
+            disabled={isFetchingOSM} // isActiveDrawToolPresent removed from here
             title="Obtener datos OSM del último polígono dibujado"
         >
             {isFetchingOSM && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}
@@ -94,3 +94,4 @@ const OSMDownloadOptions: React.FC<OSMDownloadOptionsProps> = ({
 };
 
 export default OSMDownloadOptions;
+
