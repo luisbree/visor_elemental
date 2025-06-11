@@ -46,22 +46,24 @@ const OSMDownloadOptions: React.FC<OSMDownloadOptionsProps> = ({
        <div className="flex items-center gap-2">
         <Button 
             onClick={onFetchOSMDataTrigger} 
+            size="sm" // Added size="sm" for smaller padding
             className="flex-1 min-w-0 bg-primary/70 hover:bg-primary/90 text-primary-foreground text-xs h-8"
             disabled={isFetchingOSM || isActiveDrawToolPresent}
             title="Obtener datos OSM del último polígono dibujado"
         >
-            {isFetchingOSM ? <Loader2 className="mr-2 h-3 w-3 animate-spin" /> : <MapPin className="mr-2 h-3 w-3" />}
+            {isFetchingOSM ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <MapPin className="mr-1 h-3 w-3" />} {/* mr-2 to mr-1 */}
             <span className="truncate">{isFetchingOSM ? 'Obteniendo...' : 'Obtener Datos OSM'}</span>
         </Button>
 
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
             <Button 
+                size="sm" // Added size="sm" for smaller padding
                 className="flex-1 min-w-0 bg-primary hover:bg-primary/90 text-primary-foreground text-xs h-8"
                 disabled={isDownloading}
                 title="Descargar capas OSM importadas"
             >
-                {isDownloading ? <Loader2 className="mr-2 h-3 w-3 animate-spin" /> : <Download className="mr-2 h-3 w-3" />}
+                {isDownloading ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Download className="mr-1 h-3 w-3" />} {/* mr-2 to mr-1 */}
                 <span className="truncate">{isDownloading ? 'Descargando...' : 'Descargar Capas OSM'}</span>
             </Button>
             </DropdownMenuTrigger>
@@ -92,3 +94,4 @@ const OSMDownloadOptions: React.FC<OSMDownloadOptionsProps> = ({
 };
 
 export default OSMDownloadOptions;
+
