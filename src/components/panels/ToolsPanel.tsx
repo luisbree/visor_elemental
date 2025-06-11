@@ -44,7 +44,7 @@ interface ToolsPanelProps {
   downloadFormat: string;
   onDownloadFormatChange: (format: string) => void;
   isDownloading: boolean;
-  onDownloadOSMLayers: () => void; 
+  onDownloadOSMLayers: () => void;
 
 }
 
@@ -64,9 +64,8 @@ const ToolsPanel: React.FC<ToolsPanelProps> = ({
   isFetchingOSM, onFetchOSMDataTrigger, osmCategoriesForSelection, selectedOSMCategoryIds, onSelectedOSMCategoriesChange,
   downloadFormat, onDownloadFormatChange, isDownloading, onDownloadOSMLayers
 }) => {
-  
-  // Keep 'openstreetmap-section' open by default, drawing tools are now always visible
-  const [openAccordionItems, setOpenAccordionItems] = React.useState<string[]>(['openstreetmap-section']);
+
+  const [activeAccordionItem, setActiveAccordionItem] = React.useState<string | undefined>('openstreetmap-section');
 
   return (
     <DraggablePanel
@@ -79,7 +78,7 @@ const ToolsPanel: React.FC<ToolsPanelProps> = ({
       style={{ top: `${position.y}px`, left: `${position.x}px` }}
       showCloseButton={false}
     >
-        <div className="w-full bg-white/5 rounded-md p-2"> {/* Added w-full here */}
+        <div className="w-full bg-white/5 rounded-md p-2">
             <DrawingToolbar
                 activeDrawTool={activeDrawTool}
                 onToggleDrawingTool={onToggleDrawingTool}
@@ -88,21 +87,22 @@ const ToolsPanel: React.FC<ToolsPanelProps> = ({
                 onSaveDrawnFeaturesAsKML={onSaveDrawnFeaturesAsKML}
             />
         </div>
-        
+
         <Separator className="my-2 bg-white/10" />
 
-        <Accordion 
-          type="multiple" 
-          value={openAccordionItems} // Controlled state for OSM section
-          onValueChange={setOpenAccordionItems}
+        <Accordion
+          type="single"
+          collapsible
+          value={activeAccordionItem}
+          onValueChange={setActiveAccordionItem}
           className="w-full space-y-1"
         >
             <AccordionItem value="openstreetmap-section" className="border-b-0 bg-white/5 rounded-md">
               <AccordionTrigger className="p-3 hover:no-underline hover:bg-white/10 rounded-t-md data-[state=open]:rounded-b-none">
-                <SectionHeader 
+                <SectionHeader
                   title="OpenStreetMap"
                   description="Obtener y descargar datos de OSM."
-                  icon={MapIcon} 
+                  icon={MapIcon}
                 />
               </AccordionTrigger>
               <AccordionContent className="p-3 pt-2 space-y-3 border-t border-white/10 bg-transparent rounded-b-md">

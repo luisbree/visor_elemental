@@ -10,7 +10,7 @@ import InspectToolToggle from '@/components/feature-inspection/InspectToolToggle
 import LocationSearch, { type NominatimResult } from '@/components/location-search/LocationSearch';
 import { Separator } from '@/components/ui/separator';
 import type { MapLayer, BaseLayerOptionForSelect } from '@/lib/types';
-import { Layers as LayersIcon } from 'lucide-react'; 
+import { Layers as LayersIcon } from 'lucide-react';
 import {
   Accordion,
   AccordionContent,
@@ -39,9 +39,9 @@ interface LayersPanelProps {
 
   isInspectModeActive: boolean;
   onToggleInspectMode: () => void;
-  isActiveDrawToolPresent: boolean; 
+  isActiveDrawToolPresent: boolean;
 
-  onZoomToBoundingBox: (bbox: [number, number, number, number]) => void; 
+  onZoomToBoundingBox: (bbox: [number, number, number, number]) => void;
 }
 
 const SectionHeader: React.FC<{ title: string; icon: React.ElementType, description?: string }> = ({ title, icon: Icon, description }) => (
@@ -62,16 +62,16 @@ const LayersPanel: React.FC<LayersPanelProps> = ({
   isInspectModeActive, onToggleInspectMode, isActiveDrawToolPresent,
   onZoomToBoundingBox
 }) => {
-  
-  const [openAccordionItems, setOpenAccordionItems] = React.useState<string[]>(['layers-section']);
+
+  const [activeAccordionItem, setActiveAccordionItem] = React.useState<string | undefined>('layers-section');
   const prevLayersLengthRef = React.useRef(layers.length);
 
    React.useEffect(() => {
-    if (layers.length > 0 && !openAccordionItems.includes('layers-section') && prevLayersLengthRef.current === 0) {
-        setOpenAccordionItems(prevItems => Array.from(new Set([...prevItems, 'layers-section'])));
+    if (layers.length > 0 && activeAccordionItem !== 'layers-section' && prevLayersLengthRef.current === 0) {
+        setActiveAccordionItem('layers-section');
     }
     prevLayersLengthRef.current = layers.length;
-  }, [layers.length, openAccordionItems]);
+  }, [layers.length, activeAccordionItem]);
 
   const handleLocationSelection = (location: NominatimResult) => {
     const [sLat, nLat, wLon, eLon] = location.boundingbox.map(coord => parseFloat(coord));
@@ -82,17 +82,16 @@ const LayersPanel: React.FC<LayersPanelProps> = ({
     <DraggablePanel
       title="Capas y Utilitarios"
       panelRef={panelRef}
-      initialPosition={position} 
+      initialPosition={position}
       onMouseDownHeader={onMouseDownHeader}
       isCollapsed={isCollapsed}
       onToggleCollapse={onToggleCollapse}
       style={{ top: `${position.y}px`, left: `${position.x}px` }}
-      showCloseButton={false} 
+      showCloseButton={false}
     >
       <div className="space-y-3">
         <LocationSearch onLocationSelect={handleLocationSelection} />
-        {/* Removed Accordion wrapper for LocationSearch */}
-        
+
         <BaseLayerSelector
           availableBaseLayers={availableBaseLayers}
           activeBaseLayerId={activeBaseLayerId}
@@ -101,30 +100,26 @@ const LayersPanel: React.FC<LayersPanelProps> = ({
         <Separator className="bg-white/15" />
         <div className="flex items-center gap-2">
           <FileUploadControl onAddLayer={onAddLayer} uniqueIdPrefix="layerspanel-upload"/>
-          <InspectToolToggle 
+          <InspectToolToggle
             isInspectModeActive={isInspectModeActive}
             onToggleInspectMode={onToggleInspectMode}
             isActiveDrawToolPresent={isActiveDrawToolPresent}
           />
         </div>
         <Separator className="bg-white/15" />
-        
-        <Accordion 
-          type="multiple" 
-          value={openAccordionItems.includes('layers-section') ? ['layers-section'] : []}
-          onValueChange={(value) => { 
-             const newItems = new Set(openAccordionItems);
-             if (value.includes('layers-section') && !newItems.has('layers-section')) newItems.add('layers-section');
-             else if (!value.includes('layers-section') && newItems.has('layers-section')) newItems.delete('layers-section');
-             setOpenAccordionItems(Array.from(newItems));
-          }}
+
+        <Accordion
+          type="single"
+          collapsible
+          value={activeAccordionItem}
+          onValueChange={setActiveAccordionItem}
           className="w-full space-y-1"
         >
             <AccordionItem value="layers-section" className="border-b-0 bg-white/5 rounded-md">
               <AccordionTrigger className="p-3 hover:no-underline hover:bg-white/10 rounded-t-md data-[state=open]:rounded-b-none">
-                <SectionHeader 
-                  title="Capas Cargadas" 
-                  icon={LayersIcon} 
+                <SectionHeader
+                  title="Capas Cargadas"
+                  icon={LayersIcon}
                 />
               </AccordionTrigger>
               <AccordionContent className="p-0 pt-0 border-t border-white/10 bg-transparent rounded-b-md">
