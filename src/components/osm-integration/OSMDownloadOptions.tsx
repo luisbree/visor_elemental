@@ -46,7 +46,7 @@ const OSMDownloadOptions: React.FC<OSMDownloadOptionsProps> = ({
        <div className="flex items-center gap-2">
         <Button 
             onClick={onFetchOSMDataTrigger} 
-            className="min-w-0 bg-primary/70 hover:bg-primary/90 text-primary-foreground text-xs h-8" // Removed flex-1, added min-w-0
+            className="flex-1 min-w-0 bg-primary/70 hover:bg-primary/90 text-primary-foreground text-xs h-8"
             disabled={isFetchingOSM || isActiveDrawToolPresent}
             title="Obtener datos OSM del último polígono dibujado"
         >
@@ -57,7 +57,7 @@ const OSMDownloadOptions: React.FC<OSMDownloadOptionsProps> = ({
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
             <Button 
-                className="min-w-0 bg-primary hover:bg-primary/90 text-primary-foreground text-xs h-8" // Removed flex-1, added min-w-0
+                className="flex-1 min-w-0 bg-primary hover:bg-primary/90 text-primary-foreground text-xs h-8"
                 disabled={isDownloading}
                 title="Descargar capas OSM importadas"
             >
@@ -92,4 +92,3 @@ const OSMDownloadOptions: React.FC<OSMDownloadOptionsProps> = ({
 };
 
 export default OSMDownloadOptions;
-
