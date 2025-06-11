@@ -101,7 +101,6 @@ const ToolsPanel: React.FC<ToolsPanelProps> = ({
               <AccordionTrigger className="p-3 hover:no-underline hover:bg-white/10 rounded-t-md data-[state=open]:rounded-b-none">
                 <SectionHeader
                   title="OpenStreetMap"
-                  description="Obtener y descargar datos de OSM."
                   icon={MapIcon}
                 />
               </AccordionTrigger>

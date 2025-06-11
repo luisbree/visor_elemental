@@ -32,11 +32,11 @@ const OSMCategorySelector: React.FC<OSMCategorySelectorProps> = ({
 
   return (
     <div>
-      <Label className="text-xs font-medium text-white/90 mb-1 block">Categorías OSM a Incluir</Label>
+      {/* <Label className="text-xs font-medium text-white/90 mb-1 block">Categorías OSM a Incluir</Label> */}
       <ScrollArea className="h-32 border border-white/10 p-2 rounded-md bg-black/10"> 
-        <div className="space-y-1.5">
+        <div className="space-y-1">
           {osmCategoriesForSelection.map(category => (
-            <div key={category.id} className="flex items-center space-x-2 p-1.5 rounded-md hover:bg-white/5">
+            <div key={category.id} className="flex items-center space-x-2 p-1 rounded-md hover:bg-white/5">
               <Checkbox
                 id={`osm-cat-${category.id}`}
                 checked={selectedOSMCategoryIds.includes(category.id)}
