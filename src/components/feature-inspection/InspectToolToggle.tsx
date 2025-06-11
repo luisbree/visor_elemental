@@ -8,13 +8,13 @@ import { MousePointerClick } from 'lucide-react';
 interface InspectToolToggleProps {
   isInspectModeActive: boolean;
   onToggleInspectMode: () => void;
-  isActiveDrawToolPresent: boolean; // To disable inspect when drawing
+  // isActiveDrawToolPresent prop removed
 }
 
 const InspectToolToggle: React.FC<InspectToolToggleProps> = ({
   isInspectModeActive,
   onToggleInspectMode,
-  isActiveDrawToolPresent,
+  // isActiveDrawToolPresent prop removed from destructuring
 }) => {
   return (
     <Button 
@@ -24,7 +24,7 @@ const InspectToolToggle: React.FC<InspectToolToggleProps> = ({
           ? 'bg-primary hover:bg-primary/90 text-primary-foreground' 
           : 'border border-white/30 text-white/90 bg-black/20 hover:bg-black/40 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary'
       }`}
-      disabled={isActiveDrawToolPresent} 
+      // disabled prop removed
       title="Activar/Desactivar modo inspector"
     >
       <MousePointerClick className="mr-2 h-4 w-4" />

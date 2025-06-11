@@ -39,7 +39,7 @@ interface LayersPanelProps {
 
   isInspectModeActive: boolean;
   onToggleInspectMode: () => void;
-  isActiveDrawToolPresent: boolean;
+  // isActiveDrawToolPresent prop removed
 
   onZoomToBoundingBox: (bbox: [number, number, number, number]) => void;
 }
@@ -59,7 +59,7 @@ const LayersPanel: React.FC<LayersPanelProps> = ({
   panelRef, position, isCollapsed, onToggleCollapse, onMouseDownHeader,
   layers, onAddLayer, onToggleLayerVisibility, onRemoveLayer, onZoomToLayerExtent, onShowLayerTable,
   availableBaseLayers, activeBaseLayerId, onChangeBaseLayer,
-  isInspectModeActive, onToggleInspectMode, isActiveDrawToolPresent,
+  isInspectModeActive, onToggleInspectMode, // isActiveDrawToolPresent prop removed from destructuring
   onZoomToBoundingBox
 }) => {
 
@@ -103,7 +103,7 @@ const LayersPanel: React.FC<LayersPanelProps> = ({
           <InspectToolToggle
             isInspectModeActive={isInspectModeActive}
             onToggleInspectMode={onToggleInspectMode}
-            isActiveDrawToolPresent={isActiveDrawToolPresent}
+            // isActiveDrawToolPresent prop removed
           />
         </div>
         <Separator className="bg-white/15" />

@@ -157,7 +157,7 @@ export default function GeoMapperClient() {
             return l;
         }));
       },
-      setIsWfsLoading // Pass setIsWfsLoading to the hook
+      setIsWfsLoading 
   });
 
   const { panels, handlePanelMouseDown, togglePanelCollapse } = useFloatingPanels({
@@ -263,7 +263,7 @@ export default function GeoMapperClient() {
           onChangeBaseLayer={handleChangeBaseLayer}
           isInspectModeActive={featureInspectionHook.isInspectModeActive}
           onToggleInspectMode={featureInspectionHook.toggleInspectMode}
-          isActiveDrawToolPresent={!!drawingInteractions.activeDrawTool}
+          // isActiveDrawToolPresent prop removed
           onZoomToBoundingBox={zoomToBoundingBox}
         />
 
