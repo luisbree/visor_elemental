@@ -17,7 +17,7 @@ interface OSMDownloadOptionsProps {
   onFetchOSMDataTrigger: () => void;
   isActiveDrawToolPresent: boolean;
 
-  downloadFormat: string; // Still needed to inform the hook, though not directly selected by user here
+  downloadFormat: string;
   onDownloadFormatChange: (format: string) => void;
   isDownloading: boolean;
   onDownloadOSMLayers: () => void;
@@ -28,7 +28,7 @@ const OSMDownloadOptions: React.FC<OSMDownloadOptionsProps> = ({
   isFetchingOSM,
   onFetchOSMDataTrigger,
   isActiveDrawToolPresent,
-  downloadFormat, // Kept for consistency with the hook, though not directly used for selection in UI
+  downloadFormat, 
   onDownloadFormatChange,
   isDownloading,
   onDownloadOSMLayers,
@@ -37,9 +37,6 @@ const OSMDownloadOptions: React.FC<OSMDownloadOptionsProps> = ({
 
   const handleDownloadWithFormat = (format: string) => {
     onDownloadFormatChange(format);
-    // Add a slight delay to ensure state update before triggering download, if necessary
-    // requestAnimationFrame(() => onDownloadOSMLayers()); 
-    // Or, if onDownloadOSMLayers correctly uses the latest state from its hook, direct call is fine
     onDownloadOSMLayers(); 
   };
 
@@ -49,23 +46,23 @@ const OSMDownloadOptions: React.FC<OSMDownloadOptionsProps> = ({
        <div className="flex items-center gap-2">
         <Button 
             onClick={onFetchOSMDataTrigger} 
-            className="flex-1 bg-primary/70 hover:bg-primary/90 text-primary-foreground text-xs h-8"
+            className="min-w-0 bg-primary/70 hover:bg-primary/90 text-primary-foreground text-xs h-8" // Removed flex-1, added min-w-0
             disabled={isFetchingOSM || isActiveDrawToolPresent}
             title="Obtener datos OSM del último polígono dibujado"
         >
             {isFetchingOSM ? <Loader2 className="mr-2 h-3 w-3 animate-spin" /> : <MapPin className="mr-2 h-3 w-3" />}
-            {isFetchingOSM ? 'Obteniendo...' : 'Obtener Datos OSM'}
+            <span className="truncate">{isFetchingOSM ? 'Obteniendo...' : 'Obtener Datos OSM'}</span>
         </Button>
 
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
             <Button 
-                className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground text-xs h-8"
+                className="min-w-0 bg-primary hover:bg-primary/90 text-primary-foreground text-xs h-8" // Removed flex-1, added min-w-0
                 disabled={isDownloading}
                 title="Descargar capas OSM importadas"
             >
                 {isDownloading ? <Loader2 className="mr-2 h-3 w-3 animate-spin" /> : <Download className="mr-2 h-3 w-3" />}
-                {isDownloading ? 'Descargando...' : 'Descargar Capas OSM'}
+                <span className="truncate">{isDownloading ? 'Descargando...' : 'Descargar Capas OSM'}</span>
             </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="bg-gray-700 text-white border-gray-600 w-[--radix-dropdown-menu-trigger-width]">
@@ -90,9 +87,9 @@ const OSMDownloadOptions: React.FC<OSMDownloadOptionsProps> = ({
             </DropdownMenuContent>
         </DropdownMenu>
       </div>
-      {/* The original select for format is removed */}
     </div>
   );
 };
 
 export default OSMDownloadOptions;
+
