@@ -3,7 +3,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Loader2, MapPin, Download } from 'lucide-react';
+import { Loader2 } from 'lucide-react'; // MapPin, Download removed
 import { Separator } from '@/components/ui/separator';
 import { 
   DropdownMenu, 
@@ -43,28 +43,28 @@ const OSMDownloadOptions: React.FC<OSMDownloadOptionsProps> = ({
   return (
     <div className="space-y-3">
        <Separator className="my-2 bg-white/20" />
-       <div className="flex items-center gap-1"> {/* Changed gap-2 to gap-1 */}
+       <div className="flex items-center gap-1">
         <Button 
             onClick={onFetchOSMDataTrigger} 
             size="sm"
-            className="flex-1 min-w-0 bg-primary/70 hover:bg-primary/90 text-primary-foreground text-xs h-8 px-2" /* Added px-2 */
+            className="flex-1 min-w-0 bg-primary/70 hover:bg-primary/90 text-primary-foreground text-xs h-8 px-2"
             disabled={isFetchingOSM || isActiveDrawToolPresent}
             title="Obtener datos OSM del último polígono dibujado"
         >
-            {isFetchingOSM ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <MapPin className="mr-1 h-3 w-3" />}
-            <span className="truncate">{isFetchingOSM ? 'Obteniendo...' : 'Obtener Datos OSM'}</span>
+            {isFetchingOSM && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}
+            <span className="truncate">{isFetchingOSM ? 'Cargando...' : 'Obtener OSM'}</span>
         </Button>
 
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
             <Button 
                 size="sm" 
-                className="flex-1 min-w-0 bg-primary hover:bg-primary/90 text-primary-foreground text-xs h-8 px-2" /* Added px-2 */
+                className="flex-1 min-w-0 bg-primary hover:bg-primary/90 text-primary-foreground text-xs h-8 px-2"
                 disabled={isDownloading}
                 title="Descargar capas OSM importadas"
             >
-                {isDownloading ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Download className="mr-1 h-3 w-3" />}
-                <span className="truncate">{isDownloading ? 'Descargando...' : 'Descargar Capas OSM'}</span>
+                {isDownloading && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}
+                <span className="truncate">{isDownloading ? 'Descargando...' : 'Descargar OSM'}</span>
             </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="bg-gray-700 text-white border-gray-600 w-[--radix-dropdown-menu-trigger-width]">
@@ -94,3 +94,4 @@ const OSMDownloadOptions: React.FC<OSMDownloadOptionsProps> = ({
 };
 
 export default OSMDownloadOptions;
+
