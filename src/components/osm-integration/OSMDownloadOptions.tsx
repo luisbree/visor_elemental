@@ -10,17 +10,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+// TooltipProvider, Tooltip, TooltipContent, TooltipTrigger removed
 
 interface OSMDownloadOptionsProps {
   isFetchingOSM: boolean;
   onFetchOSMDataTrigger: () => void;
-  // isActiveDrawToolPresent prop was removed in previous steps, so it's not needed here
+  // isActiveDrawToolPresent prop removed
 
   downloadFormat: string;
   onDownloadFormatChange: (format: string) => void;
@@ -46,14 +41,12 @@ const OSMDownloadOptions: React.FC<OSMDownloadOptionsProps> = ({
 
   const getFetchButtonTooltipContent = () => {
     if (isFetchingOSM) return "Cargando...";
-    // return "Obtener Datos OSM para la entidad dibujada más reciente.";
-    return "Obtener OSM";
+    return "Obtener Datos OSM para la entidad dibujada más reciente.";
   };
 
   const getDownloadButtonTooltipContent = () => {
     if (isDownloading) return "Descargando...";
-    // return "Descargar capas OSM cargadas en el formato seleccionado.";
-    return "Descargar OSM";
+    return "Descargar capas OSM cargadas en el formato seleccionado.";
   };
 
   const iconButtonBaseClass = "h-8 w-8 p-0 flex items-center justify-center focus-visible:ring-primary";
@@ -63,10 +56,7 @@ const OSMDownloadOptions: React.FC<OSMDownloadOptionsProps> = ({
 
 
   return (
-    <TooltipProvider delayDuration={100}>
-      <div className="flex items-center gap-1"> {/* Reduced gap from gap-2 */}
-        <Tooltip>
-          <TooltipTrigger asChild>
+      <div className="flex items-center gap-1">
             <Button
               onClick={onFetchOSMDataTrigger}
               className={`${iconButtonBaseClass} ${
@@ -74,18 +64,12 @@ const OSMDownloadOptions: React.FC<OSMDownloadOptionsProps> = ({
               } ${isFetchingOSM ? buttonDisabledClass : ""}`}
               disabled={isFetchingOSM}
               aria-label={getFetchButtonTooltipContent()}
+              title={getFetchButtonTooltipContent()} // Native tooltip
             >
               {isFetchingOSM ? <Loader2 className="h-4 w-4 animate-spin" /> : <CloudDownload className="h-4 w-4" />}
             </Button>
-          </TooltipTrigger>
-          <TooltipContent side="top"> {/* Changed side to top */}
-            <p>{getFetchButtonTooltipContent()}</p>
-          </TooltipContent>
-        </Tooltip>
 
         <DropdownMenu>
-          <Tooltip>
-            <TooltipTrigger asChild>
               <DropdownMenuTrigger asChild>
                 <Button
                   className={`${iconButtonBaseClass} ${
@@ -93,16 +77,12 @@ const OSMDownloadOptions: React.FC<OSMDownloadOptionsProps> = ({
                   } ${isDownloading ? buttonDisabledClass : ""}`}
                   disabled={isDownloading}
                   aria-label={getDownloadButtonTooltipContent()}
+                  title={getDownloadButtonTooltipContent()} // Native tooltip
                 >
                   {isDownloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
                 </Button>
               </DropdownMenuTrigger>
-            </TooltipTrigger>
-            <TooltipContent side="top"> {/* Changed side to top */}
-              <p>{getDownloadButtonTooltipContent()}</p>
-            </TooltipContent>
-          </Tooltip>
-          <DropdownMenuContent className="bg-gray-700 text-white border-gray-600 w-[180px]"> {/* Adjusted width slightly for content */}
+          <DropdownMenuContent className="bg-gray-700 text-white border-gray-600 w-[180px]">
             <DropdownMenuItem
               className="text-xs hover:bg-gray-600 focus:bg-gray-600 cursor-pointer"
               onSelect={() => handleDownloadWithFormat('geojson')}
@@ -124,7 +104,6 @@ const OSMDownloadOptions: React.FC<OSMDownloadOptionsProps> = ({
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-    </TooltipProvider>
   );
 };
 
