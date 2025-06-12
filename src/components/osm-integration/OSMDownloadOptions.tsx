@@ -3,7 +3,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Loader2 } from 'lucide-react'; 
+import { Loader2, CloudDownload, Download } from 'lucide-react'; 
 import { Separator } from '@/components/ui/separator';
 import { 
   DropdownMenu, 
@@ -11,11 +11,17 @@ import {
   DropdownMenuItem, 
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface OSMDownloadOptionsProps {
   isFetchingOSM: boolean;
   onFetchOSMDataTrigger: () => void;
-  isActiveDrawToolPresent: boolean;
+  // isActiveDrawToolPresent prop removed in previous steps
 
   downloadFormat: string;
   onDownloadFormatChange: (format: string) => void;
@@ -27,7 +33,7 @@ interface OSMDownloadOptionsProps {
 const OSMDownloadOptions: React.FC<OSMDownloadOptionsProps> = ({
   isFetchingOSM,
   onFetchOSMDataTrigger,
-  isActiveDrawToolPresent, // This prop is no longer used for the "Obtener OSM" button's disabled state
+  // isActiveDrawToolPresent removed
   downloadFormat, 
   onDownloadFormatChange,
   isDownloading,
@@ -40,58 +46,81 @@ const OSMDownloadOptions: React.FC<OSMDownloadOptionsProps> = ({
     onDownloadOSMLayers(); 
   };
 
-  return (
-    <div className="space-y-3">
-       <Separator className="my-2 bg-white/20" />
-       <div className="flex items-center gap-1">
-        <Button 
-            onClick={onFetchOSMDataTrigger} 
-            size="sm"
-            className="flex-1 min-w-0 bg-primary/70 hover:bg-primary/90 text-primary-foreground text-xs h-8 px-1"
-            disabled={isFetchingOSM} // isActiveDrawToolPresent removed from here
-            title="Obtener datos OSM del último polígono dibujado"
-        >
-            {isFetchingOSM && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}
-            <span className="truncate">{isFetchingOSM ? 'Cargando...' : 'Obtener OSM'}</span>
-        </Button>
+  const getFetchButtonTooltipContent = () => {
+    if (isFetchingOSM) return "Cargando...";
+    return "Obtener OSM";
+  };
 
-        <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-            <Button 
-                size="sm" 
-                className="flex-1 min-w-0 bg-primary hover:bg-primary/90 text-primary-foreground text-xs h-8 px-1"
-                disabled={isDownloading}
-                title="Descargar capas OSM importadas"
-            >
-                {isDownloading && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}
-                <span className="truncate">{isDownloading ? 'Descargando...' : 'Descargar OSM'}</span>
-            </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="bg-gray-700 text-white border-gray-600 w-[--radix-dropdown-menu-trigger-width]">
-            <DropdownMenuItem 
-                className="text-xs hover:bg-gray-600 focus:bg-gray-600 cursor-pointer"
-                onSelect={() => handleDownloadWithFormat('geojson')}
-            >
-                Como GeoJSON
-            </DropdownMenuItem>
-            <DropdownMenuItem 
-                className="text-xs hover:bg-gray-600 focus:bg-gray-600 cursor-pointer"
-                onSelect={() => handleDownloadWithFormat('kml')}
-            >
-                Como KML
-            </DropdownMenuItem>
-            <DropdownMenuItem 
-                className="text-xs hover:bg-gray-600 focus:bg-gray-600 cursor-pointer"
-                onSelect={() => handleDownloadWithFormat('shp')}
-            >
-                Como Shapefile (ZIP)
-            </DropdownMenuItem>
-            </DropdownMenuContent>
-        </DropdownMenu>
+  const getDownloadButtonTooltipContent = () => {
+    if (isDownloading) return "Descargando...";
+    return "Descargar OSM";
+  };
+
+  const iconButtonBaseClass = "h-8 w-8 p-0 flex items-center justify-center";
+
+  return (
+    <TooltipProvider delayDuration={100}>
+      <div className="space-y-3">
+        <Separator className="my-2 bg-white/20" />
+        <div className="flex items-center gap-1">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                  onClick={onFetchOSMDataTrigger} 
+                  className={`${iconButtonBaseClass} bg-primary/70 hover:bg-primary/90 text-primary-foreground`}
+                  disabled={isFetchingOSM}
+                  aria-label={getFetchButtonTooltipContent()}
+              >
+                  {isFetchingOSM ? <Loader2 className="h-4 w-4 animate-spin" /> : <CloudDownload className="h-4 w-4" />}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="top">
+              <p>{getFetchButtonTooltipContent()}</p>
+            </TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                  <Button 
+                      className={`${iconButtonBaseClass} bg-primary hover:bg-primary/90 text-primary-foreground`}
+                      disabled={isDownloading}
+                      aria-label={getDownloadButtonTooltipContent()}
+                  >
+                      {isDownloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                  </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="bg-gray-700 text-white border-gray-600 w-[--radix-dropdown-menu-trigger-width]">
+                  <DropdownMenuItem 
+                      className="text-xs hover:bg-gray-600 focus:bg-gray-600 cursor-pointer"
+                      onSelect={() => handleDownloadWithFormat('geojson')}
+                  >
+                      Como GeoJSON
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
+                      className="text-xs hover:bg-gray-600 focus:bg-gray-600 cursor-pointer"
+                      onSelect={() => handleDownloadWithFormat('kml')}
+                  >
+                      Como KML
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
+                      className="text-xs hover:bg-gray-600 focus:bg-gray-600 cursor-pointer"
+                      onSelect={() => handleDownloadWithFormat('shp')}
+                  >
+                      Como Shapefile (ZIP)
+                  </DropdownMenuItem>
+                  </DropdownMenuContent>
+              </DropdownMenu>
+            </TooltipTrigger>
+            <TooltipContent side="top">
+              <p>{getDownloadButtonTooltipContent()}</p>
+            </TooltipContent>
+          </Tooltip>
+        </div>
       </div>
-    </div>
+    </TooltipProvider>
   );
 };
 
 export default OSMDownloadOptions;
-
