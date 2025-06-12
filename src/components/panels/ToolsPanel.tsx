@@ -31,7 +31,7 @@ interface ToolsPanelProps {
   // Drawing props
   activeDrawTool: string | null;
   onToggleDrawingTool: (toolType: 'Polygon' | 'LineString' | 'Point') => void;
-  onStopDrawingTool: () => void;
+  // onStopDrawingTool prop removed as it's handled by onToggleDrawingTool
   onClearDrawnFeatures: () => void;
   onSaveDrawnFeaturesAsKML: () => void;
 
@@ -60,7 +60,7 @@ const SectionHeader: React.FC<{ title: string; description?: string; icon: React
 
 const ToolsPanel: React.FC<ToolsPanelProps> = ({
   panelRef, position, isCollapsed, onToggleCollapse, onMouseDownHeader,
-  activeDrawTool, onToggleDrawingTool, onStopDrawingTool, onClearDrawnFeatures, onSaveDrawnFeaturesAsKML,
+  activeDrawTool, onToggleDrawingTool, onClearDrawnFeatures, onSaveDrawnFeaturesAsKML,
   isFetchingOSM, onFetchOSMDataTrigger, osmCategoriesForSelection, selectedOSMCategoryIds, onSelectedOSMCategoriesChange,
   downloadFormat, onDownloadFormatChange, isDownloading, onDownloadOSMLayers
 }) => {
@@ -82,7 +82,7 @@ const ToolsPanel: React.FC<ToolsPanelProps> = ({
             <DrawingToolbar
                 activeDrawTool={activeDrawTool}
                 onToggleDrawingTool={onToggleDrawingTool}
-                onStopDrawingTool={onStopDrawingTool}
+                // onStopDrawingTool prop removed
                 onClearDrawnFeatures={onClearDrawnFeatures}
                 onSaveDrawnFeaturesAsKML={onSaveDrawnFeaturesAsKML}
             />

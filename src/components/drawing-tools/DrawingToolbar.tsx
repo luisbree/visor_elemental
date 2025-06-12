@@ -3,12 +3,12 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Square, PenLine, Dot, Eraser, Save } from 'lucide-react'; // Ban icon removed
+import { Square, PenLine, Dot, Eraser, Save } from 'lucide-react'; 
 
 interface DrawingToolbarProps {
   activeDrawTool: string | null;
   onToggleDrawingTool: (toolType: 'Polygon' | 'LineString' | 'Point') => void;
-  // onStopDrawingTool prop is no longer needed by this component directly
+  // onStopDrawingTool prop removed as it's no longer directly used by this component
   onClearDrawnFeatures: () => void;
   onSaveDrawnFeaturesAsKML: () => void;
 }
@@ -31,8 +31,8 @@ const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
           className={`${iconButtonBaseClass} ${
             activeDrawTool === 'Polygon' ? activeClass : inactiveClass
           }`}
-          title="Dibujar Polígono / Detener"
-          aria-label="Dibujar Polígono (para obtener datos OSM) o detener dibujo de polígono"
+          title={activeDrawTool === 'Polygon' ? "Detener dibujo de Polígono" : "Dibujar Polígono"}
+          aria-label={activeDrawTool === 'Polygon' ? "Detener dibujo de polígono" : "Dibujar Polígono (para obtener datos OSM)"}
         >
           <Square className="h-4 w-4" />
         </Button>
@@ -41,8 +41,8 @@ const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
           className={`${iconButtonBaseClass} ${
             activeDrawTool === 'LineString' ? activeClass : inactiveClass
           }`}
-          title="Dibujar Línea / Detener"
-          aria-label="Dibujar Línea o detener dibujo de línea"
+          title={activeDrawTool === 'LineString' ? "Detener dibujo de Línea" : "Dibujar Línea"}
+          aria-label={activeDrawTool === 'LineString' ? "Detener dibujo de línea" : "Dibujar Línea"}
         >
           <PenLine className="h-4 w-4" />
         </Button>
@@ -51,8 +51,8 @@ const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
           className={`${iconButtonBaseClass} ${
             activeDrawTool === 'Point' ? activeClass : inactiveClass
           }`}
-          title="Dibujar Punto / Detener"
-          aria-label="Dibujar Punto o detener dibujo de punto"
+          title={activeDrawTool === 'Point' ? "Detener dibujo de Punto" : "Dibujar Punto"}
+          aria-label={activeDrawTool === 'Point' ? "Detener dibujo de punto" : "Dibujar Punto"}
         >
           <Dot className="h-4 w-4" />
         </Button>
@@ -61,7 +61,7 @@ const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
           className={`${iconButtonBaseClass} border border-white/30 text-white/90 bg-black/20 hover:bg-red-500/20 hover:text-red-300 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary`}
           disabled={!!activeDrawTool}
           title="Limpiar Dibujos"
-          aria-label="Limpiar Dibujos"
+          aria-label="Limpiar todos los dibujos del mapa"
         >
           <Eraser className="h-4 w-4" />
         </Button>
@@ -75,7 +75,7 @@ const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
         className={`${iconButtonBaseClass} bg-primary hover:bg-primary/90 text-primary-foreground`}
         disabled={!!activeDrawTool}
         title="Guardar Dibujos (KML)"
-        aria-label="Guardar Dibujos (KML)"
+        aria-label="Guardar todos los dibujos del mapa como archivo KML"
       >
         <Save className="h-4 w-4" />
       </Button>
