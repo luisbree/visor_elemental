@@ -32,6 +32,7 @@ export const BASE_LAYER_DEFINITIONS = [
         url: 'https://{a-d}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
         attributions: 'Map tiles by <a href="https://carto.com/attributions">Carto</a>, under CC BY 3.0. Data by <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>, under ODbL.',
         maxZoom: 20,
+        crossOrigin: 'Anonymous' // Added for CORS
       }),
       visible: false, 
       properties: { baseLayerId: 'carto-light', isBaseLayer: true, name: 'CartoGrayscaleBaseLayer' },
@@ -45,6 +46,7 @@ export const BASE_LAYER_DEFINITIONS = [
         url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
         attributions: 'Tiles © Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
         maxZoom: 19,
+        crossOrigin: 'Anonymous' // Added for CORS
       }),
       visible: false, 
       properties: { baseLayerId: 'esri-satellite', isBaseLayer: true, name: 'ESRISatelliteBaseLayer' },
