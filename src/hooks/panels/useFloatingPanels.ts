@@ -13,7 +13,8 @@ interface UseFloatingPanelsProps {
   layersPanelRef: React.RefObject<HTMLDivElement>;
   toolsPanelRef: React.RefObject<HTMLDivElement>;
   geoServerPanelRef: React.RefObject<HTMLDivElement>;
-  mapAreaRef: React.RefObject<HTMLDivElement>; // To constrain dragging within map area
+  mapPanelRef: React.RefObject<HTMLDivElement>; // Added new panel ref
+  mapAreaRef: React.RefObject<HTMLDivElement>; 
   panelWidth?: number;
   panelPadding?: number;
 }
@@ -25,6 +26,7 @@ export function useFloatingPanels({
   layersPanelRef,
   toolsPanelRef,
   geoServerPanelRef,
+  mapPanelRef, // Destructure new panel ref
   mapAreaRef,
   panelWidth = DEFAULT_PANEL_WIDTH,
   panelPadding = DEFAULT_PANEL_PADDING,
@@ -32,34 +34,41 @@ export function useFloatingPanels({
   
   const [panels, setPanels] = useState<Record<string, PanelState>>({
     layers: { position: { x: panelPadding, y: panelPadding }, isCollapsed: false, ref: layersPanelRef },
-    tools: { position: { x: 0, y: panelPadding }, isCollapsed: false, ref: toolsPanelRef }, // X will be calculated
-    geoserver: { position: { x: 0, y: 0 }, isCollapsed: false, ref: geoServerPanelRef }, // X, Y will be calculated
+    tools: { position: { x: 0, y: panelPadding }, isCollapsed: false, ref: toolsPanelRef }, 
+    geoserver: { position: { x: 0, y: 0 }, isCollapsed: false, ref: geoServerPanelRef },
+    map: { position: {x: 0, y: 0}, isCollapsed: false, ref: mapPanelRef }, // Added map panel state
   });
 
   const [draggingPanelId, setDraggingPanelId] = useState<string | null>(null);
   const dragStartRef = useRef({ x: 0, y: 0, panelX: 0, panelY: 0 });
 
-  // Initialize positions based on mapAreaRef
   useEffect(() => {
     if (mapAreaRef.current) {
       const mapRect = mapAreaRef.current.getBoundingClientRect();
       const toolsPanelActualWidth = toolsPanelRef.current?.offsetWidth || panelWidth;
+      const toolsPanelHeight = toolsPanelRef.current?.offsetHeight || 200;
       const geoServerPanelActualWidth = geoServerPanelRef.current?.offsetWidth || panelWidth;
-      const toolsPanelHeight = toolsPanelRef.current?.offsetHeight || 200; // Approx height
+      const geoServerPanelHeight = geoServerPanelRef.current?.offsetHeight || 200; 
+      const mapPanelActualWidth = mapPanelRef.current?.offsetWidth || panelWidth;
+
 
       setPanels(prev => ({
-        ...prev,
+        layers: { ...prev.layers, position: {x: panelPadding, y: panelPadding} },
         tools: {
           ...prev.tools,
           position: { x: mapRect.width - toolsPanelActualWidth - panelPadding, y: panelPadding },
         },
         geoserver: {
           ...prev.geoserver,
-          position: { x: mapRect.width - geoServerPanelActualWidth - panelPadding, y: panelPadding + toolsPanelHeight + panelPadding * 2 },
+          position: { x: mapRect.width - geoServerPanelActualWidth - panelPadding, y: panelPadding + toolsPanelHeight + panelPadding },
         },
+        map: {
+          ...prev.map,
+          position: { x: mapRect.width - mapPanelActualWidth - panelPadding, y: panelPadding + toolsPanelHeight + panelPadding + geoServerPanelHeight + panelPadding },
+        }
       }));
     }
-  }, [mapAreaRef, panelPadding, panelWidth, toolsPanelRef, geoServerPanelRef]);
+  }, [mapAreaRef, panelPadding, panelWidth, toolsPanelRef, geoServerPanelRef, mapPanelRef]);
 
 
   const handlePanelMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>, panelId: string) => {
@@ -67,7 +76,6 @@ export function useFloatingPanels({
     if (!panel || !panel.ref.current) return;
 
     const targetElement = e.target as HTMLElement;
-    // Ignore clicks on buttons within the header (like collapse button)
     if (targetElement.closest('button')) {
         return;
     }
@@ -97,17 +105,19 @@ export function useFloatingPanels({
       if (!panelToMove || !panelToMove.ref.current) return;
 
       const mapRect = mapAreaRef.current.getBoundingClientRect();
-      const panelRect = panelToMove.ref.current.getBoundingClientRect();
+      // Use the actual rendered size of the panel for boundary checks
+      const panelCurrentWidth = panelToMove.ref.current.offsetWidth;
+      const panelCurrentHeight = panelToMove.ref.current.offsetHeight;
+
 
       const dx = e.clientX - dragStartRef.current.x;
       const dy = e.clientY - dragStartRef.current.y;
       let newX = dragStartRef.current.panelX + dx;
       let newY = dragStartRef.current.panelY + dy;
 
-      // Constrain to mapArea boundaries
-      if (panelRect.width > 0 && panelRect.height > 0 && mapRect.width > 0 && mapRect.height > 0) {
-        newX = Math.max(0, Math.min(newX, mapRect.width - panelRect.width));
-        newY = Math.max(0, Math.min(newY, mapRect.height - panelRect.height));
+      if (panelCurrentWidth > 0 && panelCurrentHeight > 0 && mapRect.width > 0 && mapRect.height > 0) {
+        newX = Math.max(0, Math.min(newX, mapRect.width - panelCurrentWidth));
+        newY = Math.max(0, Math.min(newY, mapRect.height - panelCurrentHeight));
       }
       
       if (!isNaN(newX) && !isNaN(newY)) {
