@@ -25,6 +25,7 @@ interface DraggablePanelProps {
   overflowX?: 'auto' | 'hidden' | 'visible';
   overflowY?: 'auto' | 'hidden' | 'visible';
   icon?: React.ElementType; // Optional icon for the panel header
+  zIndex?: number; // New prop for z-index
 }
 
 const DraggablePanel: React.FC<DraggablePanelProps> = ({
@@ -45,6 +46,7 @@ const DraggablePanel: React.FC<DraggablePanelProps> = ({
   overflowX = 'hidden',
   overflowY = 'auto',
   icon: IconComponent,
+  zIndex, // Destructure new prop
 }) => {
   const [currentSize, setCurrentSize] = useState(initialSize);
 
@@ -77,7 +79,7 @@ const DraggablePanel: React.FC<DraggablePanelProps> = ({
         maxHeight: maxSize.height ? `${maxSize.height}px` : '80vh',
         resize: isCollapsed ? 'none' : 'both', // Allow resize only when not collapsed
         overflow: 'hidden', // Outer div hides overflow, scroll area handles inner content
-        zIndex: 30, // Ensure panels are on top
+        zIndex: zIndex ?? 30, // Use provided zIndex or default to 30
       }}
       onMouseUpCapture={handleResizeStop} // Capture mouse up on the panel itself for resize
     >

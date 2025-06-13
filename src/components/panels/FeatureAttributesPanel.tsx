@@ -74,6 +74,7 @@ const FeatureAttributesPanel: React.FC<FeatureAttributesPanelProps> = ({
       minSize={{ width: 300, height: 250 }}
       style={{ top: `${initialPosition.y}px`, left: `${initialPosition.x}px` }}
       overflowY="auto" // Allow DraggablePanel's ScrollArea to scroll vertically
+      zIndex={40} // Set a higher zIndex for this panel
     >
       {/* Content for the FeatureAttributesPanel - DraggablePanel's ScrollArea will handle scrolling */}
       <div className="flex-grow flex flex-col h-full"> {/* Ensure this div takes up space */}
