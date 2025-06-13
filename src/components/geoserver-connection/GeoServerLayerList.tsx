@@ -24,16 +24,11 @@ const GeoServerLayerList: React.FC<GeoServerLayerListProps> = ({
   }
 
   const handleAddWFS = async (layerName: string, layerTitle: string) => {
-    // setIsWfsLoading(true); // Removed: Now handled by useGeoServerLayers hook
     try {
       await onAddGeoServerLayerAsWFS(layerName, layerTitle);
     } catch (e) {
-      // Error handling (e.g., toast) is expected to be done within onAddGeoServerLayerAsWFS
       console.error("Error invoking onAddGeoServerLayerAsWFS from GeoServerLayerList:", e);
     } 
-    // finally { // Removed: Now handled by useGeoServerLayers hook
-    //   setIsWfsLoading(false); 
-    // }
   };
 
   return (
@@ -43,14 +38,8 @@ const GeoServerLayerList: React.FC<GeoServerLayerListProps> = ({
           <ul className="space-y-1.5">
               {geoServerDiscoveredLayers.map((gsLayer) => (
                   <li key={gsLayer.name} className="p-1.5 rounded-md border border-white/15 bg-black/10 hover:bg-white/20 transition-colors overflow-hidden">
-                      <div className="flex items-center justify-between">
-                        <span
-                          className="flex-1 cursor-default text-xs font-medium text-white truncate min-w-0 mr-2"
-                          title={`${gsLayer.title} (${gsLayer.name})`}
-                        >
-                            {gsLayer.title}
-                        </span>
-                        <div className="flex items-center space-x-1 shrink-0">
+                      <div className="flex items-center"> {/* Cambiado de justify-between */}
+                        <div className="flex items-center space-x-1 shrink-0 mr-2"> {/* Grupo de botones primero, con margen derecho */}
                            <Button
                               variant="outline"
                               size="sm"
@@ -72,6 +61,12 @@ const GeoServerLayerList: React.FC<GeoServerLayerListProps> = ({
                                <Workflow className="h-3 w-3 mr-1" /> WFS
                           </Button>
                         </div>
+                        <span
+                          className="flex-1 cursor-default text-xs font-medium text-white truncate min-w-0" // Eliminado mr-2, flex-1 y min-w-0 son importantes aquí
+                          title={`${gsLayer.title} (${gsLayer.name})`}
+                        >
+                            {gsLayer.title}
+                        </span>
                       </div>
                   </li>
               ))}
