@@ -10,6 +10,11 @@ interface UseMapCaptureProps {
   activeBaseLayerId: string | undefined;
 }
 
+interface CaptureOptions {
+  format: 'png' | 'jpeg';
+  band?: 'red' | 'green' | 'blue';
+}
+
 function triggerDownload(dataUrl: string, fileName: string) {
   const link = document.createElement('a');
   link.href = dataUrl;
@@ -17,13 +22,13 @@ function triggerDownload(dataUrl: string, fileName: string) {
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
-  URL.revokeObjectURL(link.href); // Clean up blob URL
+  URL.revokeObjectURL(link.href); 
 }
 
 export function useMapCapture({ mapRef, activeBaseLayerId }: UseMapCaptureProps) {
   const [isCapturing, setIsCapturing] = useState(false);
 
-  const captureMapAsPNG = useCallback(() => {
+  const captureMap = useCallback(async (options: CaptureOptions) => {
     if (!mapRef.current) {
       toast({ description: "Mapa no disponible.", variant: "destructive" });
       return;
@@ -34,7 +39,9 @@ export function useMapCapture({ mapRef, activeBaseLayerId }: UseMapCaptureProps)
     }
 
     setIsCapturing(true);
-    toast({ description: "Preparando captura de mapa..." });
+    const formatDescription = options.format.toUpperCase();
+    const bandDescription = options.band ? ` banda ${options.band}` : ' completa';
+    toast({ description: `Preparando captura${bandDescription} como ${formatDescription}...` });
 
     const map = mapRef.current;
 
@@ -45,12 +52,62 @@ export function useMapCapture({ mapRef, activeBaseLayerId }: UseMapCaptureProps)
           throw new Error("No se pudo encontrar el canvas del mapa.");
         }
 
-        // Ensure the canvas is not tainted if cross-origin images are used without CORS.
-        // For ESRI Satellite, this should generally be fine.
-        const dataURL = mapCanvas.toDataURL('image/png');
+        let dataURL: string;
+        let fileName: string;
+        const quality = options.format === 'jpeg' ? 0.9 : undefined;
+
+        if (options.band) {
+          const tempCanvas = document.createElement('canvas');
+          tempCanvas.width = mapCanvas.width;
+          tempCanvas.height = mapCanvas.height;
+          const ctx = tempCanvas.getContext('2d');
+          if (!ctx) {
+            throw new Error("No se pudo obtener el contexto 2D del canvas temporal.");
+          }
+          
+          const mainCtx = mapCanvas.getContext('2d');
+          if (!mainCtx) {
+             throw new Error("No se pudo obtener el contexto 2D del canvas principal.");
+          }
+          const imageData = mainCtx.getImageData(0, 0, mapCanvas.width, mapCanvas.height);
+          const data = imageData.data;
+          const newImageData = ctx.createImageData(mapCanvas.width, mapCanvas.height);
+          const newData = newImageData.data;
+
+          for (let i = 0; i < data.length; i += 4) {
+            let r = data[i];
+            let g = data[i + 1];
+            let b = data[i + 2];
+            
+            switch (options.band) {
+              case 'red':
+                newData[i] = r; 
+                newData[i + 1] = r; 
+                newData[i + 2] = r; 
+                break;
+              case 'green':
+                newData[i] = g; 
+                newData[i + 1] = g; 
+                newData[i + 2] = g; 
+                break;
+              case 'blue':
+                newData[i] = b; 
+                newData[i + 1] = b; 
+                newData[i + 2] = b; 
+                break;
+            }
+            newData[i + 3] = data[i + 3]; // Alpha
+          }
+          ctx.putImageData(newImageData, 0, 0);
+          dataURL = tempCanvas.toDataURL(`image/${options.format}`, quality);
+          fileName = `map_capture_${options.band}_band.${options.format}`;
+        } else {
+          dataURL = mapCanvas.toDataURL(`image/${options.format}`, quality);
+          fileName = `map_capture_full.${options.format}`;
+        }
         
-        triggerDownload(dataURL, 'map_capture_esri.png');
-        toast({ description: "Captura de mapa descargada como PNG." });
+        triggerDownload(dataURL, fileName);
+        toast({ description: `Captura${bandDescription} descargada como ${fileName}.` });
 
       } catch (error: any) {
         console.error("Error capturando el mapa:", error);
@@ -60,14 +117,12 @@ export function useMapCapture({ mapRef, activeBaseLayerId }: UseMapCaptureProps)
       }
     });
 
-    // Trigger a re-render to ensure 'rendercomplete' fires.
-    // This is important if the map hasn't rendered recently or if an immediate capture is needed.
     map.renderSync();
 
   }, [mapRef, activeBaseLayerId, toast]);
 
   return {
-    captureMapAsPNG,
+    captureMap,
     isCapturing,
   };
 }
