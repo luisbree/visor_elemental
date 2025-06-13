@@ -120,32 +120,30 @@ const FeatureAttributesPanel: React.FC<FeatureAttributesPanelProps> = ({
           )}
         
         {totalPages > 1 && (
-          <div className="flex items-center justify-between p-2 border-t border-gray-700/50 bg-gray-800/50 mt-auto shrink-0">
-            <div className="flex items-center gap-2">
-                <Button
-                variant="outline"
-                size="sm"
-                onClick={handlePrevPage}
-                disabled={currentPage === 1}
-                className="text-xs h-7 bg-gray-600/70 hover:bg-gray-500/70 border-gray-500 text-white"
-                >
-                <ChevronLeft className="h-3.5 w-3.5 mr-1" />
-                Anterior
-                </Button>
-                <Button
-                variant="outline"
-                size="sm"
-                onClick={handleNextPage}
-                disabled={currentPage === totalPages}
-                className="text-xs h-7 bg-gray-600/70 hover:bg-gray-500/70 border-gray-500 text-white"
-                >
-                Siguiente
-                <ChevronRight className="h-3.5 w-3.5 ml-1" />
-                </Button>
-            </div>
-            <span className="text-xs text-gray-300">
+          <div className="flex items-center justify-center p-2 border-t border-gray-700/50 bg-gray-800/50 mt-auto shrink-0 gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handlePrevPage}
+              disabled={currentPage === 1}
+              className="text-xs h-7 bg-gray-600/70 hover:bg-gray-500/70 border-gray-500 text-white"
+            >
+              <ChevronLeft className="h-3.5 w-3.5 mr-1" />
+              Anterior
+            </Button>
+            <span className="text-xs text-gray-300 whitespace-nowrap">
               Página {currentPage} de {totalPages}
             </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleNextPage}
+              disabled={currentPage === totalPages}
+              className="text-xs h-7 bg-gray-600/70 hover:bg-gray-500/70 border-gray-500 text-white"
+            >
+              Siguiente
+              <ChevronRight className="h-3.5 w-3.5 ml-1" />
+            </Button>
           </div>
         )}
       </div>
