@@ -31,7 +31,6 @@ interface ToolsPanelProps {
   // Drawing props
   activeDrawTool: string | null;
   onToggleDrawingTool: (toolType: 'Polygon' | 'LineString' | 'Point') => void;
-  // onStopDrawingTool prop removed as it's handled by onToggleDrawingTool
   onClearDrawnFeatures: () => void;
   onSaveDrawnFeaturesAsKML: () => void;
 
@@ -82,7 +81,6 @@ const ToolsPanel: React.FC<ToolsPanelProps> = ({
             <DrawingToolbar
                 activeDrawTool={activeDrawTool}
                 onToggleDrawingTool={onToggleDrawingTool}
-                // onStopDrawingTool prop removed
                 onClearDrawnFeatures={onClearDrawnFeatures}
                 onSaveDrawnFeaturesAsKML={onSaveDrawnFeaturesAsKML}
             />
@@ -113,7 +111,7 @@ const ToolsPanel: React.FC<ToolsPanelProps> = ({
                 <OSMDownloadOptions
                     isFetchingOSM={isFetchingOSM}
                     onFetchOSMDataTrigger={onFetchOSMDataTrigger}
-                    isActiveDrawToolPresent={!!activeDrawTool}
+                    // isActiveDrawToolPresent prop removed
                     downloadFormat={downloadFormat}
                     onDownloadFormatChange={onDownloadFormatChange}
                     isDownloading={isDownloading}

@@ -10,12 +10,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
-// TooltipProvider, Tooltip, TooltipContent, TooltipTrigger removed
 
 interface OSMDownloadOptionsProps {
   isFetchingOSM: boolean;
   onFetchOSMDataTrigger: () => void;
-  // isActiveDrawToolPresent prop removed
+  // isActiveDrawToolPresent prop removed as it's no longer used
 
   downloadFormat: string;
   onDownloadFormatChange: (format: string) => void;
@@ -27,7 +26,7 @@ interface OSMDownloadOptionsProps {
 const OSMDownloadOptions: React.FC<OSMDownloadOptionsProps> = ({
   isFetchingOSM,
   onFetchOSMDataTrigger,
-  downloadFormat,
+  downloadFormat, // downloadFormat prop is kept as it might be used for display or other logic if needed
   onDownloadFormatChange,
   isDownloading,
   onDownloadOSMLayers,
@@ -35,23 +34,25 @@ const OSMDownloadOptions: React.FC<OSMDownloadOptionsProps> = ({
 }) => {
 
   const handleDownloadWithFormat = (format: string) => {
-    onDownloadFormatChange(format);
-    onDownloadOSMLayers();
+    onDownloadFormatChange(format); // Set the format
+    onDownloadOSMLayers(); // Then trigger download
   };
 
   const getFetchButtonTooltipContent = () => {
     if (isFetchingOSM) return "Cargando...";
+    // if (isActiveDrawToolPresent) return "Detenga la herramienta de dibujo para obtener datos OSM.";
     return "Obtener Datos OSM para la entidad dibujada más reciente.";
   };
 
   const getDownloadButtonTooltipContent = () => {
     if (isDownloading) return "Descargando...";
+    // if (isActiveDrawToolPresent) return "Detenga la herramienta de dibujo para descargar capas OSM.";
     return "Descargar capas OSM cargadas en el formato seleccionado.";
   };
 
   const iconButtonBaseClass = "h-8 w-8 p-0 flex items-center justify-center focus-visible:ring-primary";
   const buttonActiveFetchingClass = "bg-primary/70 hover:bg-primary/90 text-primary-foreground animate-pulse";
-  const buttonDefaultClass = "bg-primary/70 hover:bg-primary/90 text-primary-foreground";
+  const buttonDefaultClass = "border border-white/30 text-white/90 bg-black/20 hover:bg-black/40";
   const buttonDisabledClass = "opacity-50 cursor-not-allowed";
 
 
@@ -64,7 +65,7 @@ const OSMDownloadOptions: React.FC<OSMDownloadOptionsProps> = ({
               } ${isFetchingOSM ? buttonDisabledClass : ""}`}
               disabled={isFetchingOSM}
               aria-label={getFetchButtonTooltipContent()}
-              title={getFetchButtonTooltipContent()} // Native tooltip
+              title={getFetchButtonTooltipContent()}
             >
               {isFetchingOSM ? <Loader2 className="h-4 w-4 animate-spin" /> : <CloudDownload className="h-4 w-4" />}
             </Button>
@@ -77,7 +78,7 @@ const OSMDownloadOptions: React.FC<OSMDownloadOptionsProps> = ({
                   } ${isDownloading ? buttonDisabledClass : ""}`}
                   disabled={isDownloading}
                   aria-label={getDownloadButtonTooltipContent()}
-                  title={getDownloadButtonTooltipContent()} // Native tooltip
+                  title={getDownloadButtonTooltipContent()}
                 >
                   {isDownloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
                 </Button>
