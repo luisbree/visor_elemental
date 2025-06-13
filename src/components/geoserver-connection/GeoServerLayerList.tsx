@@ -37,9 +37,9 @@ const GeoServerLayerList: React.FC<GeoServerLayerListProps> = ({
       <ScrollArea className="h-40 border border-white/10 p-2 rounded-md bg-black/10">
           <ul className="space-y-1.5">
               {geoServerDiscoveredLayers.map((gsLayer) => (
-                  <li key={gsLayer.name} className="p-1.5 rounded-md border border-white/15 bg-black/10 hover:bg-white/20 transition-colors overflow-hidden">
-                      <div className="flex items-center"> {/* Cambiado de justify-between */}
-                        <div className="flex items-center space-x-1 shrink-0 mr-2"> {/* Grupo de botones primero, con margen derecho */}
+                  <li key={gsLayer.name} className="p-1.5 rounded-md border border-white/15 bg-black/10 hover:bg-white/20 transition-colors">
+                      <div className="flex items-center"> 
+                        <div className="flex items-center space-x-1 shrink-0 mr-2"> 
                            <Button
                               variant="outline"
                               size="sm"
@@ -62,7 +62,7 @@ const GeoServerLayerList: React.FC<GeoServerLayerListProps> = ({
                           </Button>
                         </div>
                         <span
-                          className="flex-1 cursor-default text-xs font-medium text-white truncate min-w-0" // Eliminado mr-2, flex-1 y min-w-0 son importantes aquí
+                          className="flex-1 cursor-default text-xs font-medium text-white min-w-0 whitespace-normal break-words"
                           title={`${gsLayer.title} (${gsLayer.name})`}
                         >
                             {gsLayer.title}
@@ -77,3 +77,4 @@ const GeoServerLayerList: React.FC<GeoServerLayerListProps> = ({
 };
 
 export default GeoServerLayerList;
+
