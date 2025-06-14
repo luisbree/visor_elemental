@@ -170,7 +170,7 @@ export default function GeoMapperClient() {
 
   const { captureMap, isCapturing: isMapCapturing } = useMapCapture({ 
     mapRef,
-    activeBaseLayerId,
+    // activeBaseLayerId is no longer passed as capture always uses ESRI
   });
 
   const [attrPanelPosition, setAttrPanelPosition] = useState({ x: 50, y: 50 });
@@ -324,10 +324,9 @@ export default function GeoMapperClient() {
             onMouseDownHeader={(e) => handlePanelMouseDown(e, 'map')}
             onCaptureMap={captureMap}
             isCapturing={isMapCapturing}
-            activeBaseLayerId={activeBaseLayerId}
+            // activeBaseLayerId is no longer passed to MapPanel
         />
       </div>
     </div>
   );
 }
-

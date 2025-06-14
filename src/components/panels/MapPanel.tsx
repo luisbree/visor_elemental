@@ -20,7 +20,7 @@ interface MapPanelProps {
   onMouseDownHeader: (e: React.MouseEvent<HTMLDivElement>) => void;
   onCaptureMap: (options: { format: 'png' | 'jpeg'; band?: 'red' | 'green' | 'blue' }) => void;
   isCapturing: boolean;
-  activeBaseLayerId: string | undefined;
+  // activeBaseLayerId is no longer needed as capture always uses ESRI
 }
 
 const MapPanel: React.FC<MapPanelProps> = ({
@@ -31,9 +31,7 @@ const MapPanel: React.FC<MapPanelProps> = ({
   onMouseDownHeader,
   onCaptureMap,
   isCapturing,
-  activeBaseLayerId,
 }) => {
-  const canCapture = activeBaseLayerId === 'esri-satellite';
 
   return (
     <DraggablePanel
@@ -51,9 +49,9 @@ const MapPanel: React.FC<MapPanelProps> = ({
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
-              disabled={isCapturing || !canCapture}
+              disabled={isCapturing} // Only disabled if capturing
               className="w-full bg-primary/80 hover:bg-primary text-primary-foreground text-xs h-8 flex items-center justify-between"
-              title={canCapture ? "Seleccionar opción de captura" : "Active la capa ESRI Satelital para capturar"}
+              title={"Seleccionar opción de captura (usará ESRI Satelital)"}
             >
               <div className="flex items-center">
                 <Camera className="mr-2 h-3.5 w-3.5" />
@@ -64,48 +62,42 @@ const MapPanel: React.FC<MapPanelProps> = ({
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-[var(--radix-dropdown-menu-trigger-width)] bg-gray-700 text-white border-gray-600">
             <DropdownMenuItem
-              disabled={isCapturing || !canCapture}
+              disabled={isCapturing}
               onSelect={() => onCaptureMap({ format: 'png' })}
               className="text-xs hover:bg-gray-600 focus:bg-gray-600 cursor-pointer"
             >
-              Descargar PNG Completo
+              Descargar PNG Completo (ESRI)
             </DropdownMenuItem>
             <DropdownMenuItem
-              disabled={isCapturing || !canCapture}
+              disabled={isCapturing}
               onSelect={() => onCaptureMap({ format: 'jpeg' })}
               className="text-xs hover:bg-gray-600 focus:bg-gray-600 cursor-pointer"
             >
-              Descargar JPG Completo
+              Descargar JPG Completo (ESRI)
             </DropdownMenuItem>
             <DropdownMenuItem
-              disabled={isCapturing || !canCapture}
+              disabled={isCapturing}
               onSelect={() => onCaptureMap({ format: 'jpeg', band: 'red' })}
               className="text-xs hover:bg-gray-600 focus:bg-gray-600 cursor-pointer"
             >
-              Descargar Banda Roja (JPG)
+              Descargar Banda Roja (ESRI, JPG)
             </DropdownMenuItem>
             <DropdownMenuItem
-              disabled={isCapturing || !canCapture}
+              disabled={isCapturing}
               onSelect={() => onCaptureMap({ format: 'jpeg', band: 'green' })}
               className="text-xs hover:bg-gray-600 focus:bg-gray-600 cursor-pointer"
             >
-              Descargar Banda Verde (JPG)
+              Descargar Banda Verde (ESRI, JPG)
             </DropdownMenuItem>
             <DropdownMenuItem
-              disabled={isCapturing || !canCapture}
+              disabled={isCapturing}
               onSelect={() => onCaptureMap({ format: 'jpeg', band: 'blue' })}
               className="text-xs hover:bg-gray-600 focus:bg-gray-600 cursor-pointer"
             >
-              Descargar Banda Azul (JPG)
+              Descargar Banda Azul (ESRI, JPG)
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-
-        {!canCapture && (
-          <p className="text-xs text-muted-foreground text-center">
-            La captura de pantalla solo está disponible con la capa base "ESRI Satelital".
-          </p>
-        )}
       </div>
     </DraggablePanel>
   );
