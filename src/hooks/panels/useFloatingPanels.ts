@@ -17,12 +17,12 @@ interface UseFloatingPanelsProps {
   mapAreaRef: React.RefObject<HTMLDivElement>;
   panelWidth?: number;
   panelPadding?: number;
-  estimatedCollapsedHeaderHeight?: number;
+  estimatedCollapsedHeaderHeight?: number; // Remains in props for potential other uses or future layouts
 }
 
 const DEFAULT_PANEL_WIDTH = 350;
 const DEFAULT_PANEL_PADDING = 16;
-const DEFAULT_ESTIMATED_COLLAPSED_HEADER_HEIGHT = 40; // Matching the value from GeoMapperClient
+// const DEFAULT_ESTIMATED_COLLAPSED_HEADER_HEIGHT = 40; // Not used in this specific layout calculation
 
 export function useFloatingPanels({
   layersPanelRef,
@@ -32,14 +32,14 @@ export function useFloatingPanels({
   mapAreaRef,
   panelWidth = DEFAULT_PANEL_WIDTH,
   panelPadding = DEFAULT_PANEL_PADDING,
-  estimatedCollapsedHeaderHeight = DEFAULT_ESTIMATED_COLLAPSED_HEADER_HEIGHT,
+  // estimatedCollapsedHeaderHeight = DEFAULT_ESTIMATED_COLLAPSED_HEADER_HEIGHT, // Not directly used for X,Y of horizontal layout
 }: UseFloatingPanelsProps) {
 
   const [panels, setPanels] = useState<Record<string, PanelState>>({
     layers: { position: { x: panelPadding, y: panelPadding }, isCollapsed: true, ref: layersPanelRef },
-    tools: { position: { x: 0, y: panelPadding }, isCollapsed: true, ref: toolsPanelRef },
-    geoserver: { position: { x: 0, y: 0 }, isCollapsed: true, ref: geoServerPanelRef },
-    map: { position: {x: 0, y: 0}, isCollapsed: true, ref: mapPanelRef },
+    tools: { position: { x: panelWidth + 2 * panelPadding, y: panelPadding }, isCollapsed: true, ref: toolsPanelRef },
+    geoserver: { position: { x: 2 * (panelWidth + panelPadding) + panelPadding, y: panelPadding }, isCollapsed: true, ref: geoServerPanelRef },
+    map: { position: {x: 3 * (panelWidth + panelPadding) + panelPadding, y: panelPadding}, isCollapsed: true, ref: mapPanelRef },
   });
 
   const [draggingPanelId, setDraggingPanelId] = useState<string | null>(null);
@@ -47,46 +47,52 @@ export function useFloatingPanels({
 
   useEffect(() => {
     if (mapAreaRef.current) {
-      const mapRect = mapAreaRef.current.getBoundingClientRect();
+      const yPos = panelPadding; // All panels at the same Y position, under the banner
+      let currentXOffset = panelPadding; // Starting X for the first panel
 
-      const layersPanelX = panelPadding;
-      const rightAlignedX = (pWidth: number) => Math.max(panelPadding, mapRect.width - pWidth - panelPadding);
-      
-      // Helper to get actual width or fallback. Note: offsetWidth might be 0 if not rendered or display:none.
-      const getPanelActualWidth = (panelRef: React.RefObject<HTMLDivElement>, fallbackWidth: number) => {
-        return panelRef.current?.offsetWidth || fallbackWidth;
-      }
+      // Helper to determine width for placement. For initial horizontal layout,
+      // we use panelWidth as the consistent spacing unit.
+      const getPlacementWidth = () => panelWidth;
 
-      const toolsPanelActualWidth = getPanelActualWidth(toolsPanelRef, panelWidth);
-      const geoServerPanelActualWidth = getPanelActualWidth(geoServerPanelRef, panelWidth);
-      const mapPanelActualWidth = getPanelActualWidth(mapPanelRef, panelWidth);
-      // const layersPanelActualWidth = getPanelActualWidth(layersPanelRef, panelWidth); // Not strictly needed for X if always left
+      const layersPanelX = currentXOffset;
+      currentXOffset += getPlacementWidth() + panelPadding;
 
-      const toolsY = panelPadding;
-      const geoserverY = toolsY + estimatedCollapsedHeaderHeight + panelPadding;
-      const mapPanelY = geoserverY + estimatedCollapsedHeaderHeight + panelPadding;
+      const toolsPanelX = currentXOffset;
+      currentXOffset += getPlacementWidth() + panelPadding;
 
-      setPanels(prev => ({
-        layers: { ...prev.layers, position: {x: layersPanelX, y: panelPadding}, isCollapsed: true },
-        tools: {
-          ...prev.tools,
-          position: { x: rightAlignedX(toolsPanelActualWidth), y: toolsY },
+      const geoServerPanelX = currentXOffset;
+      currentXOffset += getPlacementWidth() + panelPadding;
+
+      const mapPanelX = currentXOffset;
+      // currentXOffset += getPlacementWidth() + panelPadding; // For the next panel, if any
+
+      setPanels({
+        layers: {
+          position: { x: layersPanelX, y: yPos },
           isCollapsed: true,
+          ref: layersPanelRef,
+        },
+        tools: {
+          position: { x: toolsPanelX, y: yPos },
+          isCollapsed: true,
+          ref: toolsPanelRef,
         },
         geoserver: {
-          ...prev.geoserver,
-          position: { x: rightAlignedX(geoServerPanelActualWidth), y: geoserverY },
+          position: { x: geoServerPanelX, y: yPos },
           isCollapsed: true,
+          ref: geoServerPanelRef,
         },
         map: {
-          ...prev.map,
-          position: { x: rightAlignedX(mapPanelActualWidth), y: mapPanelY },
+          position: { x: mapPanelX, y: yPos },
           isCollapsed: true,
-        }
-      }));
+          ref: mapPanelRef,
+        },
+      });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mapAreaRef, panelPadding, panelWidth, estimatedCollapsedHeaderHeight, layersPanelRef, toolsPanelRef, geoServerPanelRef, mapPanelRef]);
+  }, [mapAreaRef, panelPadding, panelWidth, layersPanelRef, toolsPanelRef, geoServerPanelRef, mapPanelRef]);
+  // Removed estimatedCollapsedHeaderHeight from dependencies as it's not used for this specific horizontal layout's initial positioning.
+
 
   const handlePanelMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>, panelId: string) => {
     const panel = panels[panelId];
@@ -121,13 +127,9 @@ export function useFloatingPanels({
       const panelToMove = panels[draggingPanelId];
       if (!panelToMove || !panelToMove.ref.current) return;
 
-      const mapRect = mapAreaRef.current.getBoundingClientRect(); // Relative to viewport
-      const panelRect = panelToMove.ref.current.getBoundingClientRect(); // Also relative to viewport
+      const mapRect = mapAreaRef.current.getBoundingClientRect(); 
+      const panelRect = panelToMove.ref.current.getBoundingClientRect(); 
       
-      // Calculate map container's offset from the document origin, if mapAreaRef is not the direct parent of the panels
-      // For simplicity, assuming mapAreaRef contains the panels, so mapRect.left/top are 0 if it's the offsetParent
-      // Or, if panels are absolutely positioned relative to mapAreaRef, then newX/newY should be within mapRect's bounds
-
       const panelCurrentWidth = panelRect.width;
       const panelCurrentHeight = panelRect.height;
 
@@ -136,7 +138,6 @@ export function useFloatingPanels({
       let newX = dragStartRef.current.panelX + dx;
       let newY = dragStartRef.current.panelY + dy;
 
-      // Constrain within mapAreaRef bounds
       if (panelCurrentWidth > 0 && panelCurrentHeight > 0 && mapRect.width > 0 && mapRect.height > 0) {
         newX = Math.max(0, Math.min(newX, mapRect.width - panelCurrentWidth));
         newY = Math.max(0, Math.min(newY, mapRect.height - panelCurrentHeight));
