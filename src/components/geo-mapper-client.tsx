@@ -88,6 +88,8 @@ const availableBaseLayersForSelect: BaseLayerOptionForSelect[] = BASE_LAYER_DEFI
 
 const PANEL_WIDTH = 350;
 const PANEL_PADDING = 16;
+const ESTIMATED_COLLAPSED_HEADER_HEIGHT = 40;
+
 
 export default function GeoMapperClient() {
   const mapAreaRef = useRef<HTMLDivElement>(null);
@@ -165,12 +167,12 @@ export default function GeoMapperClient() {
 
   const { panels, handlePanelMouseDown, togglePanelCollapse } = useFloatingPanels({
     layersPanelRef, toolsPanelRef, geoServerPanelRef, mapPanelRef, 
-    mapAreaRef, panelWidth: PANEL_WIDTH, panelPadding: PANEL_PADDING
+    mapAreaRef, panelWidth: PANEL_WIDTH, panelPadding: PANEL_PADDING,
+    estimatedCollapsedHeaderHeight: ESTIMATED_COLLAPSED_HEADER_HEIGHT
   });
 
   const { captureMap, isCapturing: isMapCapturing } = useMapCapture({ 
     mapRef,
-    // activeBaseLayerId is no longer passed as capture always uses ESRI
   });
 
   const [attrPanelPosition, setAttrPanelPosition] = useState({ x: 50, y: 50 });
@@ -231,9 +233,9 @@ export default function GeoMapperClient() {
 
   return (
     <div className="flex h-screen w-screen flex-col bg-background text-foreground">
-      <header className="bg-gray-800/60 backdrop-blur-md text-white p-4 shadow-md flex items-center">
-        <MapPin className="mr-3 h-7 w-7 text-primary" />
-        <h1 className="text-2xl font-semibold">Departamento de Estudios Ambientales y Sociales</h1>
+      <header className="bg-gray-800/60 backdrop-blur-md text-white p-2 shadow-md flex items-center">
+        <MapPin className="mr-2 h-6 w-6 text-primary" />
+        <h1 className="text-xl font-semibold">Departamento de Estudios Ambientales y Sociales</h1>
       </header>
       <div ref={mapAreaRef} className="relative flex-1 overflow-hidden">
         <MapView
@@ -324,9 +326,10 @@ export default function GeoMapperClient() {
             onMouseDownHeader={(e) => handlePanelMouseDown(e, 'map')}
             onCaptureMap={captureMap}
             isCapturing={isMapCapturing}
-            // activeBaseLayerId is no longer passed to MapPanel
         />
       </div>
     </div>
   );
 }
+
+    
