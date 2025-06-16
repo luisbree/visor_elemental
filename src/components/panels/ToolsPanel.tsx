@@ -6,7 +6,7 @@ import DraggablePanel from './DraggablePanel';
 import DrawingToolbar from '@/components/drawing-tools/DrawingToolbar';
 import OSMCategorySelector from '@/components/osm-integration/OSMCategorySelector';
 import OSMDownloadOptions from '@/components/osm-integration/OSMDownloadOptions';
-import { PenLine, Map as MapIcon } from 'lucide-react'; // MapIcon for OSM section
+import { Wrench, Map as MapIcon } from 'lucide-react';
 import {
   Accordion,
   AccordionContent,
@@ -16,7 +16,7 @@ import {
 import { Separator } from '@/components/ui/separator';
 import type { MapLayer } from '@/lib/types'; // For handleDownloadOSMLayers prop
 
-interface OSMCategory { // Duplicating for local use, consider moving to types.ts if widely used
+interface OSMCategory {
   id: string;
   name: string;
 }
@@ -39,7 +39,7 @@ interface ToolsPanelProps {
   onFetchOSMDataTrigger: () => void;
   osmCategoriesForSelection: OSMCategory[];
   selectedOSMCategoryIds: string[];
-  onSelectedOSMCategoriesChange: (ids: string[]) => void;
+  onSelectedOSMCategoriesChange: (ids: string[]) => void; // Correct prop name for receiving
   downloadFormat: string;
   onDownloadFormatChange: (format: string) => void;
   isDownloading: boolean;
@@ -60,7 +60,8 @@ const SectionHeader: React.FC<{ title: string; description?: string; icon: React
 const ToolsPanel: React.FC<ToolsPanelProps> = ({
   panelRef, position, isCollapsed, onToggleCollapse, onMouseDownHeader,
   activeDrawTool, onToggleDrawingTool, onClearDrawnFeatures, onSaveDrawnFeaturesAsKML,
-  isFetchingOSM, onFetchOSMDataTrigger, osmCategoriesForSelection, selectedOSMCategoryIds, onSelectedOSMCategoriesChange,
+  isFetchingOSM, onFetchOSMDataTrigger, osmCategoriesForSelection, selectedOSMCategoryIds, 
+  onSelectedOSMCategoriesChange, // Use this prop when passing to OSMCategorySelector
   downloadFormat, onDownloadFormatChange, isDownloading, onDownloadOSMLayers
 }) => {
 
@@ -69,7 +70,7 @@ const ToolsPanel: React.FC<ToolsPanelProps> = ({
   return (
     <DraggablePanel
       title="Herramientas"
-      icon={PenLine}
+      icon={Wrench}
       panelRef={panelRef}
       initialPosition={position}
       onMouseDownHeader={onMouseDownHeader}
@@ -107,12 +108,11 @@ const ToolsPanel: React.FC<ToolsPanelProps> = ({
                 <OSMCategorySelector
                     osmCategoriesForSelection={osmCategoriesForSelection}
                     selectedOSMCategoryIds={selectedOSMCategoryIds}
-                    onSelectedOSMCategoriesChange={onSelectedOSMCategoriesChange}
+                    onSelectedOSMCategoriesChange={onSelectedOSMCategoriesChange} // Pass the correctly named prop here
                 />
                 <OSMDownloadOptions
                     isFetchingOSM={isFetchingOSM}
                     onFetchOSMDataTrigger={onFetchOSMDataTrigger}
-                    // isActiveDrawToolPresent prop removed
                     downloadFormat={downloadFormat}
                     onDownloadFormatChange={onDownloadFormatChange}
                     isDownloading={isDownloading}

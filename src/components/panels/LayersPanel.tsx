@@ -13,7 +13,7 @@ import GeoServerUrlInput from '@/components/geoserver-connection/GeoServerUrlInp
 import GeoServerLayerList from '@/components/geoserver-connection/GeoServerLayerList';
 import { Separator } from '@/components/ui/separator';
 import type { MapLayer, BaseLayerOptionForSelect, GeoServerDiscoveredLayer } from '@/lib/types';
-import { Layers as LayersIcon } from 'lucide-react';
+import { Layers as LayersIcon, Database } from 'lucide-react'; // Added Database
 import {
   Accordion,
   AccordionContent,
@@ -33,7 +33,7 @@ interface LayersPanelProps {
   onAddLayer: (layer: MapLayer) => void;
   onToggleLayerVisibility: (layerId: string) => void;
   onRemoveLayer: (layerId: string) => void;
-  onZoomToLayerExtent: (layerId: string) => void; // Correct prop name
+  onZoomToLayerExtent: (layerId: string) => void; 
   onShowLayerTable: (layerId: string) => void;
   onExtractByPolygon: (layerId: string) => void;
   isDrawingSourceEmptyOrNotPolygon: boolean;
@@ -108,7 +108,7 @@ const LayersPanel: React.FC<LayersPanelProps> = ({
   return (
     <DraggablePanel
       title="Datos"
-      icon={LayersIcon}
+      icon={Database} // Changed LayersIcon to Database
       panelRef={panelRef}
       initialPosition={position}
       onMouseDownHeader={onMouseDownHeader}
@@ -183,7 +183,7 @@ const LayersPanel: React.FC<LayersPanelProps> = ({
                  <LayerList
                     layers={layers}
                     onToggleVisibility={onToggleLayerVisibility}
-                    onZoomToExtent={onZoomToLayerExtent} // Pass down corrected prop name
+                    onZoomToExtent={onZoomToLayerExtent} 
                     onShowTable={onShowLayerTable}
                     onRemoveLayer={onRemoveLayer}
                     onExtractByPolygon={onExtractByPolygon}
