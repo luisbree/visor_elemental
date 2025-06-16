@@ -62,7 +62,7 @@ const GeoServerLayerList: React.FC<GeoServerLayerListProps> = ({
                           </Button>
                         </div>
                         <span
-                          className="flex-1 cursor-default text-xs font-medium text-white min-w-0 whitespace-normal break-words"
+                          className="flex-1 cursor-default text-xs font-medium text-white min-w-0 truncate"
                           title={`${gsLayer.title} (${gsLayer.name})`}
                         >
                             {gsLayer.title}
