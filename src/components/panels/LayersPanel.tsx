@@ -8,6 +8,7 @@ import FileUploadControl from '@/components/layer-manager/FileUploadControl';
 import LayerList from '@/components/layer-manager/LayerList';
 import InspectToolToggle from '@/components/feature-inspection/InspectToolToggle';
 import LocationSearch, { type NominatimResult } from '@/components/location-search/LocationSearch';
+import MapCaptureControl from '@/components/map-tools/MapCaptureControl'; // Import new component
 import { Separator } from '@/components/ui/separator';
 import type { MapLayer, BaseLayerOptionForSelect } from '@/lib/types';
 import { Layers as LayersIcon } from 'lucide-react';
@@ -39,9 +40,12 @@ interface LayersPanelProps {
 
   isInspectModeActive: boolean;
   onToggleInspectMode: () => void;
-  // isActiveDrawToolPresent prop removed
 
   onZoomToBoundingBox: (bbox: [number, number, number, number]) => void;
+
+  // Props for MapCaptureControl
+  onCaptureMap: (outputType: 'jpeg-full' | 'jpeg-red' | 'jpeg-green' | 'jpeg-blue') => void;
+  isCapturingMap: boolean;
 }
 
 const SectionHeader: React.FC<{ title: string; icon: React.ElementType, description?: string }> = ({ title, icon: Icon, description }) => (
@@ -59,8 +63,9 @@ const LayersPanel: React.FC<LayersPanelProps> = ({
   panelRef, position, isCollapsed, onToggleCollapse, onMouseDownHeader,
   layers, onAddLayer, onToggleLayerVisibility, onRemoveLayer, onZoomToLayerExtent, onShowLayerTable,
   availableBaseLayers, activeBaseLayerId, onChangeBaseLayer,
-  isInspectModeActive, onToggleInspectMode, // isActiveDrawToolPresent prop removed from destructuring
-  onZoomToBoundingBox
+  isInspectModeActive, onToggleInspectMode,
+  onZoomToBoundingBox,
+  onCaptureMap, isCapturingMap // Destructure new props
 }) => {
 
   const [activeAccordionItem, setActiveAccordionItem] = React.useState<string | undefined>('layers-section');
@@ -92,18 +97,25 @@ const LayersPanel: React.FC<LayersPanelProps> = ({
       <div className="space-y-3">
         <LocationSearch onLocationSelect={handleLocationSelection} />
 
-        <BaseLayerSelector
-          availableBaseLayers={availableBaseLayers}
-          activeBaseLayerId={activeBaseLayerId}
-          onChangeBaseLayer={onChangeBaseLayer}
-        />
+        <div className="flex items-center gap-2">
+            <div className="flex-grow">
+                <BaseLayerSelector
+                    availableBaseLayers={availableBaseLayers}
+                    activeBaseLayerId={activeBaseLayerId}
+                    onChangeBaseLayer={onChangeBaseLayer}
+                />
+            </div>
+            <MapCaptureControl
+                onCapture={onCaptureMap}
+                isCapturing={isCapturingMap}
+            />
+        </div>
         <Separator className="bg-white/15" />
         <div className="flex items-center gap-2">
           <FileUploadControl onAddLayer={onAddLayer} uniqueIdPrefix="layerspanel-upload"/>
           <InspectToolToggle
             isInspectModeActive={isInspectModeActive}
             onToggleInspectMode={onToggleInspectMode}
-            // isActiveDrawToolPresent prop removed
           />
         </div>
         <Separator className="bg-white/15" />
