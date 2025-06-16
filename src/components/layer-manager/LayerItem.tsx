@@ -36,7 +36,7 @@ const LayerItem: React.FC<LayerItemProps> = ({
   const isVectorLayer = layer.olLayer instanceof VectorLayer;
 
   return (
-    <li className="flex items-center p-1.5 rounded-md border border-white/15 bg-black/10 hover:bg-white/15 transition-colors overflow-hidden"> {/* Added overflow-hidden */}
+    <li className="flex items-center p-1.5 rounded-md border border-white/15 bg-black/10 hover:bg-white/15 transition-colors overflow-hidden">
       <Button
         variant="ghost"
         size="icon"
@@ -47,7 +47,7 @@ const LayerItem: React.FC<LayerItemProps> = ({
       >
         {layer.visible ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
       </Button>
-      <span className="flex-1 cursor-default text-xs font-medium text-white truncate min-w-0" title={layer.name}> {/* Added truncate and min-w-0 */}
+      <span className="flex-1 cursor-default text-xs font-medium text-white truncate min-w-0" title={layer.name}>
         {layer.name}
       </span>
       <div className="flex items-center space-x-0.5 flex-shrink-0">
