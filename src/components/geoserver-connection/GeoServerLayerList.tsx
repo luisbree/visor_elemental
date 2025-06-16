@@ -31,7 +31,7 @@ const GeoServerLayerList: React.FC<GeoServerLayerListProps> = ({
     } 
   };
 
-  const truncateTitle = (title: string, maxLength: number = 25) => {
+  const truncateTitle = (title: string, maxLength: number = 20) => { // Changed maxLength to 20
     if (title.length > maxLength) {
       return title.substring(0, maxLength) + "...";
     }
@@ -68,8 +68,8 @@ const GeoServerLayerList: React.FC<GeoServerLayerListProps> = ({
                         </Button>
                       </div>
                       <span
-                        className="flex-1 text-xs font-medium text-white min-w-0" // Removed truncate, relying on JS
-                        title={`${gsLayer.title} (${gsLayer.name})`} // Tooltip shows full title and technical name
+                        className="flex-1 text-xs font-medium text-white min-w-0" 
+                        title={`${gsLayer.title} (${gsLayer.name})`} 
                       >
                           {truncateTitle(gsLayer.title)}
                       </span>
