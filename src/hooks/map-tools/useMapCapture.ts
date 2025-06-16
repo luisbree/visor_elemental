@@ -5,7 +5,7 @@ import { useState, useCallback, useRef } from 'react';
 import type { Map as OLMap } from 'ol';
 import type TileLayer from 'ol/layer/Tile';
 import { toast } from "@/hooks/use-toast";
-import { BASE_LAYER_DEFINITIONS } from '@/components/map-view'; // Import definitions
+import { BASE_LAYER_DEFINITIONS } from '@/components/map-view'; 
 
 interface UseMapCaptureProps {
   mapRef: React.RefObject<OLMap | null>;
@@ -20,6 +20,9 @@ function triggerDownload(dataURL: string, fileName: string) {
   document.body.removeChild(link);
   URL.revokeObjectURL(link.href);
 }
+
+const UHD_WIDTH = 3840;
+const UHD_HEIGHT = 2160;
 
 export function useMapCapture({ mapRef }: UseMapCaptureProps) {
   const [isCapturing, setIsCapturing] = useState(false);
@@ -38,7 +41,7 @@ export function useMapCapture({ mapRef }: UseMapCaptureProps) {
     }
 
     setIsCapturing(true);
-    toast({ description: "Preparando captura con ESRI Satelital..." });
+    toast({ description: "Preparando captura UHD con ESRI Satelital..." });
 
     const mapInstance = mapRef.current;
     const esriSatelliteLayerDef = BASE_LAYER_DEFINITIONS.find(def => def.id === 'esri-satellite');
@@ -51,11 +54,11 @@ export function useMapCapture({ mapRef }: UseMapCaptureProps) {
 
     let esriOlLayer: TileLayer | undefined;
     let originallyVisibleBaseLayer: TileLayer | undefined;
-    previousActiveBaseLayerIdRef.current = null;
+    previousActiveBaseLayerIdRef.current = null; // Reset before check
 
     mapInstance.getLayers().forEach(layer => {
         if (layer.get('isBaseLayer')) {
-            const baseLayerId = layer.get('baseLayerId');
+            const baseLayerId = layer.get('baseLayerId') as string; // Assume baseLayerId is always string
             if (baseLayerId === esriSatelliteLayerDef.id) {
                 esriOlLayer = layer as TileLayer;
             }
@@ -66,7 +69,7 @@ export function useMapCapture({ mapRef }: UseMapCaptureProps) {
         }
     });
 
-    if (!esriOlLayer) { // Should not happen if map-view is correct
+    if (!esriOlLayer) { 
         toast({ description: "Capa ESRI Satelital no encontrada en el mapa.", variant: "destructive" });
         setIsCapturing(false);
         return;
@@ -84,13 +87,12 @@ export function useMapCapture({ mapRef }: UseMapCaptureProps) {
     try {
       await new Promise<void>(resolve => {
         mapInstance.once('rendercomplete', () => {
-          // Additional small delay to ensure rendering is fully flushed
-          setTimeout(resolve, 250);
+          setTimeout(resolve, 250); 
         });
         if (esriLayerNeedsToggle) {
-            mapInstance.render(); // Force re-render if visibility changed
+            mapInstance.render(); 
         } else {
-            resolve(); // If already visible, proceed
+            resolve(); 
         }
       });
 
@@ -99,38 +101,53 @@ export function useMapCapture({ mapRef }: UseMapCaptureProps) {
         throw new Error("Canvas del mapa no encontrado.");
       }
 
+      // Create UHD canvas and draw the map canvas onto it, scaled
+      const uhdCanvas = document.createElement('canvas');
+      uhdCanvas.width = UHD_WIDTH;
+      uhdCanvas.height = UHD_HEIGHT;
+      const uhdCtx = uhdCanvas.getContext('2d');
+      if (!uhdCtx) {
+        throw new Error("No se pudo obtener el contexto 2D del canvas UHD.");
+      }
+      uhdCtx.drawImage(mapCanvas, 0, 0, mapCanvas.width, mapCanvas.height, 0, 0, UHD_WIDTH, UHD_HEIGHT);
+
+
       let dataURL: string;
       let fileName: string;
       const jpegQuality = 0.9;
 
       if (outputType === 'jpeg-full') {
-        dataURL = mapCanvas.toDataURL('image/jpeg', jpegQuality);
-        fileName = 'map_capture_esri_full.jpg';
+        dataURL = uhdCanvas.toDataURL('image/jpeg', jpegQuality);
+        fileName = 'map_capture_esri_full_uhd.jpg';
       } else {
-        const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = mapCanvas.width;
-        tempCanvas.height = mapCanvas.height;
-        const ctx = tempCanvas.getContext('2d');
-        if (!ctx) throw new Error("No se pudo obtener el contexto 2D del canvas temporal.");
+        const bandCanvas = document.createElement('canvas');
+        bandCanvas.width = UHD_WIDTH;
+        bandCanvas.height = UHD_HEIGHT;
+        const bandCtx = bandCanvas.getContext('2d');
+        if (!bandCtx) throw new Error("No se pudo obtener el contexto 2D del canvas de banda.");
 
-        ctx.drawImage(mapCanvas, 0, 0);
-        const imageData = ctx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+        // Get image data from the scaled UHD canvas
+        const imageData = uhdCtx.getImageData(0, 0, UHD_WIDTH, UHD_HEIGHT);
         const data = imageData.data;
 
-        let bandIndex = 0; // 0 for Red, 1 for Green, 2 for Blue
-        if (outputType === 'jpeg-red') { bandIndex = 0; fileName = 'map_capture_esri_red.jpg'; }
-        else if (outputType === 'jpeg-green') { bandIndex = 1; fileName = 'map_capture_esri_green.jpg'; }
-        else { bandIndex = 2; fileName = 'map_capture_esri_blue.jpg'; }
+        let bandIndex = 0; 
+        if (outputType === 'jpeg-red') { bandIndex = 0; fileName = 'map_capture_esri_red_uhd.jpg'; }
+        else if (outputType === 'jpeg-green') { bandIndex = 1; fileName = 'map_capture_esri_green_uhd.jpg'; }
+        else { bandIndex = 2; fileName = 'map_capture_esri_blue_uhd.jpg'; } // jpeg-blue
+
+        // Create a new ImageData for the band canvas
+        const bandImageData = bandCtx.createImageData(UHD_WIDTH, UHD_HEIGHT);
+        const bandData = bandImageData.data;
 
         for (let i = 0; i < data.length; i += 4) {
           const bandValue = data[i + bandIndex];
-          data[i] = bandValue;     // Red
-          data[i + 1] = bandValue; // Green
-          data[i + 2] = bandValue; // Blue
-          // Alpha (data[i + 3]) remains unchanged
+          bandData[i] = bandValue;     
+          bandData[i + 1] = bandValue; 
+          bandData[i + 2] = bandValue; 
+          bandData[i + 3] = data[i + 3]; // Preserve alpha
         }
-        ctx.putImageData(imageData, 0, 0);
-        dataURL = tempCanvas.toDataURL('image/jpeg', jpegQuality);
+        bandCtx.putImageData(bandImageData, 0, 0);
+        dataURL = bandCanvas.toDataURL('image/jpeg', jpegQuality);
       }
       
       triggerDownload(dataURL, fileName);
@@ -140,16 +157,22 @@ export function useMapCapture({ mapRef }: UseMapCaptureProps) {
       console.error("Error durante la captura de mapa:", error);
       toast({ description: error.message || "Error al capturar el mapa.", variant: "destructive" });
     } finally {
-      // Restore original base layer visibility
       if (esriLayerNeedsToggle && esriOlLayer) {
-        esriOlLayer.setVisible(false); // Hide ESRI if it was turned on
+        esriOlLayer.setVisible(false); 
       }
-      if (previousActiveBaseLayerIdRef.current) {
+      if (previousActiveBaseLayerIdRef.current && 
+          (!esriOlLayer || esriOlLayer.get('baseLayerId') !== previousActiveBaseLayerIdRef.current || esriLayerNeedsToggle) ) {
          mapInstance.getLayers().forEach(layer => {
             if (layer.get('isBaseLayer') && layer.get('baseLayerId') === previousActiveBaseLayerIdRef.current) {
                 layer.setVisible(true);
-                if (layer !== esriOlLayer && esriLayerNeedsToggle) { // if original was not esri and esri was toggled, render again
+                if (layer !== esriOlLayer) { 
                      mapInstance.render();
+                }
+            } else if (layer.get('isBaseLayer') && layer !== esriOlLayer && previousActiveBaseLayerIdRef.current !== layer.get('baseLayerId')) {
+                // Ensure other base layers that are not the original or ESRI (if ESRI was the original) remain hidden
+                // This case is mostly for when ESRI was *not* the original, and we need to ensure only original is re-shown
+                if (layer.get('baseLayerId') !== esriSatelliteLayerDef.id) { // Don't hide ESRI if it WAS the original
+                   layer.setVisible(false);
                 }
             }
         });
