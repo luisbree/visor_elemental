@@ -35,39 +35,37 @@ const GeoServerLayerList: React.FC<GeoServerLayerListProps> = ({
     <>
       <Label className="text-xs font-medium text-white/90 mb-1 block">Capas Disponibles en GeoServer:</Label>
       <ScrollArea className="h-40 border border-white/10 p-2 rounded-md bg-black/10">
-          <ul className="space-y-1.5 w-full"> {/* Added w-full here */}
+          <ul className="space-y-1.5 w-full">
               {geoServerDiscoveredLayers.map((gsLayer) => (
-                  <li key={gsLayer.name} className="p-1.5 rounded-md border border-white/15 bg-black/10 hover:bg-white/15 transition-colors overflow-hidden">
-                      <div className="flex items-center"> 
-                        <div className="flex items-center space-x-1 shrink-0 mr-2"> 
-                           <Button
-                              variant="outline"
-                              size="sm"
-                              className="text-xs h-6 px-2 bg-sky-600/30 hover:bg-sky-500/50 border-sky-500/50 text-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
-                              onClick={() => onAddGeoServerLayerToMap(gsLayer.name, gsLayer.title)}
-                              disabled={gsLayer.wmsAddedToMap}
-                              title={gsLayer.wmsAddedToMap ? "Capa WMS ya añadida" : "Añadir capa como WMS (visual)"}
-                          >
-                              <Layers className="h-3 w-3 mr-1" /> WMS
-                          </Button>
-                           <Button
-                              variant="outline"
-                              size="sm"
-                              className="text-xs h-6 px-2 bg-teal-600/30 hover:bg-teal-500/50 border-teal-500/50 text-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
-                              onClick={() => handleAddWFS(gsLayer.name, gsLayer.title)}
-                              disabled={gsLayer.wfsAddedToMap}
-                              title={gsLayer.wfsAddedToMap ? "Capa WFS ya añadida" : "Añadir capa como WFS (datos vectoriales)"}
-                          >
-                               <Workflow className="h-3 w-3 mr-1" /> WFS
-                          </Button>
-                        </div>
-                        <span
-                          className="flex-1 cursor-default text-xs font-medium text-white min-w-0 truncate"
-                          title={`${gsLayer.title} (${gsLayer.name})`}
+                  <li key={gsLayer.name} className="flex items-center p-1.5 rounded-md border border-white/15 bg-black/10 hover:bg-white/15 transition-colors overflow-hidden">
+                      <div className="flex items-center space-x-1 shrink-0 mr-2"> 
+                         <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-xs h-6 px-2 bg-sky-600/30 hover:bg-sky-500/50 border-sky-500/50 text-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                            onClick={() => onAddGeoServerLayerToMap(gsLayer.name, gsLayer.title)}
+                            disabled={gsLayer.wmsAddedToMap}
+                            title={gsLayer.wmsAddedToMap ? "Capa WMS ya añadida" : "Añadir capa como WMS (visual)"}
                         >
-                            {gsLayer.title}
-                        </span>
+                            <Layers className="h-3 w-3 mr-1" /> WMS
+                        </Button>
+                         <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-xs h-6 px-2 bg-teal-600/30 hover:bg-teal-500/50 border-teal-500/50 text-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                            onClick={() => handleAddWFS(gsLayer.name, gsLayer.title)}
+                            disabled={gsLayer.wfsAddedToMap}
+                            title={gsLayer.wfsAddedToMap ? "Capa WFS ya añadida" : "Añadir capa como WFS (datos vectoriales)"}
+                        >
+                             <Workflow className="h-3 w-3 mr-1" /> WFS
+                        </Button>
                       </div>
+                      <span
+                        className="flex-1 text-xs font-medium text-white min-w-0 truncate"
+                        title={`${gsLayer.title} (${gsLayer.name})`}
+                      >
+                          {gsLayer.title}
+                      </span>
                   </li>
               ))}
           </ul>
