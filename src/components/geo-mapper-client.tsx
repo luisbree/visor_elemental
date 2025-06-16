@@ -20,7 +20,7 @@ import { useDrawingInteractions } from '@/hooks/drawing-tools/useDrawingInteract
 import { useOSMData } from '@/hooks/osm-integration/useOSMData';
 import { useGeoServerLayers } from '@/hooks/geoserver-connection/useGeoServerLayers';
 import { useFloatingPanels } from '@/hooks/panels/useFloatingPanels';
-import { useMapCapture } from '@/hooks/map-tools/useMapCapture'; // Re-added
+import { useMapCapture } from '@/hooks/map-tools/useMapCapture';
 import { useToast } from "@/hooks/use-toast";
 
 import type { OSMCategoryConfig, GeoServerDiscoveredLayer, BaseLayerOptionForSelect } from '@/lib/types';
@@ -114,12 +114,12 @@ export default function GeoMapperClient() {
 
   const {
     layers, addLayer, removeLayer, toggleLayerVisibility, zoomToLayerExtent, handleShowLayerTable,
-    handleExtractFeaturesByPolygon, isDrawingSourceEmptyOrNotPolygon, // Added from useLayerManager
+    handleExtractFeaturesByPolygon, isDrawingSourceEmptyOrNotPolygon,
   } = useLayerManager({ 
     mapRef, 
     isMapReady, 
     drawingLayerRef, 
-    drawingSourceRef, // Pass drawingSourceRef to useLayerManager
+    drawingSourceRef,
     onShowTableRequest: featureInspectionHook.processAndDisplayFeatures,
     updateGeoServerDiscoveredLayerState: (layerName, added, type) => {
         setGeoServerDiscoveredLayers(prev => prev.map(l => {
@@ -171,7 +171,7 @@ export default function GeoMapperClient() {
     estimatedCollapsedHeaderHeight: ESTIMATED_COLLAPSED_HEADER_HEIGHT,
   });
 
-  const { captureMap, isCapturing: isMapCapturing } = useMapCapture({ mapRef }); // Re-added useMapCapture
+  const { captureMap, isCapturing: isMapCapturing } = useMapCapture({ mapRef });
 
   const [attrPanelPosition, setAttrPanelPosition] = useState({ x: 50, y: 50 });
   const handleAttrPanelMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
@@ -271,16 +271,16 @@ export default function GeoMapperClient() {
           onRemoveLayer={removeLayer}
           onZoomToLayerExtent={zoomToLayerExtent}
           onShowLayerTable={handleShowLayerTable}
-          onExtractByPolygon={handleExtractFeaturesByPolygon} // Pass new prop
-          isDrawingSourceEmptyOrNotPolygon={isDrawingSourceEmptyOrNotPolygon} // Pass new prop
+          onExtractByPolygon={handleExtractFeaturesByPolygon}
+          isDrawingSourceEmptyOrNotPolygon={isDrawingSourceEmptyOrNotPolygon}
           availableBaseLayers={availableBaseLayersForSelect}
           activeBaseLayerId={activeBaseLayerId}
           onChangeBaseLayer={handleChangeBaseLayer}
           isInspectModeActive={featureInspectionHook.isInspectModeActive}
           onToggleInspectMode={featureInspectionHook.toggleInspectMode}
           onZoomToBoundingBox={zoomToBoundingBox}
-          captureMap={captureMap} // Pass captureMap
-          isCapturingMap={isMapCapturing} // Pass isMapCapturing
+          captureMap={captureMap}
+          isCapturingMap={isMapCapturing}
           geoServerUrlInput={geoServerUrlInput}
           onGeoServerUrlChange={setGeoServerUrlInput}
           onFetchGeoServerLayers={handleFetchGeoServerLayers}

@@ -69,6 +69,7 @@ const ToolsPanel: React.FC<ToolsPanelProps> = ({
   return (
     <DraggablePanel
       title="Herramientas"
+      icon={PenLine}
       panelRef={panelRef}
       initialPosition={position}
       onMouseDownHeader={onMouseDownHeader}

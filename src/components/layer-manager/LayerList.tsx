@@ -10,21 +10,21 @@ import { Layers } from 'lucide-react';
 interface LayerListProps {
   layers: MapLayer[];
   onToggleVisibility: (layerId: string) => void;
-  onZoomToExtent: (layerId: string) => void;
+  onZoomToExtent: (layerId: string) => void; // Correct prop name
   onShowTable: (layerId: string) => void;
   onRemoveLayer: (layerId: string) => void;
-  onExtractByPolygon: (layerId: string) => void; // New prop
-  isDrawingSourceEmptyOrNotPolygon: boolean; // New prop
+  onExtractByPolygon: (layerId: string) => void;
+  isDrawingSourceEmptyOrNotPolygon: boolean;
 }
 
 const LayerList: React.FC<LayerListProps> = ({
   layers,
   onToggleVisibility,
-  onZoomToExtent,
+  onZoomToExtent, // Correct prop name
   onShowTable,
   onRemoveLayer,
-  onExtractByPolygon, // Destructure new prop
-  isDrawingSourceEmptyOrNotPolygon, // Destructure new prop
+  onExtractByPolygon,
+  isDrawingSourceEmptyOrNotPolygon,
 }) => {
   if (layers.length === 0) {
     return (
@@ -44,11 +44,11 @@ const LayerList: React.FC<LayerListProps> = ({
             key={layer.id}
             layer={layer}
             onToggleVisibility={onToggleVisibility}
-            onZoomToExtent={onZoomToExtent}
+            onZoomToExtent={onZoomToExtent} // Pass down corrected prop name
             onShowTable={onShowTable}
             onRemove={onRemoveLayer}
-            onExtractByPolygon={onExtractByPolygon} // Pass down
-            isDrawingSourceEmptyOrNotPolygon={isDrawingSourceEmptyOrNotPolygon} // Pass down
+            onExtractByPolygon={onExtractByPolygon}
+            isDrawingSourceEmptyOrNotPolygon={isDrawingSourceEmptyOrNotPolygon}
           />
         ))}
       </ul>

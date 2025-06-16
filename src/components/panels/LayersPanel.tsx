@@ -33,10 +33,10 @@ interface LayersPanelProps {
   onAddLayer: (layer: MapLayer) => void;
   onToggleLayerVisibility: (layerId: string) => void;
   onRemoveLayer: (layerId: string) => void;
-  onZoomToLayerExtent: (layerId: string) => void;
+  onZoomToLayerExtent: (layerId: string) => void; // Correct prop name
   onShowLayerTable: (layerId: string) => void;
-  onExtractByPolygon: (layerId: string) => void; // New prop
-  isDrawingSourceEmptyOrNotPolygon: boolean; // New prop
+  onExtractByPolygon: (layerId: string) => void;
+  isDrawingSourceEmptyOrNotPolygon: boolean;
 
   availableBaseLayers: BaseLayerOptionForSelect[];
   activeBaseLayerId: string;
@@ -74,7 +74,7 @@ const SectionHeader: React.FC<{ title: string; icon: React.ElementType, descript
 const LayersPanel: React.FC<LayersPanelProps> = ({
   panelRef, position, isCollapsed, onToggleCollapse, onMouseDownHeader,
   layers, onAddLayer, onToggleLayerVisibility, onRemoveLayer, onZoomToLayerExtent, onShowLayerTable,
-  onExtractByPolygon, isDrawingSourceEmptyOrNotPolygon, // Destructure new props
+  onExtractByPolygon, isDrawingSourceEmptyOrNotPolygon,
   availableBaseLayers, activeBaseLayerId, onChangeBaseLayer,
   isInspectModeActive, onToggleInspectMode,
   onZoomToBoundingBox,
@@ -107,7 +107,8 @@ const LayersPanel: React.FC<LayersPanelProps> = ({
 
   return (
     <DraggablePanel
-      title="Capas y Utilitarios"
+      title="Datos"
+      icon={LayersIcon}
       panelRef={panelRef}
       initialPosition={position}
       onMouseDownHeader={onMouseDownHeader}
@@ -182,11 +183,11 @@ const LayersPanel: React.FC<LayersPanelProps> = ({
                  <LayerList
                     layers={layers}
                     onToggleVisibility={onToggleLayerVisibility}
-                    onZoomToExtent={onZoomToLayerExtent}
+                    onZoomToExtent={onZoomToLayerExtent} // Pass down corrected prop name
                     onShowTable={onShowLayerTable}
                     onRemoveLayer={onRemoveLayer}
-                    onExtractByPolygon={onExtractByPolygon} // Pass down
-                    isDrawingSourceEmptyOrNotPolygon={isDrawingSourceEmptyOrNotPolygon} // Pass down
+                    onExtractByPolygon={onExtractByPolygon}
+                    isDrawingSourceEmptyOrNotPolygon={isDrawingSourceEmptyOrNotPolygon}
                   />
               </AccordionContent>
             </AccordionItem>
