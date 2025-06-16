@@ -13,6 +13,8 @@ interface LayerListProps {
   onZoomToExtent: (layerId: string) => void;
   onShowTable: (layerId: string) => void;
   onRemoveLayer: (layerId: string) => void;
+  onExtractByPolygon: (layerId: string) => void; // New prop
+  isDrawingSourceEmptyOrNotPolygon: boolean; // New prop
 }
 
 const LayerList: React.FC<LayerListProps> = ({
@@ -21,6 +23,8 @@ const LayerList: React.FC<LayerListProps> = ({
   onZoomToExtent,
   onShowTable,
   onRemoveLayer,
+  onExtractByPolygon, // Destructure new prop
+  isDrawingSourceEmptyOrNotPolygon, // Destructure new prop
 }) => {
   if (layers.length === 0) {
     return (
@@ -43,6 +47,8 @@ const LayerList: React.FC<LayerListProps> = ({
             onZoomToExtent={onZoomToExtent}
             onShowTable={onShowTable}
             onRemove={onRemoveLayer}
+            onExtractByPolygon={onExtractByPolygon} // Pass down
+            isDrawingSourceEmptyOrNotPolygon={isDrawingSourceEmptyOrNotPolygon} // Pass down
           />
         ))}
       </ul>

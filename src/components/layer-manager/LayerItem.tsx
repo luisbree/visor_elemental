@@ -3,9 +3,9 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Eye, EyeOff, ZoomIn, Table2, Trash2 } from 'lucide-react';
+import { Eye, EyeOff, ZoomIn, Table2, Trash2, Scissors } from 'lucide-react'; // Added Scissors
 import type { MapLayer } from '@/lib/types';
-import VectorLayer from 'ol/layer/Vector'; // Import VectorLayer
+import VectorLayer from 'ol/layer/Vector'; 
 
 interface LayerItemProps {
   layer: MapLayer;
@@ -13,6 +13,8 @@ interface LayerItemProps {
   onZoomToExtent: (layerId: string) => void;
   onShowTable: (layerId: string) => void;
   onRemove: (layerId: string) => void;
+  onExtractByPolygon: (layerId: string) => void; // New prop
+  isDrawingSourceEmptyOrNotPolygon: boolean; // New prop
 }
 
 const LayerItem: React.FC<LayerItemProps> = ({
@@ -21,7 +23,11 @@ const LayerItem: React.FC<LayerItemProps> = ({
   onZoomToExtent,
   onShowTable,
   onRemove,
+  onExtractByPolygon, // Destructure new prop
+  isDrawingSourceEmptyOrNotPolygon, // Destructure new prop
 }) => {
+  const isVectorLayer = layer.olLayer instanceof VectorLayer;
+
   return (
     <li className="flex items-center p-1.5 rounded-md border border-white/15 bg-black/10 hover:bg-white/15 transition-colors overflow-hidden">
       <Button
@@ -48,8 +54,7 @@ const LayerItem: React.FC<LayerItemProps> = ({
         >
           <ZoomIn className="h-3.5 w-3.5" />
         </Button>
-        {/* Check if the layer is an instance of VectorLayer to show the table button */}
-        {layer.olLayer instanceof VectorLayer && (
+        {isVectorLayer && (
            <Button
              variant="ghost"
              size="icon"
@@ -60,6 +65,19 @@ const LayerItem: React.FC<LayerItemProps> = ({
            >
              <Table2 className="h-3.5 w-3.5" />
            </Button>
+        )}
+        {isVectorLayer && ( // Only show for vector layers
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => onExtractByPolygon(layer.id)}
+            className="h-6 w-6 text-white hover:bg-gray-600/80 p-0 disabled:opacity-50 disabled:cursor-not-allowed"
+            aria-label={`Extraer de ${layer.name} por polígono dibujado`}
+            title={isDrawingSourceEmptyOrNotPolygon ? "Dibuje un polígono primero" : `Extraer de ${layer.name} por polígono`}
+            disabled={isDrawingSourceEmptyOrNotPolygon}
+          >
+            <Scissors className="h-3.5 w-3.5" />
+          </Button>
         )}
         <Button
           variant="ghost"

@@ -13,7 +13,7 @@ import GeoServerUrlInput from '@/components/geoserver-connection/GeoServerUrlInp
 import GeoServerLayerList from '@/components/geoserver-connection/GeoServerLayerList';
 import { Separator } from '@/components/ui/separator';
 import type { MapLayer, BaseLayerOptionForSelect, GeoServerDiscoveredLayer } from '@/lib/types';
-import { Layers as LayersIcon, Server as ServerIcon } from 'lucide-react'; // ServerIcon ya no se usará aquí para el header de GeoServer
+import { Layers as LayersIcon } from 'lucide-react';
 import {
   Accordion,
   AccordionContent,
@@ -35,6 +35,8 @@ interface LayersPanelProps {
   onRemoveLayer: (layerId: string) => void;
   onZoomToLayerExtent: (layerId: string) => void;
   onShowLayerTable: (layerId: string) => void;
+  onExtractByPolygon: (layerId: string) => void; // New prop
+  isDrawingSourceEmptyOrNotPolygon: boolean; // New prop
 
   availableBaseLayers: BaseLayerOptionForSelect[];
   activeBaseLayerId: string;
@@ -45,10 +47,9 @@ interface LayersPanelProps {
 
   onZoomToBoundingBox: (bbox: [number, number, number, number]) => void;
 
-  onCaptureMap: (outputType: 'jpeg-full' | 'jpeg-red' | 'jpeg-green' | 'jpeg-blue') => void;
+  captureMap: (outputType: 'jpeg-full' | 'jpeg-red' | 'jpeg-green' | 'jpeg-blue') => void;
   isCapturingMap: boolean;
 
-  // GeoServer Props
   geoServerUrlInput: string;
   onGeoServerUrlChange: (url: string) => void;
   onFetchGeoServerLayers: () => Promise<GeoServerDiscoveredLayer[]>; 
@@ -73,10 +74,11 @@ const SectionHeader: React.FC<{ title: string; icon: React.ElementType, descript
 const LayersPanel: React.FC<LayersPanelProps> = ({
   panelRef, position, isCollapsed, onToggleCollapse, onMouseDownHeader,
   layers, onAddLayer, onToggleLayerVisibility, onRemoveLayer, onZoomToLayerExtent, onShowLayerTable,
+  onExtractByPolygon, isDrawingSourceEmptyOrNotPolygon, // Destructure new props
   availableBaseLayers, activeBaseLayerId, onChangeBaseLayer,
   isInspectModeActive, onToggleInspectMode,
   onZoomToBoundingBox,
-  onCaptureMap, isCapturingMap,
+  captureMap, isCapturingMap,
   geoServerUrlInput, onGeoServerUrlChange, onFetchGeoServerLayers, 
   geoServerDiscoveredLayers, setGeoServerDiscoveredLayers,
   isLoadingGeoServerLayers, onAddGeoServerLayerToMap, onAddGeoServerLayerAsWFS
@@ -92,8 +94,6 @@ const LayersPanel: React.FC<LayersPanelProps> = ({
     prevLayersLengthRef.current = layers.length;
   }, [layers.length, activeAccordionItems]);
   
-  // useEffect para expandir el acordeón de GeoServer eliminado
-
   const handleLocationSelection = (location: NominatimResult) => {
     const [sLat, nLat, wLon, eLon] = location.boundingbox.map(coord => parseFloat(coord));
     onZoomToBoundingBox([wLon, sLat, eLon, nLat]);
@@ -116,11 +116,11 @@ const LayersPanel: React.FC<LayersPanelProps> = ({
       style={{ top: `${position.y}px`, left: `${position.x}px` }}
       showCloseButton={false}
     >
-      <div className="space-y-3"> {/* Contenedor principal con espaciado vertical */}
+      <div className="space-y-3"> 
         
         <LocationSearch onLocationSelect={handleLocationSelection} />
 
-        <div className="flex items-center gap-2"> {/* Contenedor para BaseLayerSelector y MapCaptureControl en línea */}
+        <div className="flex items-center gap-2"> 
             <div className="flex-grow">
                 <BaseLayerSelector
                     availableBaseLayers={availableBaseLayers}
@@ -129,14 +129,13 @@ const LayersPanel: React.FC<LayersPanelProps> = ({
                 />
             </div>
             <MapCaptureControl
-                onCapture={onCaptureMap}
+                onCapture={captureMap}
                 isCapturing={isCapturingMap}
             />
         </div>
         
         <Separator className="bg-white/15" />
 
-        {/* Sección de GeoServer integrada directamente */}
         <GeoServerUrlInput
             geoServerUrlInput={geoServerUrlInput}
             onGeoServerUrlChange={onGeoServerUrlChange}
@@ -146,7 +145,6 @@ const LayersPanel: React.FC<LayersPanelProps> = ({
         />
         {geoServerDiscoveredLayers && geoServerDiscoveredLayers.length > 0 && (
           <>
-            {/* GeoServerLayerList no necesita un Separator antes si está agrupado lógicamente */}
             <GeoServerLayerList
               geoServerDiscoveredLayers={geoServerDiscoveredLayers}
               onAddGeoServerLayerToMap={onAddGeoServerLayerToMap}
@@ -157,7 +155,7 @@ const LayersPanel: React.FC<LayersPanelProps> = ({
 
         <Separator className="bg-white/15" />
         
-        <div className="flex items-center gap-2"> {/* Contenedor para FileUploadControl e InspectToolToggle en línea */}
+        <div className="flex items-center gap-2"> 
           <FileUploadControl onAddLayer={onAddLayer} uniqueIdPrefix="layerspanel-upload"/>
           <InspectToolToggle
             isInspectModeActive={isInspectModeActive}
@@ -187,6 +185,8 @@ const LayersPanel: React.FC<LayersPanelProps> = ({
                     onZoomToExtent={onZoomToLayerExtent}
                     onShowTable={onShowLayerTable}
                     onRemoveLayer={onRemoveLayer}
+                    onExtractByPolygon={onExtractByPolygon} // Pass down
+                    isDrawingSourceEmptyOrNotPolygon={isDrawingSourceEmptyOrNotPolygon} // Pass down
                   />
               </AccordionContent>
             </AccordionItem>
@@ -198,4 +198,3 @@ const LayersPanel: React.FC<LayersPanelProps> = ({
 };
 
 export default LayersPanel;
-
