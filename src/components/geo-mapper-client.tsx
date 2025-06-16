@@ -2,10 +2,18 @@
 "use client";
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { MapPin } from 'lucide-react';
+import { MapPin, Database, Wrench } from 'lucide-react'; // Added Database, Wrench
 import { Style, Fill, Stroke, Circle as CircleStyle } from 'ol/style';
 import { transformExtent } from 'ol/proj';
 import type { Extent } from 'ol/extent';
+import { Button } from '@/components/ui/button'; // For minimized icons
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"; // For tooltips on minimized icons
+
 
 import MapView, { BASE_LAYER_DEFINITIONS } from '@/components/map-view';
 import FeatureAttributesPanel from '@/components/panels/FeatureAttributesPanel';
@@ -163,7 +171,7 @@ export default function GeoMapperClient() {
       setIsWfsLoading 
   });
 
-  const { panels, handlePanelMouseDown, togglePanelCollapse } = useFloatingPanels({
+  const { panels, handlePanelMouseDown, togglePanelCollapse, togglePanelMinimize } = useFloatingPanels({
     layersPanelRef, toolsPanelRef, 
     mapAreaRef, 
     panelWidth: PANEL_WIDTH, 
@@ -258,59 +266,100 @@ export default function GeoMapperClient() {
           isPanelCollapsed={isAttrPanelCollapsed}
           onTogglePanelCollapse={() => setIsAttrPanelCollapsed(!isAttrPanelCollapsed)}
         />
+        
+        {/* Minimized Panel Icons Area */}
+        <div className="absolute top-2 right-2 z-20 flex flex-col space-y-1">
+          <TooltipProvider delayDuration={200}>
+            {Object.entries(panels).map(([panelId, panelState]) => {
+              if (panelState.isMinimized) {
+                let IconComponent;
+                let tooltipText = "";
+                if (panelId === 'layers') { IconComponent = Database; tooltipText = "Restaurar Panel de Datos"; }
+                else if (panelId === 'tools') { IconComponent = Wrench; tooltipText = "Restaurar Panel de Herramientas"; }
+                else { return null; }
 
-        <LayersPanel
-          panelRef={layersPanelRef}
-          position={panels.layers.position}
-          isCollapsed={panels.layers.isCollapsed}
-          onToggleCollapse={() => togglePanelCollapse('layers')}
-          onMouseDownHeader={(e) => handlePanelMouseDown(e, 'layers')}
-          layers={layers}
-          onAddLayer={addLayer}
-          onToggleLayerVisibility={toggleLayerVisibility}
-          onRemoveLayer={removeLayer}
-          onZoomToLayerExtent={zoomToLayerExtent}
-          onShowLayerTable={handleShowLayerTable}
-          onExtractByPolygon={handleExtractFeaturesByPolygon}
-          isDrawingSourceEmptyOrNotPolygon={isDrawingSourceEmptyOrNotPolygon}
-          availableBaseLayers={availableBaseLayersForSelect}
-          activeBaseLayerId={activeBaseLayerId}
-          onChangeBaseLayer={handleChangeBaseLayer}
-          isInspectModeActive={featureInspectionHook.isInspectModeActive}
-          onToggleInspectMode={featureInspectionHook.toggleInspectMode}
-          onZoomToBoundingBox={zoomToBoundingBox}
-          captureMap={captureMap}
-          isCapturingMap={isMapCapturing}
-          geoServerUrlInput={geoServerUrlInput}
-          onGeoServerUrlChange={setGeoServerUrlInput}
-          onFetchGeoServerLayers={handleFetchGeoServerLayers}
-          geoServerDiscoveredLayers={geoServerDiscoveredLayers}
-          setGeoServerDiscoveredLayers={setGeoServerDiscoveredLayers}
-          isLoadingGeoServerLayers={isLoadingGeoServerLayers}
-          onAddGeoServerLayerToMap={handleAddGeoServerLayerToMap}
-          onAddGeoServerLayerAsWFS={handleAddGeoServerLayerAsWFS}
-        />
+                return (
+                  <Tooltip key={panelId}>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8 bg-gray-700/80 text-white hover:bg-gray-600/90 border-gray-600/70"
+                        onClick={() => togglePanelMinimize(panelId)}
+                      >
+                        <IconComponent className="h-4 w-4" />
+                        <span className="sr-only">{tooltipText}</span>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="left" className="bg-gray-700 text-white border-gray-600">
+                      <p>{tooltipText}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                );
+              }
+              return null;
+            })}
+          </TooltipProvider>
+        </div>
 
-        <ToolsPanel
-          panelRef={toolsPanelRef}
-          position={panels.tools.position}
-          isCollapsed={panels.tools.isCollapsed}
-          onToggleCollapse={() => togglePanelCollapse('tools')}
-          onMouseDownHeader={(e) => handlePanelMouseDown(e, 'tools')}
-          activeDrawTool={drawingInteractions.activeDrawTool}
-          onToggleDrawingTool={drawingInteractions.toggleDrawingTool}
-          onClearDrawnFeatures={drawingInteractions.clearDrawnFeatures}
-          onSaveDrawnFeaturesAsKML={drawingInteractions.saveDrawnFeaturesAsKML}
-          isFetchingOSM={isFetchingOSM}
-          onFetchOSMDataTrigger={fetchOSMData}
-          osmCategoriesForSelection={osmCategoriesForSelection}
-          selectedOSMCategoryIds={selectedOSMCategoryIds}
-          onSelectedOSMCategoriesChange={setSelectedOSMCategoryIds}
-          downloadFormat={downloadFormat}
-          onDownloadFormatChange={setDownloadFormat}
-          isDownloading={isDownloading}
-          onDownloadOSMLayers={() => handleDownloadOSMLayers(layers)}
-        />
+        {!panels.layers.isMinimized && (
+          <LayersPanel
+            panelRef={layersPanelRef}
+            position={panels.layers.position}
+            isCollapsed={panels.layers.isCollapsed}
+            onToggleCollapse={() => togglePanelCollapse('layers')}
+            onClosePanel={() => togglePanelMinimize('layers')}
+            onMouseDownHeader={(e) => handlePanelMouseDown(e, 'layers')}
+            layers={layers}
+            onAddLayer={addLayer}
+            onToggleLayerVisibility={toggleLayerVisibility}
+            onRemoveLayer={removeLayer}
+            onZoomToLayerExtent={zoomToLayerExtent}
+            onShowLayerTable={handleShowLayerTable}
+            onExtractByPolygon={handleExtractFeaturesByPolygon}
+            isDrawingSourceEmptyOrNotPolygon={isDrawingSourceEmptyOrNotPolygon}
+            availableBaseLayers={availableBaseLayersForSelect}
+            activeBaseLayerId={activeBaseLayerId}
+            onChangeBaseLayer={handleChangeBaseLayer}
+            isInspectModeActive={featureInspectionHook.isInspectModeActive}
+            onToggleInspectMode={featureInspectionHook.toggleInspectMode}
+            onZoomToBoundingBox={zoomToBoundingBox}
+            captureMap={captureMap}
+            isCapturingMap={isMapCapturing}
+            geoServerUrlInput={geoServerUrlInput}
+            onGeoServerUrlChange={setGeoServerUrlInput}
+            onFetchGeoServerLayers={handleFetchGeoServerLayers}
+            geoServerDiscoveredLayers={geoServerDiscoveredLayers}
+            setGeoServerDiscoveredLayers={setGeoServerDiscoveredLayers}
+            isLoadingGeoServerLayers={isLoadingGeoServerLayers}
+            onAddGeoServerLayerToMap={handleAddGeoServerLayerToMap}
+            onAddGeoServerLayerAsWFS={handleAddGeoServerLayerAsWFS}
+          />
+        )}
+
+        {!panels.tools.isMinimized && (
+          <ToolsPanel
+            panelRef={toolsPanelRef}
+            position={panels.tools.position}
+            isCollapsed={panels.tools.isCollapsed}
+            onToggleCollapse={() => togglePanelCollapse('tools')}
+            onClosePanel={() => togglePanelMinimize('tools')}
+            onMouseDownHeader={(e) => handlePanelMouseDown(e, 'tools')}
+            activeDrawTool={drawingInteractions.activeDrawTool}
+            onToggleDrawingTool={drawingInteractions.toggleDrawingTool}
+            onClearDrawnFeatures={drawingInteractions.clearDrawnFeatures}
+            onSaveDrawnFeaturesAsKML={drawingInteractions.saveDrawnFeaturesAsKML}
+            isFetchingOSM={isFetchingOSM}
+            onFetchOSMDataTrigger={fetchOSMData}
+            osmCategoriesForSelection={osmCategoriesForSelection}
+            selectedOSMCategoryIds={selectedOSMCategoryIds}
+            onSelectedOSMCategoriesChange={setSelectedOSMCategoryIds}
+            downloadFormat={downloadFormat}
+            onDownloadFormatChange={setDownloadFormat}
+            isDownloading={isDownloading}
+            onDownloadOSMLayers={() => handleDownloadOSMLayers(layers)}
+          />
+        )}
       </div>
     </div>
   );

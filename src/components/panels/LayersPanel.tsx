@@ -13,7 +13,7 @@ import GeoServerUrlInput from '@/components/geoserver-connection/GeoServerUrlInp
 import GeoServerLayerList from '@/components/geoserver-connection/GeoServerLayerList';
 import { Separator } from '@/components/ui/separator';
 import type { MapLayer, BaseLayerOptionForSelect, GeoServerDiscoveredLayer } from '@/lib/types';
-import { Layers as LayersIcon, Database } from 'lucide-react'; // Added Database
+import { Layers as LayersIcon, Database } from 'lucide-react';
 import {
   Accordion,
   AccordionContent,
@@ -27,6 +27,7 @@ interface LayersPanelProps {
   position: { x: number; y: number };
   isCollapsed: boolean;
   onToggleCollapse: () => void;
+  onClosePanel: () => void; // New prop for closing/minimizing
   onMouseDownHeader: (e: React.MouseEvent<HTMLDivElement>) => void;
 
   layers: MapLayer[];
@@ -72,7 +73,7 @@ const SectionHeader: React.FC<{ title: string; icon: React.ElementType, descript
 
 
 const LayersPanel: React.FC<LayersPanelProps> = ({
-  panelRef, position, isCollapsed, onToggleCollapse, onMouseDownHeader,
+  panelRef, position, isCollapsed, onToggleCollapse, onClosePanel, onMouseDownHeader,
   layers, onAddLayer, onToggleLayerVisibility, onRemoveLayer, onZoomToLayerExtent, onShowLayerTable,
   onExtractByPolygon, isDrawingSourceEmptyOrNotPolygon,
   availableBaseLayers, activeBaseLayerId, onChangeBaseLayer,
@@ -108,14 +109,15 @@ const LayersPanel: React.FC<LayersPanelProps> = ({
   return (
     <DraggablePanel
       title="Datos"
-      icon={Database} // Changed LayersIcon to Database
+      icon={Database}
       panelRef={panelRef}
       initialPosition={position}
       onMouseDownHeader={onMouseDownHeader}
       isCollapsed={isCollapsed}
       onToggleCollapse={onToggleCollapse}
+      onClose={onClosePanel} // Use new prop
+      showCloseButton={true} // Explicitly show close button
       style={{ top: `${position.y}px`, left: `${position.x}px` }}
-      showCloseButton={false}
     >
       <div className="space-y-3"> 
         

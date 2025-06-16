@@ -7,12 +7,12 @@ interface PanelState {
   position: { x: number; y: number };
   isCollapsed: boolean;
   ref: React.RefObject<HTMLDivElement>;
+  isMinimized: boolean; // New state
 }
 
 interface UseFloatingPanelsProps {
   layersPanelRef: React.RefObject<HTMLDivElement>;
   toolsPanelRef: React.RefObject<HTMLDivElement>;
-  // geoServerPanelRef removed
   mapAreaRef: React.RefObject<HTMLDivElement>;
   panelWidth?: number;
   panelPadding?: number;
@@ -26,7 +26,6 @@ const DEFAULT_ESTIMATED_COLLAPSED_HEADER_HEIGHT = 32;
 export function useFloatingPanels({
   layersPanelRef,
   toolsPanelRef,
-  // geoServerPanelRef removed
   mapAreaRef,
   panelWidth = DEFAULT_PANEL_WIDTH,
   panelPadding = DEFAULT_PANEL_PADDING,
@@ -34,9 +33,8 @@ export function useFloatingPanels({
 }: UseFloatingPanelsProps) {
 
   const [panels, setPanels] = useState<Record<string, PanelState>>({
-    layers: { position: { x: panelPadding, y: panelPadding }, isCollapsed: false, ref: layersPanelRef }, // Start layers panel uncollapsed
-    tools: { position: { x: panelWidth + 2 * panelPadding, y: panelPadding }, isCollapsed: true, ref: toolsPanelRef },
-    // geoserver panel state removed
+    layers: { position: { x: panelPadding, y: panelPadding }, isCollapsed: false, ref: layersPanelRef, isMinimized: false },
+    tools: { position: { x: panelWidth + 2 * panelPadding, y: panelPadding }, isCollapsed: true, ref: toolsPanelRef, isMinimized: false },
   });
 
   const [draggingPanelId, setDraggingPanelId] = useState<string | null>(null);
@@ -47,44 +45,44 @@ export function useFloatingPanels({
       const yPos = panelPadding; 
       let currentXOffset = panelPadding;
       
-      const getPanelEffectiveWidth = (panelId: string, isCollapsed: boolean) => {
+      const getPanelEffectiveWidth = (panelId: string, isCollapsed: boolean, isMinimized: boolean) => {
+         if (isMinimized) return 0; // Minimized panels don't take up layout space
          const panelRef = panels[panelId]?.ref;
          if (panelRef?.current && isCollapsed) {
-           // For collapsed panels, attempt to get actual width or fallback to a smaller estimate
-           // This ensures horizontal layout uses a more accurate width for collapsed state
-           return panelRef.current.offsetWidth > 0 ? panelRef.current.offsetWidth : estimatedCollapsedHeaderHeight * 1.5; // Smaller estimate for collapsed
+           return panelRef.current.offsetWidth > 0 ? panelRef.current.offsetWidth : estimatedCollapsedHeaderHeight * 1.5;
          }
-         return panelWidth; // Use configured panelWidth for expanded or initially unrendered
+         return panelWidth;
       };
 
-      const layersPanelX = currentXOffset;
-      currentXOffset += getPanelEffectiveWidth('layers', panels.layers.isCollapsed) + panelPadding;
-
-      const toolsPanelX = currentXOffset;
-      // currentXOffset += getPanelEffectiveWidth('tools', panels.tools.isCollapsed) + panelPadding; // For next one if any
-
-      setPanels(prev => ({ // Use prev to preserve isCollapsed state if already set
-        layers: {
-          ...prev.layers, // Keep existing collapse state
-          position: { x: layersPanelX, y: yPos },
-          ref: layersPanelRef,
-        },
-        tools: {
-          ...prev.tools, // Keep existing collapse state
-          position: { x: toolsPanelX, y: yPos },
-          ref: toolsPanelRef,
-        },
-        // geoserver panel removed
-      }));
+      // Only adjust positions if not manually dragged
+      if (!draggingPanelId) {
+          const layersPanelX = currentXOffset;
+          currentXOffset += getPanelEffectiveWidth('layers', panels.layers.isCollapsed, panels.layers.isMinimized) + (panels.layers.isMinimized ? 0 : panelPadding);
+    
+          const toolsPanelX = currentXOffset;
+    
+          setPanels(prev => ({
+            layers: {
+              ...prev.layers,
+              position: prev.layers.isMinimized ? prev.layers.position : { x: layersPanelX, y: yPos }, // Keep position if minimized
+              ref: layersPanelRef,
+            },
+            tools: {
+              ...prev.tools,
+              position: prev.tools.isMinimized ? prev.tools.position : { x: toolsPanelX, y: yPos }, // Keep position if minimized
+              ref: toolsPanelRef,
+            },
+          }));
+      }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mapAreaRef, panelPadding, panelWidth, layersPanelRef, toolsPanelRef, estimatedCollapsedHeaderHeight]);
-  // Removed geoServerPanelRef from dependencies
+  // draggingPanelId intentionally omitted from deps here to avoid re-layout during drag
 
 
   const handlePanelMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>, panelId: string) => {
     const panel = panels[panelId];
-    if (!panel || !panel.ref.current) return;
+    if (!panel || !panel.ref.current || panel.isMinimized) return;
 
     const targetElement = e.target as HTMLElement;
     if (targetElement.closest('button') || targetElement.closest('input') || targetElement.closest('[role="combobox"]') || targetElement.closest('[role="menuitem"]') || targetElement.closest('[role="menu"]')) {
@@ -102,18 +100,48 @@ export function useFloatingPanels({
   }, [panels]);
 
   const togglePanelCollapse = useCallback((panelId: string) => {
-    setPanels(prev => ({
-      ...prev,
-      [panelId]: { ...prev[panelId], isCollapsed: !prev[panelId].isCollapsed },
-    }));
+    setPanels(prev => {
+      if (prev[panelId]?.isMinimized) return prev; // Don't change collapse state if minimized
+      return {
+        ...prev,
+        [panelId]: { ...prev[panelId], isCollapsed: !prev[panelId].isCollapsed },
+      };
+    });
   }, []);
+
+  const togglePanelMinimize = useCallback((panelId: string) => {
+    setPanels(prev => {
+      const panel = prev[panelId];
+      if (!panel) return prev;
+      
+      const newMinimizedState = !panel.isMinimized;
+      let newPosition = panel.position;
+
+      if (!newMinimizedState) { // Restoring
+        // If panel was minimized, try to place it intelligently or restore last known good pos
+        // For now, use its current position which might have been its last non-minimized pos
+        // Or, a default position if it was never unminimized (though initial state handles that)
+      }
+
+      return {
+        ...prev,
+        [panelId]: { 
+          ...panel, 
+          isMinimized: newMinimizedState,
+          position: newPosition,
+          // isCollapsed: newMinimizedState ? true : panel.isCollapsed, // Optionally force collapse on minimize
+        },
+      };
+    });
+  }, []);
+
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (!draggingPanelId || !mapAreaRef.current) return;
 
       const panelToMove = panels[draggingPanelId];
-      if (!panelToMove || !panelToMove.ref.current) return;
+      if (!panelToMove || !panelToMove.ref.current || panelToMove.isMinimized) return;
 
       const mapRect = mapAreaRef.current.getBoundingClientRect(); 
       const panelRect = panelToMove.ref.current.getBoundingClientRect(); 
@@ -161,5 +189,6 @@ export function useFloatingPanels({
     panels,
     handlePanelMouseDown,
     togglePanelCollapse,
+    togglePanelMinimize, // Expose new function
   };
 }

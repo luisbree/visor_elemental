@@ -4,33 +4,33 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ChevronDown, ChevronUp, X as LucideX } from 'lucide-react'; // Removed GripVertical
+import { ChevronDown, ChevronUp, X as LucideX } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface DraggablePanelProps {
   title: string;
   initialPosition: { x: number; y: number };
-  initialSize?: { width: number; height: number }; // Optional initial size
+  initialSize?: { width: number; height: number };
   minSize?: { width: number; height: number };
   maxSize?: { width?: number; height?: number };
-  panelRef: React.RefObject<HTMLDivElement>; // Pass the ref from parent
-  onMouseDownHeader: (e: React.MouseEvent<HTMLDivElement>) => void; // Pass mousedown handler from parent hook
+  panelRef: React.RefObject<HTMLDivElement>;
+  onMouseDownHeader: (e: React.MouseEvent<HTMLDivElement>) => void;
   isCollapsed: boolean;
   onToggleCollapse: () => void;
-  onClose?: () => void; // Optional close button handler
+  onClose?: () => void; // Changed from optional to required for panels that can be closed
   children: React.ReactNode;
   className?: string;
-  style?: React.CSSProperties; // To apply position and size from parent hook
+  style?: React.CSSProperties;
   showCloseButton?: boolean;
   overflowX?: 'auto' | 'hidden' | 'visible';
   overflowY?: 'auto' | 'hidden' | 'visible';
-  icon?: React.ElementType; // Optional icon for the panel header
-  zIndex?: number; // New prop for z-index
+  icon?: React.ElementType;
+  zIndex?: number;
 }
 
 const DraggablePanel: React.FC<DraggablePanelProps> = ({
   title,
-  initialPosition, // Used by parent hook to set style.top/left
+  initialPosition,
   initialSize = { width: 350, height: 400 },
   minSize = { width: 250, height: 200 },
   maxSize = {},
@@ -38,26 +38,22 @@ const DraggablePanel: React.FC<DraggablePanelProps> = ({
   onMouseDownHeader,
   isCollapsed,
   onToggleCollapse,
-  onClose,
+  onClose, // Now used
   children,
   className,
   style,
-  showCloseButton = true,
+  showCloseButton = true, // Default to true
   overflowX = 'hidden',
   overflowY = 'auto',
   icon: IconComponent,
-  zIndex, // Destructure new prop
+  zIndex,
 }) => {
   const [currentSize, setCurrentSize] = useState(initialSize);
 
-  // Effect to update size state when panelRef's dimensions change (e.g., via resize handle)
-  // This assumes the parent hook updates the style prop for position.
-  // The panelRef.current.offsetWidth/Height reflect the actual rendered size.
   const handleResizeStop = useCallback(() => {
     if (panelRef.current) {
       const newWidth = panelRef.current.offsetWidth;
       const newHeight = panelRef.current.offsetHeight;
-      // Update internal size state only if it has actually changed
       if (newWidth !== currentSize.width || newHeight !== currentSize.height) {
         setCurrentSize({ width: newWidth, height: newHeight });
       }
@@ -70,25 +66,24 @@ const DraggablePanel: React.FC<DraggablePanelProps> = ({
       ref={panelRef}
       className={`absolute bg-gray-800/70 backdrop-blur-md text-white shadow-xl rounded-lg border border-gray-700/80 flex flex-col ${className}`}
       style={{
-        ...style, // This should include top, left
-        width: `${currentSize.width}px`, // Maintain width even when collapsed
-        height: isCollapsed ? 'auto' : `${currentSize.height}px`, // Adjust height when collapsed
+        ...style,
+        width: `${currentSize.width}px`,
+        height: isCollapsed ? 'auto' : `${currentSize.height}px`,
         minWidth: `${minSize.width}px`,
         minHeight: isCollapsed ? 'auto' : `${minSize.height}px`,
         maxWidth: maxSize.width ? `${maxSize.width}px` : '90vw',
         maxHeight: maxSize.height ? `${maxSize.height}px` : '80vh',
-        resize: isCollapsed ? 'none' : 'both', // Allow resize only when not collapsed
-        overflow: 'hidden', // Outer div hides overflow, scroll area handles inner content
-        zIndex: zIndex ?? 30, // Use provided zIndex or default to 30
+        resize: isCollapsed ? 'none' : 'both',
+        overflow: 'hidden',
+        zIndex: zIndex ?? 30,
       }}
-      onMouseUpCapture={handleResizeStop} // Capture mouse up on the panel itself for resize
+      onMouseUpCapture={handleResizeStop}
     >
       <CardHeader
         className="flex flex-row items-center justify-between p-2 bg-gray-700/80 cursor-grab rounded-t-lg select-none"
         onMouseDown={onMouseDownHeader}
       >
         <div className="flex items-center">
-          {/* Icono de agarre eliminado */}
           {IconComponent && <IconComponent className="h-4 w-4 mr-2 text-primary" />}
           <CardTitle className="text-sm font-semibold text-white truncate" title={title}>{title}</CardTitle>
         </div>
@@ -100,18 +95,18 @@ const DraggablePanel: React.FC<DraggablePanelProps> = ({
           {showCloseButton && onClose && (
             <Button variant="ghost" size="icon" onClick={onClose} className="h-6 w-6 text-white hover:bg-gray-600/80">
               <LucideX className="h-4 w-4" />
-              <span className="sr-only">Cerrar</span>
+              <span className="sr-only">Cerrar Panel</span>
             </Button>
           )}
         </div>
       </CardHeader>
       {!isCollapsed && (
-        <CardContent className="p-0 flex-grow flex flex-col overflow-hidden"> {/* Changed p-3 to p-0 */}
+        <CardContent className="p-0 flex-grow flex flex-col overflow-hidden">
           <ScrollArea 
             className="flex-grow h-0 w-full" 
-            style={{ overflowX: overflowX, overflowY: overflowY }} // Control scroll on ScrollArea
+            style={{ overflowX: overflowX, overflowY: overflowY }}
           >
-            <div className="p-3"> {/* Add padding back here for the content inside scroll area */}
+            <div className="p-3">
              {children}
             </div>
           </ScrollArea>

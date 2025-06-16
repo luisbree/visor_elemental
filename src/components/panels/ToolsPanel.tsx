@@ -14,7 +14,6 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Separator } from '@/components/ui/separator';
-import type { MapLayer } from '@/lib/types'; // For handleDownloadOSMLayers prop
 
 interface OSMCategory {
   id: string;
@@ -26,6 +25,7 @@ interface ToolsPanelProps {
   position: { x: number; y: number };
   isCollapsed: boolean;
   onToggleCollapse: () => void;
+  onClosePanel: () => void; // New prop for closing/minimizing
   onMouseDownHeader: (e: React.MouseEvent<HTMLDivElement>) => void;
 
   // Drawing props
@@ -39,12 +39,11 @@ interface ToolsPanelProps {
   onFetchOSMDataTrigger: () => void;
   osmCategoriesForSelection: OSMCategory[];
   selectedOSMCategoryIds: string[];
-  onSelectedOSMCategoriesChange: (ids: string[]) => void; // Correct prop name for receiving
+  onSelectedOSMCategoriesChange: (ids: string[]) => void;
   downloadFormat: string;
   onDownloadFormatChange: (format: string) => void;
   isDownloading: boolean;
   onDownloadOSMLayers: () => void;
-
 }
 
 const SectionHeader: React.FC<{ title: string; description?: string; icon: React.ElementType }> = ({ title, description, icon: Icon }) => (
@@ -58,10 +57,10 @@ const SectionHeader: React.FC<{ title: string; description?: string; icon: React
 );
 
 const ToolsPanel: React.FC<ToolsPanelProps> = ({
-  panelRef, position, isCollapsed, onToggleCollapse, onMouseDownHeader,
+  panelRef, position, isCollapsed, onToggleCollapse, onClosePanel, onMouseDownHeader,
   activeDrawTool, onToggleDrawingTool, onClearDrawnFeatures, onSaveDrawnFeaturesAsKML,
   isFetchingOSM, onFetchOSMDataTrigger, osmCategoriesForSelection, selectedOSMCategoryIds, 
-  onSelectedOSMCategoriesChange, // Use this prop when passing to OSMCategorySelector
+  onSelectedOSMCategoriesChange,
   downloadFormat, onDownloadFormatChange, isDownloading, onDownloadOSMLayers
 }) => {
 
@@ -76,8 +75,9 @@ const ToolsPanel: React.FC<ToolsPanelProps> = ({
       onMouseDownHeader={onMouseDownHeader}
       isCollapsed={isCollapsed}
       onToggleCollapse={onToggleCollapse}
+      onClose={onClosePanel} // Use new prop
+      showCloseButton={true} // Explicitly show close button
       style={{ top: `${position.y}px`, left: `${position.x}px` }}
-      showCloseButton={false}
     >
         <div className="w-full bg-white/5 rounded-md p-2">
             <DrawingToolbar
@@ -108,7 +108,7 @@ const ToolsPanel: React.FC<ToolsPanelProps> = ({
                 <OSMCategorySelector
                     osmCategoriesForSelection={osmCategoriesForSelection}
                     selectedOSMCategoryIds={selectedOSMCategoryIds}
-                    onSelectedOSMCategoriesChange={onSelectedOSMCategoriesChange} // Pass the correctly named prop here
+                    onSelectedOSMCategoriesChange={onSelectedOSMCategoriesChange}
                 />
                 <OSMDownloadOptions
                     isFetchingOSM={isFetchingOSM}
