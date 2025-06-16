@@ -13,33 +13,33 @@ interface UseFloatingPanelsProps {
   layersPanelRef: React.RefObject<HTMLDivElement>;
   toolsPanelRef: React.RefObject<HTMLDivElement>;
   geoServerPanelRef: React.RefObject<HTMLDivElement>;
-  mapPanelRef: React.RefObject<HTMLDivElement>;
+  // mapPanelRef: React.RefObject<HTMLDivElement>; // Removed
   mapAreaRef: React.RefObject<HTMLDivElement>;
   panelWidth?: number;
   panelPadding?: number;
-  estimatedCollapsedHeaderHeight?: number; // Remains in props for potential other uses or future layouts
+  estimatedCollapsedHeaderHeight?: number;
 }
 
 const DEFAULT_PANEL_WIDTH = 350;
-const DEFAULT_PANEL_PADDING = 16;
-// const DEFAULT_ESTIMATED_COLLAPSED_HEADER_HEIGHT = 40; // Not used in this specific layout calculation
+const DEFAULT_PANEL_PADDING = 8; 
+const DEFAULT_ESTIMATED_COLLAPSED_HEADER_HEIGHT = 32;
 
 export function useFloatingPanels({
   layersPanelRef,
   toolsPanelRef,
   geoServerPanelRef,
-  mapPanelRef,
+  // mapPanelRef, // Removed
   mapAreaRef,
   panelWidth = DEFAULT_PANEL_WIDTH,
   panelPadding = DEFAULT_PANEL_PADDING,
-  // estimatedCollapsedHeaderHeight = DEFAULT_ESTIMATED_COLLAPSED_HEADER_HEIGHT, // Not directly used for X,Y of horizontal layout
+  estimatedCollapsedHeaderHeight = DEFAULT_ESTIMATED_COLLAPSED_HEADER_HEIGHT,
 }: UseFloatingPanelsProps) {
 
   const [panels, setPanels] = useState<Record<string, PanelState>>({
     layers: { position: { x: panelPadding, y: panelPadding }, isCollapsed: true, ref: layersPanelRef },
     tools: { position: { x: panelWidth + 2 * panelPadding, y: panelPadding }, isCollapsed: true, ref: toolsPanelRef },
     geoserver: { position: { x: 2 * (panelWidth + panelPadding) + panelPadding, y: panelPadding }, isCollapsed: true, ref: geoServerPanelRef },
-    map: { position: {x: 3 * (panelWidth + panelPadding) + panelPadding, y: panelPadding}, isCollapsed: true, ref: mapPanelRef },
+    // map: { position: {x: 3 * (panelWidth + panelPadding) + panelPadding, y: panelPadding}, isCollapsed: true, ref: mapPanelRef }, // Removed
   });
 
   const [draggingPanelId, setDraggingPanelId] = useState<string | null>(null);
@@ -47,29 +47,32 @@ export function useFloatingPanels({
 
   useEffect(() => {
     if (mapAreaRef.current) {
-      const yPos = panelPadding; // All panels at the same Y position, under the banner
-      let currentXOffset = panelPadding; // Starting X for the first panel
-
-      // Helper to determine width for placement. For initial horizontal layout,
-      // we use panelWidth as the consistent spacing unit.
-      const getPlacementWidth = () => panelWidth;
+      const yPos = panelPadding;
+      let currentXOffset = panelPadding;
+      const getPanelWidthForPlacement = (panelId: string) => {
+        const panel = panels[panelId];
+        // For initial horizontal layout, use the configured panelWidth if not collapsed,
+        // or a smaller estimated width if it were to be initially uncollapsed.
+        // However, since all are starting collapsed, their actual rendered width will be based on CSS.
+        // The panelWidth prop is more about desired spacing *between* panels.
+        return panelWidth; 
+      };
 
       const layersPanelX = currentXOffset;
-      currentXOffset += getPlacementWidth() + panelPadding;
+      currentXOffset += getPanelWidthForPlacement('layers') + panelPadding;
 
       const toolsPanelX = currentXOffset;
-      currentXOffset += getPlacementWidth() + panelPadding;
+      currentXOffset += getPanelWidthForPlacement('tools') + panelPadding;
 
       const geoServerPanelX = currentXOffset;
-      currentXOffset += getPlacementWidth() + panelPadding;
+      // currentXOffset += getPanelWidthForPlacement('geoserver') + panelPadding; // For the next one, if any
 
-      const mapPanelX = currentXOffset;
-      // currentXOffset += getPlacementWidth() + panelPadding; // For the next panel, if any
+      // const mapPanelX = currentXOffset; // Removed
 
       setPanels({
         layers: {
           position: { x: layersPanelX, y: yPos },
-          isCollapsed: true,
+          isCollapsed: true, // All start collapsed
           ref: layersPanelRef,
         },
         tools: {
@@ -82,16 +85,16 @@ export function useFloatingPanels({
           isCollapsed: true,
           ref: geoServerPanelRef,
         },
-        map: {
-          position: { x: mapPanelX, y: yPos },
-          isCollapsed: true,
-          ref: mapPanelRef,
-        },
+        // map: { // Removed
+        //   position: { x: mapPanelX, y: yPos },
+        //   isCollapsed: true,
+        //   ref: mapPanelRef,
+        // },
       });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mapAreaRef, panelPadding, panelWidth, layersPanelRef, toolsPanelRef, geoServerPanelRef, mapPanelRef]);
-  // Removed estimatedCollapsedHeaderHeight from dependencies as it's not used for this specific horizontal layout's initial positioning.
+  }, [mapAreaRef, panelPadding, panelWidth, estimatedCollapsedHeaderHeight, layersPanelRef, toolsPanelRef, geoServerPanelRef]);
+  // Removed mapPanelRef from dependencies
 
 
   const handlePanelMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>, panelId: string) => {
@@ -99,7 +102,7 @@ export function useFloatingPanels({
     if (!panel || !panel.ref.current) return;
 
     const targetElement = e.target as HTMLElement;
-    if (targetElement.closest('button') || targetElement.closest('input') || targetElement.closest('[role="combobox"]')) { // Prevent drag on interactive elements inside header
+    if (targetElement.closest('button') || targetElement.closest('input') || targetElement.closest('[role="combobox"]')) {
         return;
     }
 
@@ -175,4 +178,6 @@ export function useFloatingPanels({
     togglePanelCollapse,
   };
 }
+    
+
     

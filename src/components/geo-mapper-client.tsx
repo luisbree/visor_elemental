@@ -12,7 +12,7 @@ import FeatureAttributesPanel from '@/components/panels/FeatureAttributesPanel';
 import LayersPanel from '@/components/panels/LayersPanel';
 import ToolsPanel from '@/components/panels/ToolsPanel';
 import GeoServerPanel from '@/components/panels/GeoServerPanel';
-import MapPanel from '@/components/panels/MapPanel'; 
+// import MapPanel from '@/components/panels/MapPanel'; 
 import WfsLoadingIndicator from '@/components/feedback/WfsLoadingIndicator';
 
 import { useOpenLayersMap } from '@/hooks/map-core/useOpenLayersMap';
@@ -22,7 +22,7 @@ import { useDrawingInteractions } from '@/hooks/drawing-tools/useDrawingInteract
 import { useOSMData } from '@/hooks/osm-integration/useOSMData';
 import { useGeoServerLayers } from '@/hooks/geoserver-connection/useGeoServerLayers';
 import { useFloatingPanels } from '@/hooks/panels/useFloatingPanels';
-import { useMapCapture } from '@/hooks/map-tools/useMapCapture'; 
+// import { useMapCapture } from '@/hooks/map-tools/useMapCapture'; 
 import { useToast } from "@/hooks/use-toast";
 
 import type { OSMCategoryConfig, GeoServerDiscoveredLayer, BaseLayerOptionForSelect } from '@/lib/types';
@@ -87,8 +87,8 @@ const osmCategoriesForSelection = osmCategoryConfig.map(({ id, name }) => ({ id,
 const availableBaseLayersForSelect: BaseLayerOptionForSelect[] = BASE_LAYER_DEFINITIONS.map(def => ({ id: def.id, name: def.name }));
 
 const PANEL_WIDTH = 350;
-const PANEL_PADDING = 16;
-const ESTIMATED_COLLAPSED_HEADER_HEIGHT = 40;
+const PANEL_PADDING = 8; // Reduced padding
+const ESTIMATED_COLLAPSED_HEADER_HEIGHT = 32; // Reduced header height estimation
 
 
 export default function GeoMapperClient() {
@@ -96,7 +96,7 @@ export default function GeoMapperClient() {
   const layersPanelRef = useRef<HTMLDivElement>(null);
   const toolsPanelRef = useRef<HTMLDivElement>(null);
   const geoServerPanelRef = useRef<HTMLDivElement>(null);
-  const mapPanelRef = useRef<HTMLDivElement>(null); 
+  // const mapPanelRef = useRef<HTMLDivElement>(null); 
   const featureAttributesPanelRef = useRef<HTMLDivElement>(null);
 
   const { mapRef, mapElementRef, drawingSourceRef, drawingLayerRef, setMapInstanceAndElement, isMapReady } = useOpenLayersMap();
@@ -166,14 +166,14 @@ export default function GeoMapperClient() {
   });
 
   const { panels, handlePanelMouseDown, togglePanelCollapse } = useFloatingPanels({
-    layersPanelRef, toolsPanelRef, geoServerPanelRef, mapPanelRef, 
+    layersPanelRef, toolsPanelRef, geoServerPanelRef, // mapPanelRef removed
     mapAreaRef, panelWidth: PANEL_WIDTH, panelPadding: PANEL_PADDING,
     estimatedCollapsedHeaderHeight: ESTIMATED_COLLAPSED_HEADER_HEIGHT
   });
 
-  const { captureMap, isCapturing: isMapCapturing } = useMapCapture({ 
-    mapRef,
-  });
+  // const { captureMap, isCapturing: isMapCapturing } = useMapCapture({ 
+  //   mapRef,
+  // });
 
   const [attrPanelPosition, setAttrPanelPosition] = useState({ x: 50, y: 50 });
   const handleAttrPanelMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
@@ -318,18 +318,12 @@ export default function GeoMapperClient() {
           onAddGeoServerLayerAsWFS={handleAddGeoServerLayerAsWFS}
         />
 
-        <MapPanel
-            panelRef={mapPanelRef}
-            position={panels.map.position}
-            isCollapsed={panels.map.isCollapsed}
-            onToggleCollapse={() => togglePanelCollapse('map')}
-            onMouseDownHeader={(e) => handlePanelMouseDown(e, 'map')}
-            onCaptureMap={captureMap}
-            isCapturing={isMapCapturing}
-        />
+        {/* MapPanel removed */}
       </div>
     </div>
   );
 }
+
+    
 
     
