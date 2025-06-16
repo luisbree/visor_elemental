@@ -12,31 +12,31 @@ interface PanelState {
 interface UseFloatingPanelsProps {
   layersPanelRef: React.RefObject<HTMLDivElement>;
   toolsPanelRef: React.RefObject<HTMLDivElement>;
-  geoServerPanelRef: React.RefObject<HTMLDivElement>;
+  // geoServerPanelRef removed
   mapAreaRef: React.RefObject<HTMLDivElement>;
   panelWidth?: number;
   panelPadding?: number;
-  estimatedCollapsedHeaderHeight?: number; // Keep if used for Y positioning
+  estimatedCollapsedHeaderHeight?: number;
 }
 
 const DEFAULT_PANEL_WIDTH = 350;
 const DEFAULT_PANEL_PADDING = 8;
-// const DEFAULT_ESTIMATED_COLLAPSED_HEADER_HEIGHT = 32; // No longer used for horizontal layout
+const DEFAULT_ESTIMATED_COLLAPSED_HEADER_HEIGHT = 32; 
 
 export function useFloatingPanels({
   layersPanelRef,
   toolsPanelRef,
-  geoServerPanelRef,
+  // geoServerPanelRef removed
   mapAreaRef,
   panelWidth = DEFAULT_PANEL_WIDTH,
   panelPadding = DEFAULT_PANEL_PADDING,
-  // estimatedCollapsedHeaderHeight = DEFAULT_ESTIMATED_COLLAPSED_HEADER_HEIGHT, // No longer used for horizontal layout
+  estimatedCollapsedHeaderHeight = DEFAULT_ESTIMATED_COLLAPSED_HEADER_HEIGHT,
 }: UseFloatingPanelsProps) {
 
   const [panels, setPanels] = useState<Record<string, PanelState>>({
-    layers: { position: { x: panelPadding, y: panelPadding }, isCollapsed: true, ref: layersPanelRef },
+    layers: { position: { x: panelPadding, y: panelPadding }, isCollapsed: false, ref: layersPanelRef }, // Start layers panel uncollapsed
     tools: { position: { x: panelWidth + 2 * panelPadding, y: panelPadding }, isCollapsed: true, ref: toolsPanelRef },
-    geoserver: { position: { x: 2 * (panelWidth + panelPadding) + panelPadding, y: panelPadding }, isCollapsed: true, ref: geoServerPanelRef },
+    // geoserver panel state removed
   });
 
   const [draggingPanelId, setDraggingPanelId] = useState<string | null>(null);
@@ -44,55 +44,42 @@ export function useFloatingPanels({
 
   useEffect(() => {
     if (mapAreaRef.current) {
-      const yPos = panelPadding; // All panels aligned to the top, under the header
+      const yPos = panelPadding; 
       let currentXOffset = panelPadding;
       
-      const getPanelEffectiveWidth = (panelId: string) => {
-        // If the panel ref has a current element, use its actual width.
-        // Otherwise, fall back to the configured panelWidth (for initial placement before render).
-        // This is more relevant if panels could start uncollapsed or have variable initial widths.
-        // For now, as all start collapsed, their actual width will be small initially.
-        // The panelWidth prop is used more for desired spacing *between* full-sized panels.
-        // When collapsed, their actual width is determined by their content (e.g., header only).
-        // For consistent horizontal layout of *collapsed* panels, we might need a different approach
-        // if panelWidth is meant for expanded state.
-        // Let's assume panelWidth is a reasonable proxy for the space they *should* occupy
-        // or the starting point for their left edge.
-        
-        // Since they start collapsed and we want them side-by-side,
-        // we use panelWidth as the space allocated for each before the next one starts.
-        return panelWidth;
+      const getPanelEffectiveWidth = (panelId: string, isCollapsed: boolean) => {
+         const panelRef = panels[panelId]?.ref;
+         if (panelRef?.current && isCollapsed) {
+           // For collapsed panels, attempt to get actual width or fallback to a smaller estimate
+           // This ensures horizontal layout uses a more accurate width for collapsed state
+           return panelRef.current.offsetWidth > 0 ? panelRef.current.offsetWidth : estimatedCollapsedHeaderHeight * 1.5; // Smaller estimate for collapsed
+         }
+         return panelWidth; // Use configured panelWidth for expanded or initially unrendered
       };
 
       const layersPanelX = currentXOffset;
-      currentXOffset += getPanelEffectiveWidth('layers') + panelPadding;
+      currentXOffset += getPanelEffectiveWidth('layers', panels.layers.isCollapsed) + panelPadding;
 
       const toolsPanelX = currentXOffset;
-      currentXOffset += getPanelEffectiveWidth('tools') + panelPadding;
+      // currentXOffset += getPanelEffectiveWidth('tools', panels.tools.isCollapsed) + panelPadding; // For next one if any
 
-      const geoServerPanelX = currentXOffset;
-      // currentXOffset += getPanelEffectiveWidth('geoserver') + panelPadding; // For next one
-
-      setPanels({
+      setPanels(prev => ({ // Use prev to preserve isCollapsed state if already set
         layers: {
+          ...prev.layers, // Keep existing collapse state
           position: { x: layersPanelX, y: yPos },
-          isCollapsed: true, 
           ref: layersPanelRef,
         },
         tools: {
+          ...prev.tools, // Keep existing collapse state
           position: { x: toolsPanelX, y: yPos },
-          isCollapsed: true,
           ref: toolsPanelRef,
         },
-        geoserver: {
-          position: { x: geoServerPanelX, y: yPos },
-          isCollapsed: true,
-          ref: geoServerPanelRef,
-        },
-      });
+        // geoserver panel removed
+      }));
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mapAreaRef, panelPadding, panelWidth, layersPanelRef, toolsPanelRef, geoServerPanelRef]);
+  }, [mapAreaRef, panelPadding, panelWidth, layersPanelRef, toolsPanelRef, estimatedCollapsedHeaderHeight]);
+  // Removed geoServerPanelRef from dependencies
 
 
   const handlePanelMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>, panelId: string) => {
@@ -101,7 +88,7 @@ export function useFloatingPanels({
 
     const targetElement = e.target as HTMLElement;
     if (targetElement.closest('button') || targetElement.closest('input') || targetElement.closest('[role="combobox"]') || targetElement.closest('[role="menuitem"]') || targetElement.closest('[role="menu"]')) {
-        return; // Do not drag if clicking on interactive elements within the header or panel
+        return; 
     }
 
     setDraggingPanelId(panelId);

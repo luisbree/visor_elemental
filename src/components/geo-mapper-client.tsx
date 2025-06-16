@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { MapPin } from 'lucide-react'; // ServerIcon removed as GeoServerPanel has its own
+import { MapPin } from 'lucide-react';
 import { Style, Fill, Stroke, Circle as CircleStyle } from 'ol/style';
 import { transformExtent } from 'ol/proj';
 import type { Extent } from 'ol/extent';
@@ -11,7 +11,7 @@ import MapView, { BASE_LAYER_DEFINITIONS } from '@/components/map-view';
 import FeatureAttributesPanel from '@/components/panels/FeatureAttributesPanel';
 import LayersPanel from '@/components/panels/LayersPanel';
 import ToolsPanel from '@/components/panels/ToolsPanel';
-import GeoServerPanel from '@/components/panels/GeoServerPanel';
+// GeoServerPanel import removed
 import WfsLoadingIndicator from '@/components/feedback/WfsLoadingIndicator';
 
 import { useOpenLayersMap } from '@/hooks/map-core/useOpenLayersMap';
@@ -21,7 +21,7 @@ import { useDrawingInteractions } from '@/hooks/drawing-tools/useDrawingInteract
 import { useOSMData } from '@/hooks/osm-integration/useOSMData';
 import { useGeoServerLayers } from '@/hooks/geoserver-connection/useGeoServerLayers';
 import { useFloatingPanels } from '@/hooks/panels/useFloatingPanels';
-import { useMapCapture } from '@/hooks/map-tools/useMapCapture'; // Import new hook
+import { useMapCapture } from '@/hooks/map-tools/useMapCapture';
 import { useToast } from "@/hooks/use-toast";
 
 import type { OSMCategoryConfig, GeoServerDiscoveredLayer, BaseLayerOptionForSelect } from '@/lib/types';
@@ -94,7 +94,7 @@ export default function GeoMapperClient() {
   const mapAreaRef = useRef<HTMLDivElement>(null);
   const layersPanelRef = useRef<HTMLDivElement>(null);
   const toolsPanelRef = useRef<HTMLDivElement>(null);
-  const geoServerPanelRef = useRef<HTMLDivElement>(null);
+  // geoServerPanelRef removed
   const featureAttributesPanelRef = useRef<HTMLDivElement>(null);
 
   const { mapRef, mapElementRef, drawingSourceRef, drawingLayerRef, setMapInstanceAndElement, isMapReady } = useOpenLayersMap();
@@ -164,20 +164,19 @@ export default function GeoMapperClient() {
   });
 
   const { panels, handlePanelMouseDown, togglePanelCollapse } = useFloatingPanels({
-    layersPanelRef, toolsPanelRef, geoServerPanelRef, 
+    layersPanelRef, toolsPanelRef, // geoServerPanelRef removed
     mapAreaRef, 
     panelWidth: PANEL_WIDTH, 
     panelPadding: PANEL_PADDING,
     estimatedCollapsedHeaderHeight: ESTIMATED_COLLAPSED_HEADER_HEIGHT,
   });
 
-  const { captureMap, isCapturing: isMapCapturing } = useMapCapture({ mapRef }); // Initialize new hook
+  const { captureMap, isCapturing: isMapCapturing } = useMapCapture({ mapRef });
 
   const [attrPanelPosition, setAttrPanelPosition] = useState({ x: 50, y: 50 });
   const handleAttrPanelMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
       const panel = featureAttributesPanelRef.current;
       if (!panel) return;
-      // Prevent drag if click is on button or input-like elements
       const targetElement = e.target as HTMLElement;
       if (targetElement.closest('button') || targetElement.closest('input') || targetElement.closest('[role="combobox"]')) {
           return;
@@ -278,8 +277,17 @@ export default function GeoMapperClient() {
           isInspectModeActive={featureInspectionHook.isInspectModeActive}
           onToggleInspectMode={featureInspectionHook.toggleInspectMode}
           onZoomToBoundingBox={zoomToBoundingBox}
-          onCaptureMap={captureMap} // Pass capture function
-          isCapturingMap={isMapCapturing} // Pass capturing state
+          onCaptureMap={captureMap}
+          isCapturingMap={isMapCapturing}
+          // GeoServer Props for LayersPanel
+          geoServerUrlInput={geoServerUrlInput}
+          onGeoServerUrlChange={setGeoServerUrlInput}
+          onFetchGeoServerLayers={handleFetchGeoServerLayers}
+          geoServerDiscoveredLayers={geoServerDiscoveredLayers}
+          setGeoServerDiscoveredLayers={setGeoServerDiscoveredLayers}
+          isLoadingGeoServerLayers={isLoadingGeoServerLayers}
+          onAddGeoServerLayerToMap={handleAddGeoServerLayerToMap}
+          onAddGeoServerLayerAsWFS={handleAddGeoServerLayerAsWFS}
         />
 
         <ToolsPanel
@@ -303,25 +311,7 @@ export default function GeoMapperClient() {
           onDownloadOSMLayers={() => handleDownloadOSMLayers(layers)}
         />
 
-        <GeoServerPanel
-          panelRef={geoServerPanelRef}
-          position={panels.geoserver.position}
-          isCollapsed={panels.geoserver.isCollapsed}
-          onToggleCollapse={() => togglePanelCollapse('geoserver')}
-          onMouseDownHeader={(e) => handlePanelMouseDown(e, 'geoserver')}
-          geoServerUrlInput={geoServerUrlInput}
-          onGeoServerUrlChange={setGeoServerUrlInput}
-          onFetchGeoServerLayers={async () => {
-            const discovered = await handleFetchGeoServerLayers();
-            setGeoServerDiscoveredLayers(discovered);
-            return discovered;
-          }}
-          geoServerDiscoveredLayers={geoServerDiscoveredLayers}
-          setGeoServerDiscoveredLayers={setGeoServerDiscoveredLayers}
-          isLoadingGeoServerLayers={isLoadingGeoServerLayers}
-          onAddGeoServerLayerToMap={handleAddGeoServerLayerToMap}
-          onAddGeoServerLayerAsWFS={handleAddGeoServerLayerAsWFS}
-        />
+        {/* GeoServerPanel component removed from here */}
       </div>
     </div>
   );
