@@ -13,7 +13,7 @@ import GeoServerUrlInput from '@/components/geoserver-connection/GeoServerUrlInp
 import GeoServerLayerList from '@/components/geoserver-connection/GeoServerLayerList';
 import { Separator } from '@/components/ui/separator';
 import type { MapLayer, BaseLayerOptionForSelect, GeoServerDiscoveredLayer } from '@/lib/types';
-import { Layers as LayersIcon, Server as ServerIcon } from 'lucide-react';
+import { Layers as LayersIcon, Server as ServerIcon } from 'lucide-react'; // ServerIcon ya no se usará aquí para el header de GeoServer
 import {
   Accordion,
   AccordionContent,
@@ -51,7 +51,7 @@ interface LayersPanelProps {
   // GeoServer Props
   geoServerUrlInput: string;
   onGeoServerUrlChange: (url: string) => void;
-  onFetchGeoServerLayers: () => Promise<GeoServerDiscoveredLayer[]>; // Updated to return Promise
+  onFetchGeoServerLayers: () => Promise<GeoServerDiscoveredLayer[]>; 
   geoServerDiscoveredLayers: GeoServerDiscoveredLayer[];
   setGeoServerDiscoveredLayers: React.Dispatch<React.SetStateAction<GeoServerDiscoveredLayer[]>>;
   isLoadingGeoServerLayers: boolean;
@@ -82,7 +82,7 @@ const LayersPanel: React.FC<LayersPanelProps> = ({
   isLoadingGeoServerLayers, onAddGeoServerLayerToMap, onAddGeoServerLayerAsWFS
 }) => {
 
-  const [activeAccordionItems, setActiveAccordionItems] = React.useState<string[]>(['layers-section', 'geoserver-section']);
+  const [activeAccordionItems, setActiveAccordionItems] = React.useState<string[]>(['layers-section']);
   const prevLayersLengthRef = React.useRef(layers.length);
 
    React.useEffect(() => {
@@ -92,12 +92,7 @@ const LayersPanel: React.FC<LayersPanelProps> = ({
     prevLayersLengthRef.current = layers.length;
   }, [layers.length, activeAccordionItems]);
   
-  React.useEffect(() => {
-    if (geoServerDiscoveredLayers.length > 0 && !activeAccordionItems.includes('geoserver-section')) {
-      setActiveAccordionItems(prev => [...prev, 'geoserver-section'].filter((value, index, self) => self.indexOf(value) === index));
-    }
-  }, [geoServerDiscoveredLayers.length, activeAccordionItems]);
-
+  // useEffect para expandir el acordeón de GeoServer eliminado
 
   const handleLocationSelection = (location: NominatimResult) => {
     const [sLat, nLat, wLon, eLon] = location.boundingbox.map(coord => parseFloat(coord));
@@ -106,7 +101,7 @@ const LayersPanel: React.FC<LayersPanelProps> = ({
   
   const handleFetchGeoServer = async () => {
     const discovered = await onFetchGeoServerLayers();
-    setGeoServerDiscoveredLayers(discovered); // This ensures parent state is updated
+    setGeoServerDiscoveredLayers(discovered);
   };
 
 
@@ -121,10 +116,11 @@ const LayersPanel: React.FC<LayersPanelProps> = ({
       style={{ top: `${position.y}px`, left: `${position.x}px` }}
       showCloseButton={false}
     >
-      <div className="space-y-3">
+      <div className="space-y-3"> {/* Contenedor principal con espaciado vertical */}
+        
         <LocationSearch onLocationSelect={handleLocationSelection} />
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2"> {/* Contenedor para BaseLayerSelector y MapCaptureControl en línea */}
             <div className="flex-grow">
                 <BaseLayerSelector
                     availableBaseLayers={availableBaseLayers}
@@ -140,57 +136,42 @@ const LayersPanel: React.FC<LayersPanelProps> = ({
         
         <Separator className="bg-white/15" />
 
-        <Accordion
-          type="multiple" // Changed to multiple to allow both open
-          value={activeAccordionItems}
-          onValueChange={setActiveAccordionItems}
-          className="w-full space-y-1"
-        >
-            <AccordionItem value="geoserver-section" className="border-b-0 bg-white/5 rounded-md">
-              <AccordionTrigger className="p-3 hover:no-underline hover:bg-white/10 rounded-t-md data-[state=open]:rounded-b-none">
-                 <SectionHeader 
-                    title="GeoServer"
-                    description="Conectar y cargar capas WMS/WFS."
-                    icon={ServerIcon} 
-                  />
-              </AccordionTrigger>
-              <AccordionContent className="p-3 pt-2 space-y-3 border-t border-white/10 bg-transparent rounded-b-md">
-                  <GeoServerUrlInput
-                      geoServerUrlInput={geoServerUrlInput}
-                      onGeoServerUrlChange={onGeoServerUrlChange}
-                      onFetchGeoServerLayers={handleFetchGeoServer}
-                      isLoadingGeoServerLayers={isLoadingGeoServerLayers}
-                      uniqueIdPrefix="layerspanel-geoserver"
-                  />
-                  {geoServerDiscoveredLayers && geoServerDiscoveredLayers.length > 0 && (
-                  <>
-                      {/* <Separator className="my-2 bg-white/20" /> */}
-                      <GeoServerLayerList
-                        geoServerDiscoveredLayers={geoServerDiscoveredLayers}
-                        onAddGeoServerLayerToMap={onAddGeoServerLayerToMap}
-                        onAddGeoServerLayerAsWFS={onAddGeoServerLayerAsWFS}
-                      />
-                  </>
-                  )}
-              </AccordionContent>
-            </AccordionItem>
-        </Accordion>
+        {/* Sección de GeoServer integrada directamente */}
+        <GeoServerUrlInput
+            geoServerUrlInput={geoServerUrlInput}
+            onGeoServerUrlChange={onGeoServerUrlChange}
+            onFetchGeoServerLayers={handleFetchGeoServer}
+            isLoadingGeoServerLayers={isLoadingGeoServerLayers}
+            uniqueIdPrefix="layerspanel-geoserver"
+        />
+        {geoServerDiscoveredLayers && geoServerDiscoveredLayers.length > 0 && (
+          <>
+            {/* GeoServerLayerList no necesita un Separator antes si está agrupado lógicamente */}
+            <GeoServerLayerList
+              geoServerDiscoveredLayers={geoServerDiscoveredLayers}
+              onAddGeoServerLayerToMap={onAddGeoServerLayerToMap}
+              onAddGeoServerLayerAsWFS={onAddGeoServerLayerAsWFS}
+            />
+          </>
+        )}
 
         <Separator className="bg-white/15" />
-        <div className="flex items-center gap-2">
+        
+        <div className="flex items-center gap-2"> {/* Contenedor para FileUploadControl e InspectToolToggle en línea */}
           <FileUploadControl onAddLayer={onAddLayer} uniqueIdPrefix="layerspanel-upload"/>
           <InspectToolToggle
             isInspectModeActive={isInspectModeActive}
             onToggleInspectMode={onToggleInspectMode}
           />
         </div>
+        
         <Separator className="bg-white/15" />
 
         <Accordion
-          type="multiple" // Changed to multiple to allow both open
+          type="multiple" 
           value={activeAccordionItems}
           onValueChange={setActiveAccordionItems}
-          className="w-full space-y-1"
+          className="w-full space-y-1" 
         >
             <AccordionItem value="layers-section" className="border-b-0 bg-white/5 rounded-md">
               <AccordionTrigger className="p-3 hover:no-underline hover:bg-white/10 rounded-t-md data-[state=open]:rounded-b-none">
@@ -217,3 +198,4 @@ const LayersPanel: React.FC<LayersPanelProps> = ({
 };
 
 export default LayersPanel;
+
