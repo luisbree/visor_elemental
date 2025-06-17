@@ -32,7 +32,7 @@ import { useFloatingPanels } from '@/hooks/panels/useFloatingPanels';
 import { useMapCapture } from '@/hooks/map-tools/useMapCapture';
 import { useToast } from "@/hooks/use-toast";
 
-import type { OSMCategoryConfig, GeoServerDiscoveredLayer, BaseLayerOptionForSelect } from '@/lib/types';
+import type { OSMCategoryConfig, GeoServerDiscoveredLayer, BaseLayerOptionForSelect, MapLayer } from '@/lib/types';
 
 const osmCategoryConfig: OSMCategoryConfig[] = [
   {
@@ -278,7 +278,7 @@ export default function GeoMapperClient() {
           <TooltipProvider delayDuration={200}>
             {panelToggleConfigs.map((panelConfig) => {
               const panelState = panels[panelConfig.id];
-              if (!panelState) return null; // Should not happen if panelConfigs and panels state are in sync
+              if (!panelState) return null; 
 
               const isPanelOpen = !panelState.isMinimized;
               const tooltipText = isPanelOpen 
@@ -289,11 +289,11 @@ export default function GeoMapperClient() {
                 <Tooltip key={panelConfig.id}>
                   <TooltipTrigger asChild>
                     <Button
-                      variant={isPanelOpen ? "default" : "outline"}
+                      variant={"outline"} // Always outline for toggle buttons
                       size="icon"
                       className={`h-8 w-8 focus-visible:ring-primary ${
                         isPanelOpen 
-                          ? 'bg-primary text-primary-foreground hover:bg-primary/90' 
+                          ? 'bg-primary text-primary-foreground hover:bg-primary/90 border-primary/80' 
                           : 'bg-gray-700/80 text-white hover:bg-gray-600/90 border-gray-600/70'
                       }`}
                       onClick={() => togglePanelMinimize(panelConfig.id)}
@@ -319,12 +319,11 @@ export default function GeoMapperClient() {
             onToggleCollapse={() => togglePanelCollapse('layers')}
             onClosePanel={() => togglePanelMinimize('layers')}
             onMouseDownHeader={(e) => handlePanelMouseDown(e, 'layers')}
-            onAddLayer={layerManagerHook.addLayer}
+            // onAddLayer prop removed
             availableBaseLayers={availableBaseLayersForSelect}
             activeBaseLayerId={activeBaseLayerId}
             onChangeBaseLayer={handleChangeBaseLayer}
-            isInspectModeActive={featureInspectionHook.isInspectModeActive}
-            onToggleInspectMode={featureInspectionHook.toggleInspectMode}
+            // isInspectModeActive and onToggleInspectMode props removed
             onZoomToBoundingBox={zoomToBoundingBox}
             captureMap={captureMap}
             isCapturingMap={isMapCapturing}
@@ -382,10 +381,13 @@ export default function GeoMapperClient() {
             onShowLayerTable={layerManagerHook.handleShowLayerTable}
             onExtractByPolygon={layerManagerHook.handleExtractFeaturesByPolygon}
             isDrawingSourceEmptyOrNotPolygon={layerManagerHook.isDrawingSourceEmptyOrNotPolygon}
+            // Pass new props for FileUploadControl and InspectToolToggle
+            onAddLayer={layerManagerHook.addLayer as (layer: MapLayer) => void}
+            isInspectModeActive={featureInspectionHook.isInspectModeActive}
+            onToggleInspectMode={featureInspectionHook.toggleInspectMode}
           />
         )}
       </div>
     </div>
   );
 }
-

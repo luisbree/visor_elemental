@@ -4,16 +4,15 @@
 import React from 'react';
 import DraggablePanel from './DraggablePanel';
 import BaseLayerSelector from '@/components/layer-manager/BaseLayerSelector';
-import FileUploadControl from '@/components/layer-manager/FileUploadControl';
-// LayerList removed
-import InspectToolToggle from '@/components/feature-inspection/InspectToolToggle';
+// FileUploadControl removed
+// InspectToolToggle removed
 import LocationSearch, { type NominatimResult } from '@/components/location-search/LocationSearch';
 import MapCaptureControl from '@/components/map-tools/MapCaptureControl';
 import GeoServerUrlInput from '@/components/geoserver-connection/GeoServerUrlInput';
 import GeoServerLayerList from '@/components/geoserver-connection/GeoServerLayerList';
 import { Separator } from '@/components/ui/separator';
-import type { BaseLayerOptionForSelect, GeoServerDiscoveredLayer, MapLayer } from '@/lib/types'; // MapLayer might not be needed here anymore
-import { Database } from 'lucide-react'; // LayersIcon removed as it's no longer used for section header here
+import type { BaseLayerOptionForSelect, GeoServerDiscoveredLayer } from '@/lib/types'; 
+import { Database } from 'lucide-react'; 
 
 interface LayersPanelProps {
   panelRef: React.RefObject<HTMLDivElement>;
@@ -23,16 +22,12 @@ interface LayersPanelProps {
   onClosePanel: () => void; 
   onMouseDownHeader: (e: React.MouseEvent<HTMLDivElement>) => void;
 
-  // Props for LayerList are removed from here
-  onAddLayer: (layer: MapLayer) => void; // FileUploadControl still needs this
-
+  // onAddLayer prop removed
   availableBaseLayers: BaseLayerOptionForSelect[];
   activeBaseLayerId: string;
   onChangeBaseLayer: (id: string) => void;
 
-  isInspectModeActive: boolean;
-  onToggleInspectMode: () => void;
-
+  // isInspectModeActive and onToggleInspectMode props removed
   onZoomToBoundingBox: (bbox: [number, number, number, number]) => void;
 
   captureMap: (outputType: 'jpeg-full' | 'jpeg-red' | 'jpeg-green' | 'jpeg-blue') => void;
@@ -48,13 +43,12 @@ interface LayersPanelProps {
   onAddGeoServerLayerAsWFS: (layerName: string, layerTitle: string) => Promise<void>;
 }
 
-// SectionHeader removed as "Capas Cargadas" section is gone
 
 const LayersPanel: React.FC<LayersPanelProps> = ({
   panelRef, position, isCollapsed, onToggleCollapse, onClosePanel, onMouseDownHeader,
-  onAddLayer, // For FileUploadControl
+  // onAddLayer removed
   availableBaseLayers, activeBaseLayerId, onChangeBaseLayer,
-  isInspectModeActive, onToggleInspectMode,
+  // isInspectModeActive, onToggleInspectMode removed
   onZoomToBoundingBox,
   captureMap, isCapturingMap,
   geoServerUrlInput, onGeoServerUrlChange, onFetchGeoServerLayers, 
@@ -121,19 +115,9 @@ const LayersPanel: React.FC<LayersPanelProps> = ({
             />
           </>
         )}
-
-        <Separator className="bg-white/15" />
         
-        <div className="flex items-center gap-2"> 
-          <FileUploadControl onAddLayer={onAddLayer} uniqueIdPrefix="layerspanel-upload"/>
-          <InspectToolToggle
-            isInspectModeActive={isInspectModeActive}
-            onToggleInspectMode={onToggleInspectMode}
-          />
-        </div>
+        {/* FileUploadControl and InspectToolToggle removed from here */}
         
-        {/* Accordion for "Capas Cargadas" is removed */}
-
       </div>
     </DraggablePanel>
   );

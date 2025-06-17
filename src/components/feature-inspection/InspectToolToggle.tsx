@@ -4,32 +4,47 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { MousePointerClick } from 'lucide-react';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface InspectToolToggleProps {
   isInspectModeActive: boolean;
   onToggleInspectMode: () => void;
-  // isActiveDrawToolPresent prop removed
 }
 
 const InspectToolToggle: React.FC<InspectToolToggleProps> = ({
   isInspectModeActive,
   onToggleInspectMode,
-  // isActiveDrawToolPresent prop removed from destructuring
 }) => {
+  const iconButtonBaseClass = "h-8 w-8 p-0 flex items-center justify-center focus-visible:ring-primary";
+  const activeClass = "bg-primary hover:bg-primary/90 text-primary-foreground";
+  const inactiveClass = "border border-white/30 text-white/90 bg-black/20 hover:bg-black/40 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary";
+  
+  const tooltipText = isInspectModeActive ? 'Desactivar modo inspector' : 'Activar modo inspector';
+
   return (
-    <Button 
-      onClick={onToggleInspectMode} 
-      className={`flex-1 text-xs h-8 focus-visible:ring-primary ${
-        isInspectModeActive 
-          ? 'bg-primary hover:bg-primary/90 text-primary-foreground' 
-          : 'border border-white/30 text-white/90 bg-black/20 hover:bg-black/40 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary'
-      }`}
-      // disabled prop removed
-      title="Activar/Desactivar modo inspector"
-    >
-      <MousePointerClick className="mr-2 h-4 w-4" />
-      {isInspectModeActive ? 'Inspeccionando' : 'Inspeccionar'}
-    </Button>
+    <TooltipProvider delayDuration={300}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button 
+            onClick={onToggleInspectMode} 
+            className={`${iconButtonBaseClass} ${
+              isInspectModeActive ? activeClass : inactiveClass
+            }`}
+            aria-label={tooltipText}
+          >
+            <MousePointerClick className="h-4 w-4" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="bottom" className="bg-gray-700 text-white border-gray-600">
+          <p className="text-xs">{tooltipText}</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 };
 

@@ -4,9 +4,11 @@
 import React from 'react';
 import DraggablePanel from './DraggablePanel';
 import LayerList from '@/components/layer-manager/LayerList';
-// Accordion components are no longer needed here
+import FileUploadControl from '@/components/layer-manager/FileUploadControl';
+import InspectToolToggle from '@/components/feature-inspection/InspectToolToggle';
+import { Separator } from '@/components/ui/separator';
 import type { MapLayer } from '@/lib/types';
-import { Layers as LayersIcon } from 'lucide-react'; // Or ListTree if preferred for the panel icon
+import { ListTree } from 'lucide-react'; // Changed from LayersIcon
 
 interface LegendPanelProps {
   panelRef: React.RefObject<HTMLDivElement>;
@@ -23,21 +25,25 @@ interface LegendPanelProps {
   onShowLayerTable: (layerId: string) => void;
   onExtractByPolygon: (layerId: string) => void;
   isDrawingSourceEmptyOrNotPolygon: boolean;
+
+  // Props for new controls
+  onAddLayer: (layer: MapLayer) => void;
+  isInspectModeActive: boolean;
+  onToggleInspectMode: () => void;
 }
 
-// SectionHeader is removed as it was part of the Accordion structure
 
 const LegendPanel: React.FC<LegendPanelProps> = ({
   panelRef, position, isCollapsed, onToggleCollapse, onClosePanel, onMouseDownHeader,
   layers, onToggleLayerVisibility, onRemoveLayer, onZoomToLayerExtent, onShowLayerTable,
   onExtractByPolygon, isDrawingSourceEmptyOrNotPolygon,
+  onAddLayer, isInspectModeActive, onToggleInspectMode, // Destructure new props
 }) => {
-  // activeAccordionItems state and useEffect related to it are removed
 
   return (
     <DraggablePanel
       title="Capas"
-      icon={LayersIcon} 
+      icon={ListTree} 
       panelRef={panelRef}
       initialPosition={position}
       onMouseDownHeader={onMouseDownHeader}
@@ -47,8 +53,15 @@ const LegendPanel: React.FC<LegendPanelProps> = ({
       showCloseButton={true}
       style={{ top: `${position.y}px`, left: `${position.x}px` }}
     >
-      {/* LayerList is now a direct child within DraggablePanel's content area */}
-      <div className="space-y-3">
+      <div className="space-y-2"> {/* Adjusted main space-y */}
+        <div className="flex items-center gap-1 p-1 bg-white/5 rounded-md"> {/* Container for new buttons */}
+          <FileUploadControl onAddLayer={onAddLayer} uniqueIdPrefix="legendpanel-upload" />
+          <InspectToolToggle
+            isInspectModeActive={isInspectModeActive}
+            onToggleInspectMode={onToggleInspectMode}
+          />
+        </div>
+        <Separator className="bg-white/10" /> {/* Separator below new buttons */}
         <LayerList
           layers={layers}
           onToggleVisibility={onToggleLayerVisibility}
@@ -64,4 +77,3 @@ const LegendPanel: React.FC<LegendPanelProps> = ({
 };
 
 export default LegendPanel;
-
