@@ -9,8 +9,13 @@ import VectorSource from 'ol/source/Vector';
 import TileLayer from 'ol/layer/Tile';
 import TileWMS from 'ol/source/TileWMS';
 import type { Extent } from 'ol/extent';
+import { Style, Fill, Stroke } from 'ol/style';
+import { fromExtent as polygonFromExtent } from 'ol/geom/Polygon';
 import { toast } from "@/hooks/use-toast";
 import type { MapLayer } from '@/lib/types';
+
+const SENTINEL_FOOTPRINTS_LAYER_ID = "sentinel-footprints-layer";
+const SENTINEL_FOOTPRINTS_LAYER_NAME = "Footprints Sentinel-2 (Sim.)";
 
 interface UseLayerManagerProps {
   mapRef: React.RefObject<OLMap | null>;
@@ -31,6 +36,7 @@ export function useLayerManager({
 }: UseLayerManagerProps) {
   const [layers, setLayers] = useState<MapLayer[]>([]);
   const [isDrawingSourceEmptyOrNotPolygon, setIsDrawingSourceEmptyOrNotPolygon] = useState(true);
+  const [isFindingSentinelFootprints, setIsFindingSentinelFootprints] = useState(false);
 
 
   useEffect(() => {
@@ -66,7 +72,7 @@ export function useLayerManager({
     let alreadyExists = false;
     const layerWithOpacity: MapLayer = {
       ...newLayerData,
-      opacity: newLayerData.opacity ?? 1, // Default to 1 if not provided
+      opacity: newLayerData.opacity ?? 1, 
     };
 
     setLayers(prevLayers => {
@@ -76,7 +82,7 @@ export function useLayerManager({
       }
       const maxZIndex = prevLayers.reduce((max, l) => Math.max(max, l.olLayer.getZIndex() || 0), 0);
       layerWithOpacity.olLayer.setZIndex(maxZIndex + 1);
-      layerWithOpacity.olLayer.setOpacity(layerWithOpacity.opacity); // Set initial opacity on OL layer
+      layerWithOpacity.olLayer.setOpacity(layerWithOpacity.opacity); 
       return [...prevLayers, layerWithOpacity];
     });
 
@@ -260,7 +266,7 @@ export function useLayerManager({
       const targetGeom = feature.getGeometry();
       if (targetGeom) {
         if (targetGeom.getType() === 'Point') {
-          if ((selectionPolygonGeom as geom.Polygon).intersectsCoordinate(targetGeom.getCoordinates())) {
+          if ((selectionPolygonGeom as geom.Polygon).intersectsCoordinate(targetGeom.getCoordinates() as any)) { // Cast to any to satisfy OL type
             extractedFeatures.push(feature.clone());
           }
         } else { 
@@ -274,7 +280,7 @@ export function useLayerManager({
       const newLayer = new VectorLayer({
         source: newSource,
         style: targetMapLayer.olLayer.getStyle(), 
-        opacity: targetMapLayer.opacity, // Preserve opacity
+        opacity: targetMapLayer.opacity, 
       });
       const newLayerId = `extraction-${targetMapLayer.id}-${Date.now()}`;
       const newLayerName = `Extracción de ${targetMapLayer.name.substring(0,25)}${targetMapLayer.name.length > 25 ? "..." : ""}`;
@@ -292,6 +298,90 @@ export function useLayerManager({
       setTimeout(() => toast({ description: "No se encontraron entidades dentro del polígono dibujado." }), 0);
     }
   }, [layers, drawingSourceRef, addLayer, mapRef, toast]);
+
+  const findSentinel2FootprintsInCurrentView = useCallback(async () => {
+    if (!mapRef.current || !isMapReady) {
+      toast({ description: "El mapa no está listo para buscar escenas.", variant: "destructive" });
+      return;
+    }
+    setIsFindingSentinelFootprints(true);
+    toast({ description: "Simulando búsqueda de footprints Sentinel-2..." });
+
+    // Remove existing footprints layer first
+    const existingFootprintsLayer = layers.find(l => l.id === SENTINEL_FOOTPRINTS_LAYER_ID);
+    if (existingFootprintsLayer) {
+      removeLayer(SENTINEL_FOOTPRINTS_LAYER_ID);
+    }
+    
+    await new Promise(resolve => setTimeout(resolve, 500)); // Simulate API call delay
+
+    try {
+      const view = mapRef.current.getView();
+      const extent = view.calculateExtent(mapRef.current.getSize());
+      const simulatedFootprints: OLFeature[] = [];
+      const numFootprints = Math.floor(Math.random() * 3) + 3; // 3 to 5 footprints
+
+      const extentWidth = extent[2] - extent[0];
+      const extentHeight = extent[3] - extent[1];
+
+      for (let i = 0; i < numFootprints; i++) {
+        // Make footprints slightly smaller than full view and somewhat overlapping
+        const fpWidth = extentWidth * (Math.random() * 0.2 + 0.4); // 40-60% of view width
+        const fpHeight = extentHeight * (Math.random() * 0.2 + 0.4); // 40-60% of view height
+
+        const fpX = extent[0] + Math.random() * (extentWidth - fpWidth);
+        const fpY = extent[1] + Math.random() * (extentHeight - fpHeight);
+        
+        const footprintExtent: Extent = [fpX, fpY, fpX + fpWidth, fpY + fpHeight];
+        const footprintGeom = polygonFromExtent(footprintExtent);
+        const footprintFeature = new OLFeature({
+          geometry: footprintGeom,
+          name: `Sentinel-2 Escena Simulada ${i + 1}`,
+          date: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // Random date in last 30 days
+          cloud_cover: Math.round(Math.random() * 30), // Random cloud cover 0-30%
+        });
+        simulatedFootprints.push(footprintFeature);
+      }
+
+      if (simulatedFootprints.length > 0) {
+        const vectorSource = new VectorSource({ features: simulatedFootprints });
+        const vectorLayer = new VectorLayer({
+          source: vectorSource,
+          style: new Style({
+            stroke: new Stroke({ color: 'rgba(255, 0, 255, 0.8)', width: 2 }),
+            fill: new Fill({ color: 'rgba(255, 0, 255, 0.1)' }),
+          }),
+          properties: { 'title': SENTINEL_FOOTPRINTS_LAYER_NAME }
+        });
+        addLayer({
+          id: SENTINEL_FOOTPRINTS_LAYER_ID,
+          name: `${SENTINEL_FOOTPRINTS_LAYER_NAME} (${simulatedFootprints.length})`,
+          olLayer: vectorLayer,
+          visible: true,
+          opacity: 0.8,
+          originType: 'file', // Treat as a dynamic/generated layer for now
+        });
+        toast({ description: `${simulatedFootprints.length} footprints Sentinel-2 simulados encontrados.` });
+      } else {
+        toast({ description: "No se generaron footprints simulados." });
+      }
+    } catch (error: any) {
+      console.error("Error generando footprints Sentinel-2 simulados:", error);
+      toast({ description: "Error al simular búsqueda de footprints.", variant: "destructive" });
+    } finally {
+      setIsFindingSentinelFootprints(false);
+    }
+  }, [mapRef, isMapReady, addLayer, removeLayer, layers, toast]);
+
+  const clearSentinel2FootprintsLayer = useCallback(() => {
+    const existingLayer = layers.find(l => l.id === SENTINEL_FOOTPRINTS_LAYER_ID);
+    if (existingLayer) {
+      removeLayer(SENTINEL_FOOTPRINTS_LAYER_ID);
+      toast({ description: "Footprints Sentinel-2 limpiados." });
+    } else {
+      toast({ description: "No hay footprints Sentinel-2 para limpiar." });
+    }
+  }, [layers, removeLayer, toast]);
 
 
   useEffect(() => {
@@ -313,7 +403,7 @@ export function useLayerManager({
         currentMap.addLayer(appLayer.olLayer); 
       }
       appLayer.olLayer.setVisible(appLayer.visible);
-      appLayer.olLayer.setOpacity(appLayer.opacity); // Ensure opacity is applied
+      appLayer.olLayer.setOpacity(appLayer.opacity); 
     });
 
   }, [layers, isMapReady, mapRef, drawingLayerRef]);
@@ -325,10 +415,13 @@ export function useLayerManager({
     addLayer,
     removeLayer,
     toggleLayerVisibility,
-    setLayerOpacity, // Expose new function
+    setLayerOpacity, 
     zoomToLayerExtent,
     handleShowLayerTable,
     handleExtractFeaturesByPolygon,
     isDrawingSourceEmptyOrNotPolygon,
+    findSentinel2FootprintsInCurrentView,
+    clearSentinel2FootprintsLayer,
+    isFindingSentinelFootprints,
   };
 }

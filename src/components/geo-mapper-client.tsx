@@ -334,6 +334,9 @@ export default function GeoMapperClient() {
             isLoadingGeoServerLayers={isLoadingGeoServerLayers}
             onAddGeoServerLayerToMap={handleAddGeoServerLayerToMap}
             onAddGeoServerLayerAsWFS={handleAddGeoServerLayerAsWFS}
+            onFindSentinel2Footprints={layerManagerHook.findSentinel2FootprintsInCurrentView}
+            onClearSentinel2Footprints={layerManagerHook.clearSentinel2FootprintsLayer}
+            isFindingSentinelFootprints={layerManagerHook.isFindingSentinelFootprints}
             style={{ top: `${panels.layers.position.y}px`, left: `${panels.layers.position.x}px`, zIndex: panels.layers.zIndex }}
           />
         )}
@@ -376,7 +379,7 @@ export default function GeoMapperClient() {
             onShowLayerTable={layerManagerHook.handleShowLayerTable}
             onExtractByPolygon={layerManagerHook.handleExtractFeaturesByPolygon}
             isDrawingSourceEmptyOrNotPolygon={layerManagerHook.isDrawingSourceEmptyOrNotPolygon}
-            onSetLayerOpacity={layerManagerHook.setLayerOpacity} // Pass setLayerOpacity
+            onSetLayerOpacity={layerManagerHook.setLayerOpacity}
             onAddLayer={layerManagerHook.addLayer as (layer: MapLayer) => void}
             isInspectModeActive={featureInspectionHook.isInspectModeActive}
             onToggleInspectMode={featureInspectionHook.toggleInspectMode}

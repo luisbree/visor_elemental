@@ -15,7 +15,8 @@ interface MapViewProps {
   activeBaseLayerId?: string; 
 }
 
-export const BASE_LAYER_DEFINITIONS = [
+// Definitions for all potential base layers
+export const ALL_BASE_LAYER_DEFINITIONS = [
   {
     id: 'osm-standard',
     name: 'OpenStreetMap',
@@ -32,7 +33,7 @@ export const BASE_LAYER_DEFINITIONS = [
         url: 'https://{a-d}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
         attributions: 'Map tiles by <a href="https://carto.com/attributions">Carto</a>, under CC BY 3.0. Data by <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>, under ODbL.',
         maxZoom: 20,
-        crossOrigin: 'Anonymous' // Added for CORS
+        crossOrigin: 'Anonymous'
       }),
       visible: false, 
       properties: { baseLayerId: 'carto-light', isBaseLayer: true, name: 'CartoGrayscaleBaseLayer' },
@@ -46,20 +47,20 @@ export const BASE_LAYER_DEFINITIONS = [
         url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
         attributions: 'Tiles © Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
         maxZoom: 19,
-        crossOrigin: 'Anonymous' // Added for CORS
+        crossOrigin: 'Anonymous'
       }),
       visible: false, 
       properties: { baseLayerId: 'esri-satellite', isBaseLayer: true, name: 'ESRISatelliteBaseLayer' },
     }),
   },
   {
-    id: 'sentinel-2-esri',
-    name: 'Sentinel-2 (ESRI)',
+    id: 'sentinel-2-esri', // Kept for potential future use, but not in BASE_LAYER_DEFINITIONS_FOR_SELECT
+    name: 'Sentinel-2 (ESRI) - Imagery',
     createLayer: () => new TileLayer({
       source: new XYZ({
         url: 'https://tiles.arcgis.com/tiles/P3ePLMYs2RVChkJx/arcgis/rest/services/Sentinel_2_L2A_Global_View/MapServer/tile/{z}/{y}/{x}',
         attributions: 'Sentinel-2, Contains modified Copernicus Sentinel data, processed by Esri.',
-        maxZoom: 19, // Consistent with ESRI Satellite, can be adjusted if needed
+        maxZoom: 19, 
         crossOrigin: 'Anonymous'
       }),
       visible: false,
@@ -68,20 +69,23 @@ export const BASE_LAYER_DEFINITIONS = [
   },
 ] as const;
 
+// Definitions for base layers to be shown in the selector
+export const BASE_LAYER_DEFINITIONS = ALL_BASE_LAYER_DEFINITIONS.filter(
+  def => def.id !== 'sentinel-2-esri'
+);
+
 
 const MapView: React.FC<MapViewProps> = ({ setMapInstanceAndElement, onMapClick, activeBaseLayerId }) => {
   const mapElementRef = useRef<HTMLDivElement>(null);
-  const olMapInstanceRef = useRef<OLMap | null>(null); // Internal ref to the map instance created by this component
+  const olMapInstanceRef = useRef<OLMap | null>(null); 
 
-  // Effect for map initialization (runs once)
   useEffect(() => {
-    if (!mapElementRef.current || olMapInstanceRef.current) { // Only run if div exists and map not yet created
+    if (!mapElementRef.current || olMapInstanceRef.current) { 
       return;
     }
 
-    const initialBaseLayers = BASE_LAYER_DEFINITIONS.map(def => {
+    const initialBaseLayers = ALL_BASE_LAYER_DEFINITIONS.map(def => {
         const layer = def.createLayer();
-        // Set initial visibility based on activeBaseLayerId (first one if not specified)
         layer.setVisible(def.id === (activeBaseLayerId || BASE_LAYER_DEFINITIONS[0].id));
         return layer;
     });
@@ -104,38 +108,34 @@ const MapView: React.FC<MapViewProps> = ({ setMapInstanceAndElement, onMapClick,
       }),
     });
     
-    olMapInstanceRef.current = map; // Store locally
+    olMapInstanceRef.current = map; 
     setMapInstanceAndElement(map, mapElementRef.current);
 
     return () => {
-      // Cleanup when MapView unmounts completely
       if (olMapInstanceRef.current) {
-        olMapInstanceRef.current.setTarget(undefined); // Detach map from target
-        // olMapInstanceRef.current.dispose(); // Consider if full disposal is needed
+        olMapInstanceRef.current.setTarget(undefined); 
         olMapInstanceRef.current = null;
       }
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [setMapInstanceAndElement]); // setMapInstanceAndElement should be stable
+  }, [setMapInstanceAndElement]); 
 
-  // Effect to handle 'onMapClick' listener changes
   useEffect(() => {
-    if (!olMapInstanceRef.current) return; // Map not yet created
+    if (!olMapInstanceRef.current) return; 
     const currentMap = olMapInstanceRef.current;
 
     if (onMapClick) {
       currentMap.on('singleclick', onMapClick);
     }
     return () => {
-      if (onMapClick) { // Check if onMapClick was actually defined and attached
+      if (onMapClick) { 
         currentMap.un('singleclick', onMapClick);
       }
     };
-  }, [onMapClick]); // Only depends on onMapClick callback changing
+  }, [onMapClick]); 
 
-  // Effect to handle base layer visibility changes
   useEffect(() => {
-    if (!olMapInstanceRef.current || !activeBaseLayerId) return; // Map not yet created or no activeBaseLayerId
+    if (!olMapInstanceRef.current || !activeBaseLayerId) return; 
     const currentMap = olMapInstanceRef.current;
 
     currentMap.getLayers().forEach(layer => {
@@ -143,10 +143,9 @@ const MapView: React.FC<MapViewProps> = ({ setMapInstanceAndElement, onMapClick,
             layer.setVisible(layer.get('baseLayerId') === activeBaseLayerId);
         }
     });
-  }, [activeBaseLayerId]); // Only depends on activeBaseLayerId changing
+  }, [activeBaseLayerId]); 
 
   return <div ref={mapElementRef} className="w-full h-full bg-gray-200" />;
 };
 
 export default MapView;
-
