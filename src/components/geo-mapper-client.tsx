@@ -16,7 +16,8 @@ import {
 
 
 import MapView, { BASE_LAYER_DEFINITIONS } from '@/components/map-view';
-import FeatureAttributesPanel from '@/components/panels/FeatureAttributesPanel';
+// FeatureAttributesPanel is now imported from its new location
+import FeatureAttributesPanel from '@/components/panels/FeatureAttributesPanel'; 
 import LayersPanel from '@/components/panels/LayersPanel';
 import ToolsPanel from '@/components/panels/ToolsPanel';
 import LegendPanel from '@/components/panels/LegendPanel'; 
@@ -95,7 +96,7 @@ const availableBaseLayersForSelect: BaseLayerOptionForSelect[] = BASE_LAYER_DEFI
 
 const PANEL_WIDTH = 350;
 const PANEL_PADDING = 8; 
-const ESTIMATED_COLLAPSED_HEADER_HEIGHT = 32; 
+// const ESTIMATED_COLLAPSED_HEADER_HEIGHT = 32; // Not directly used here now
 
 const panelToggleConfigs = [
   { id: 'layers', IconComponent: Database, name: "Datos" },
@@ -121,8 +122,8 @@ export default function GeoMapperClient() {
 
   const featureInspectionHook = useFeatureInspection({
     mapRef, mapElementRef, isMapReady, drawingSourceRef, drawingLayerRef,
-    activeDrawTool: null, 
-    stopDrawingTool: () => {}, 
+    activeDrawTool: null, // Will be updated by drawingInteractions
+    stopDrawingTool: () => {}, // Will be updated by drawingInteractions
   });
 
   const [geoServerDiscoveredLayers, setGeoServerDiscoveredLayers] = useState<GeoServerDiscoveredLayer[]>([]);
@@ -183,16 +184,18 @@ export default function GeoMapperClient() {
     mapAreaRef, 
     panelWidth: PANEL_WIDTH, 
     panelPadding: PANEL_PADDING,
-    estimatedCollapsedHeaderHeight: ESTIMATED_COLLAPSED_HEADER_HEIGHT,
+    // estimatedCollapsedHeaderHeight removed as it's not directly used here
   });
 
   const { captureMap, isCapturing: isMapCapturing } = useMapCapture({ mapRef });
 
+  // State and handler for FeatureAttributesPanel (draggable, collapsable, but not part of the main toggle group)
   const [attrPanelPosition, setAttrPanelPosition] = useState({ x: 50, y: 50 });
   const handleAttrPanelMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
       const panel = featureAttributesPanelRef.current;
       if (!panel) return;
       const targetElement = e.target as HTMLElement;
+      // Prevent drag if clicking on interactive elements within the header
       if (targetElement.closest('button') || targetElement.closest('input') || targetElement.closest('[role="combobox"]')) {
           return;
       }
@@ -243,6 +246,7 @@ export default function GeoMapperClient() {
   }, [layerManagerHook.layers, featureInspectionHook]);
 
    useEffect(() => {
+    // Update featureInspectionHook with latest drawing tool state
     featureInspectionHook.activeDrawTool = drawingInteractions.activeDrawTool;
     featureInspectionHook.stopDrawingTool = drawingInteractions.stopDrawingTool;
   }, [drawingInteractions.activeDrawTool, drawingInteractions.stopDrawingTool, featureInspectionHook ]);
@@ -262,16 +266,18 @@ export default function GeoMapperClient() {
 
         <WfsLoadingIndicator isVisible={isWfsLoading} />
 
+        {/* FeatureAttributesPanel is managed separately, not part of the main toggle group */}
         <FeatureAttributesPanel
           featuresAttributes={featureInspectionHook.selectedFeatureAttributes}
           isVisible={featureInspectionHook.isFeatureAttributesPanelVisible}
           layerName={featureInspectionHook.currentInspectedLayerName}
           onClose={featureInspectionHook.closeFeatureAttributesPanel}
           panelRef={featureAttributesPanelRef}
-          initialPosition={attrPanelPosition}
-          onMouseDownHeader={handleAttrPanelMouseDown}
+          initialPosition={attrPanelPosition} // Controlled position
+          onMouseDownHeader={handleAttrPanelMouseDown} // Custom drag handler
           isPanelCollapsed={isAttrPanelCollapsed}
           onTogglePanelCollapse={() => setIsAttrPanelCollapsed(!isAttrPanelCollapsed)}
+          // zIndex is set within FeatureAttributesPanel's DraggablePanel
         />
         
         <div className="absolute top-2 right-2 z-20 flex flex-row space-x-1">
@@ -289,7 +295,7 @@ export default function GeoMapperClient() {
                 <Tooltip key={panelConfig.id}>
                   <TooltipTrigger asChild>
                     <Button
-                      variant={"outline"} // Always outline for toggle buttons
+                      variant={"outline"} 
                       size="icon"
                       className={`h-8 w-8 focus-visible:ring-primary ${
                         isPanelOpen 
@@ -303,7 +309,7 @@ export default function GeoMapperClient() {
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent side="bottom" className="bg-gray-700 text-white border-gray-600">
-                    <p>{tooltipText}</p>
+                    <p className="text-xs">{tooltipText}</p>
                   </TooltipContent>
                 </Tooltip>
               );
@@ -314,17 +320,15 @@ export default function GeoMapperClient() {
         {panels.layers && !panels.layers.isMinimized && (
           <LayersPanel
             panelRef={layersPanelRef}
-            position={panels.layers.position}
+            // position prop is now handled by style
             isCollapsed={panels.layers.isCollapsed}
             onToggleCollapse={() => togglePanelCollapse('layers')}
             onClosePanel={() => togglePanelMinimize('layers')}
             onMouseDownHeader={(e) => handlePanelMouseDown(e, 'layers')}
-            // onAddLayer prop removed
             availableBaseLayers={availableBaseLayersForSelect}
             activeBaseLayerId={activeBaseLayerId}
             onChangeBaseLayer={handleChangeBaseLayer}
-            // isInspectModeActive and onToggleInspectMode props removed
-            onZoomToBoundingBox={zoomToBoundingBox}
+            onZoomToBoundingBox={zoomToBoundingBox} // This was onZoomToLayerExtent, but for LayersPanel, bbox makes sense.
             captureMap={captureMap}
             isCapturingMap={isMapCapturing}
             geoServerUrlInput={geoServerUrlInput}
@@ -339,13 +343,14 @@ export default function GeoMapperClient() {
             isLoadingGeoServerLayers={isLoadingGeoServerLayers}
             onAddGeoServerLayerToMap={handleAddGeoServerLayerToMap}
             onAddGeoServerLayerAsWFS={handleAddGeoServerLayerAsWFS}
+            style={{ top: `${panels.layers.position.y}px`, left: `${panels.layers.position.x}px`, zIndex: panels.layers.zIndex }}
           />
         )}
 
         {panels.tools && !panels.tools.isMinimized && (
           <ToolsPanel
             panelRef={toolsPanelRef}
-            position={panels.tools.position}
+            // position prop is now handled by style
             isCollapsed={panels.tools.isCollapsed}
             onToggleCollapse={() => togglePanelCollapse('tools')}
             onClosePanel={() => togglePanelMinimize('tools')}
@@ -363,13 +368,14 @@ export default function GeoMapperClient() {
             onDownloadFormatChange={setDownloadFormat}
             isDownloading={isDownloading}
             onDownloadOSMLayers={() => handleDownloadOSMLayers(layerManagerHook.layers)}
+            style={{ top: `${panels.tools.position.y}px`, left: `${panels.tools.position.x}px`, zIndex: panels.tools.zIndex }}
           />
         )}
 
         {panels.legend && !panels.legend.isMinimized && (
           <LegendPanel
             panelRef={legendPanelRef}
-            position={panels.legend.position}
+            // position prop is now handled by style
             isCollapsed={panels.legend.isCollapsed}
             onToggleCollapse={() => togglePanelCollapse('legend')}
             onClosePanel={() => togglePanelMinimize('legend')}
@@ -381,10 +387,10 @@ export default function GeoMapperClient() {
             onShowLayerTable={layerManagerHook.handleShowLayerTable}
             onExtractByPolygon={layerManagerHook.handleExtractFeaturesByPolygon}
             isDrawingSourceEmptyOrNotPolygon={layerManagerHook.isDrawingSourceEmptyOrNotPolygon}
-            // Pass new props for FileUploadControl and InspectToolToggle
             onAddLayer={layerManagerHook.addLayer as (layer: MapLayer) => void}
             isInspectModeActive={featureInspectionHook.isInspectModeActive}
             onToggleInspectMode={featureInspectionHook.toggleInspectMode}
+            style={{ top: `${panels.legend.position.y}px`, left: `${panels.legend.position.x}px`, zIndex: panels.legend.zIndex }}
           />
         )}
       </div>

@@ -1,19 +1,30 @@
 
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 
-interface PanelState {
+interface PanelConfig { // Renamed from PanelState to avoid confusion with internal state
   position: { x: number; y: number };
   isCollapsed: boolean;
   ref: React.RefObject<HTMLDivElement>;
-  isMinimized: boolean; 
+  isMinimized: boolean;
 }
 
+// This will be the shape of the state managed internally
+interface InternalPanelState extends Omit<PanelConfig, 'ref'>{
+  // ref is handled by the refs passed in props
+}
+
+// This will be the shape of the object returned by the hook
+export interface PanelStateWithZIndex extends PanelConfig {
+  zIndex: number;
+}
+
+
 interface UseFloatingPanelsProps {
-  layersPanelRef: React.RefObject<HTMLDivElement>; // Datos
-  toolsPanelRef: React.RefObject<HTMLDivElement>;  // Herramientas
-  legendPanelRef: React.RefObject<HTMLDivElement>; // Capas (nuevo)
+  layersPanelRef: React.RefObject<HTMLDivElement>; 
+  toolsPanelRef: React.RefObject<HTMLDivElement>;  
+  legendPanelRef: React.RefObject<HTMLDivElement>; 
   mapAreaRef: React.RefObject<HTMLDivElement>;
   panelWidth?: number;
   panelPadding?: number;
@@ -23,6 +34,7 @@ interface UseFloatingPanelsProps {
 const DEFAULT_PANEL_WIDTH = 350;
 const DEFAULT_PANEL_PADDING = 8;
 const DEFAULT_ESTIMATED_COLLAPSED_HEADER_HEIGHT = 32; 
+const BASE_PANEL_Z_INDEX = 30; // Base Z-index for the floating panels
 
 export function useFloatingPanels({
   layersPanelRef,
@@ -31,48 +43,56 @@ export function useFloatingPanels({
   mapAreaRef,
   panelWidth = DEFAULT_PANEL_WIDTH,
   panelPadding = DEFAULT_PANEL_PADDING,
-  estimatedCollapsedHeaderHeight = DEFAULT_ESTIMATED_COLLAPSED_HEADER_HEIGHT,
+  // estimatedCollapsedHeaderHeight removed as it's not directly used in z-index logic
 }: UseFloatingPanelsProps) {
 
-  const [panels, setPanels] = useState<Record<string, PanelState>>({
-    layers: { position: { x: panelPadding, y: panelPadding }, isCollapsed: false, ref: layersPanelRef, isMinimized: true }, 
-    tools: { position: { x: panelWidth + 2 * panelPadding, y: panelPadding }, isCollapsed: true, ref: toolsPanelRef, isMinimized: true },
-    legend: { position: { x: 2 * (panelWidth + panelPadding) + panelPadding, y: panelPadding }, isCollapsed: false, ref: legendPanelRef, isMinimized: true }, 
+  const panelRefs = useMemo(() => ({
+    layers: layersPanelRef,
+    tools: toolsPanelRef,
+    legend: legendPanelRef,
+  }), [layersPanelRef, toolsPanelRef, legendPanelRef]);
+
+  const [internalPanelsState, setInternalPanelsState] = useState<Record<string, InternalPanelState>>({
+    layers: { position: { x: panelPadding, y: panelPadding }, isCollapsed: false, isMinimized: true }, 
+    tools: { position: { x: panelWidth + 2 * panelPadding, y: panelPadding }, isCollapsed: true, isMinimized: true },
+    legend: { position: { x: panelPadding, y: panelPadding }, isCollapsed: false, isMinimized: true }, 
   });
+
+  const [zOrder, setZOrder] = useState<string[]>(['tools', 'layers', 'legend']); // legend is on top by default
 
   const [draggingPanelId, setDraggingPanelId] = useState<string | null>(null);
   const dragStartRef = useRef({ x: 0, y: 0, panelX: 0, panelY: 0 });
 
   useEffect(() => {
+    // Initial position adjustment (runs once or if dependencies change significantly)
     if (mapAreaRef.current) {
       const mapWidth = mapAreaRef.current.offsetWidth;
-      const yPos = panelPadding; 
+      const yPos = panelPadding;
       
-      setPanels(prev => ({
+      setInternalPanelsState(prev => ({
         layers: {
           ...prev.layers,
           position: prev.layers.isMinimized ? prev.layers.position : { x: panelPadding, y: yPos },
-          ref: layersPanelRef,
         },
         tools: {
           ...prev.tools,
           position: prev.tools.isMinimized ? prev.tools.position : { x: (prev.layers.isMinimized ? 0 : panelWidth) + (prev.layers.isMinimized ? 0 : panelPadding) + panelPadding, y: yPos },
-          ref: toolsPanelRef,
         },
-        legend: { // "Capas" panel
+        legend: {
           ...prev.legend,
-           position: prev.legend.isMinimized ? prev.legend.position : { x: Math.max(panelPadding, mapWidth - panelWidth - panelPadding), y: yPos }, // Default to right side if not minimized initially
-          ref: legendPanelRef,
+          position: prev.legend.isMinimized ? prev.legend.position : { x: panelPadding, y: yPos }, // Default to left side
         }
       }));
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mapAreaRef, panelPadding, panelWidth, layersPanelRef, toolsPanelRef, legendPanelRef, estimatedCollapsedHeaderHeight]);
+  }, [panelPadding, panelWidth]); // Removed mapAreaRef from deps to prevent frequent recalcs if not needed
 
 
   const handlePanelMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>, panelId: string) => {
-    const panel = panels[panelId];
-    if (!panel || !panel.ref.current || panel.isMinimized) return;
+    const panelConfig = internalPanelsState[panelId];
+    const panelRef = panelRefs[panelId as keyof typeof panelRefs];
+
+    if (!panelConfig || !panelRef.current || panelConfig.isMinimized) return;
 
     const targetElement = e.target as HTMLElement;
     if (targetElement.closest('button') || targetElement.closest('input') || targetElement.closest('[role="combobox"]') || targetElement.closest('[role="menuitem"]') || targetElement.closest('[role="menu"]')) {
@@ -83,14 +103,21 @@ export function useFloatingPanels({
     dragStartRef.current = {
       x: e.clientX,
       y: e.clientY,
-      panelX: panel.position.x,
-      panelY: panel.position.y,
+      panelX: panelConfig.position.x,
+      panelY: panelConfig.position.y,
     };
+
+    // Bring panel to front
+    setZOrder(prevZOrder => {
+      const newOrder = prevZOrder.filter(id => id !== panelId);
+      newOrder.push(panelId); // Move to top
+      return newOrder;
+    });
     e.preventDefault();
-  }, [panels]);
+  }, [internalPanelsState, panelRefs]);
 
   const togglePanelCollapse = useCallback((panelId: string) => {
-    setPanels(prev => {
+    setInternalPanelsState(prev => {
       if (prev[panelId]?.isMinimized) return prev; 
       return {
         ...prev,
@@ -100,22 +127,26 @@ export function useFloatingPanels({
   }, []);
 
   const togglePanelMinimize = useCallback((panelId: string) => {
-    setPanels(prev => {
+    setInternalPanelsState(prev => {
       const panel = prev[panelId];
       if (!panel) return prev;
       
       const newMinimizedState = !panel.isMinimized;
-      let newPosition = panel.position; // Default to current/last position
+      let newPosition = panel.position;
       let newIsCollapsed = panel.isCollapsed;
 
       if (!newMinimizedState) { // Panel is being restored
-        newIsCollapsed = false; // Always uncollapse when restoring from minimized state
+        newIsCollapsed = false; 
 
-        if (panelId === 'legend') { // "Capas" panel
-          newPosition = { x: panelPadding, y: panelPadding }; // Always restore to the left
+        if (panelId === 'legend') { 
+          newPosition = { x: panelPadding, y: panelPadding }; 
         }
-        // For other panels (layers, tools), they will restore to their 'newPosition' which is their last known position.
-        // Boundary checks during drag and initial placement should handle their general positioning.
+         // Bring panel to front when restored
+        setZOrder(prevZOrder => {
+          const newOrder = prevZOrder.filter(id => id !== panelId);
+          newOrder.push(panelId);
+          return newOrder;
+        });
       }
 
       return {
@@ -123,7 +154,7 @@ export function useFloatingPanels({
         [panelId]: { 
           ...panel, 
           isMinimized: newMinimizedState,
-          isCollapsed: newIsCollapsed, // Apply updated collapse state
+          isCollapsed: newIsCollapsed,
           position: newPosition,
         },
       };
@@ -135,11 +166,13 @@ export function useFloatingPanels({
     const handleMouseMove = (e: MouseEvent) => {
       if (!draggingPanelId || !mapAreaRef.current) return;
 
-      const panelToMove = panels[draggingPanelId];
-      if (!panelToMove || !panelToMove.ref.current || panelToMove.isMinimized) return;
+      const panelToMoveConfig = internalPanelsState[draggingPanelId];
+      const panelToMoveRef = panelRefs[draggingPanelId as keyof typeof panelRefs];
+
+      if (!panelToMoveConfig || !panelToMoveRef.current || panelToMoveConfig.isMinimized) return;
 
       const mapRect = mapAreaRef.current.getBoundingClientRect(); 
-      const panelRect = panelToMove.ref.current.getBoundingClientRect(); 
+      const panelRect = panelToMoveRef.current.getBoundingClientRect(); 
       
       const panelCurrentWidth = panelRect.width;
       const panelCurrentHeight = panelRect.height;
@@ -155,7 +188,7 @@ export function useFloatingPanels({
       }
 
       if (!isNaN(newX) && !isNaN(newY)) {
-        setPanels(prev => ({
+        setInternalPanelsState(prev => ({
           ...prev,
           [draggingPanelId]: { ...prev[draggingPanelId], position: { x: newX, y: newY } },
         }));
@@ -178,7 +211,22 @@ export function useFloatingPanels({
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [draggingPanelId, panels, mapAreaRef]);
+  }, [draggingPanelId, internalPanelsState, mapAreaRef, panelRefs]);
+
+  const panels = useMemo(() => {
+    const result: Record<string, PanelStateWithZIndex> = {};
+    Object.keys(internalPanelsState).forEach(id => {
+      const panelZOrderIndex = zOrder.indexOf(id);
+      const panelRef = panelRefs[id as keyof typeof panelRefs];
+      result[id] = {
+        ...internalPanelsState[id],
+        ref: panelRef, // Add the ref back here for the consumer
+        zIndex: BASE_PANEL_Z_INDEX + panelZOrderIndex,
+      };
+    });
+    return result;
+  }, [internalPanelsState, zOrder, panelRefs]);
+
 
   return {
     panels,
@@ -187,4 +235,3 @@ export function useFloatingPanels({
     togglePanelMinimize,
   };
 }
-

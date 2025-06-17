@@ -22,7 +22,7 @@ interface OSMCategory {
 
 interface ToolsPanelProps {
   panelRef: React.RefObject<HTMLDivElement>;
-  position: { x: number; y: number };
+  // position: { x: number; y: number }; // Removed, controlled by style
   isCollapsed: boolean;
   onToggleCollapse: () => void;
   onClosePanel: () => void; 
@@ -44,6 +44,7 @@ interface ToolsPanelProps {
   onDownloadFormatChange: (format: string) => void;
   isDownloading: boolean;
   onDownloadOSMLayers: () => void;
+  style?: React.CSSProperties; // Added for position and zIndex
 }
 
 const SectionHeader: React.FC<{ title: string; description?: string; icon: React.ElementType }> = ({ title, description, icon: Icon }) => (
@@ -57,11 +58,12 @@ const SectionHeader: React.FC<{ title: string; description?: string; icon: React
 );
 
 const ToolsPanel: React.FC<ToolsPanelProps> = ({
-  panelRef, position, isCollapsed, onToggleCollapse, onClosePanel, onMouseDownHeader,
+  panelRef, /*position,*/ isCollapsed, onToggleCollapse, onClosePanel, onMouseDownHeader,
   activeDrawTool, onToggleDrawingTool, onClearDrawnFeatures, onSaveDrawnFeaturesAsKML,
   isFetchingOSM, onFetchOSMDataTrigger, osmCategoriesForSelection, selectedOSMCategoryIds, 
   onSelectedOSMCategoriesChange,
-  downloadFormat, onDownloadFormatChange, isDownloading, onDownloadOSMLayers
+  downloadFormat, onDownloadFormatChange, isDownloading, onDownloadOSMLayers,
+  style, // Destructure style
 }) => {
 
   const [activeAccordionItem, setActiveAccordionItem] = React.useState<string | undefined>('openstreetmap-section');
@@ -71,13 +73,14 @@ const ToolsPanel: React.FC<ToolsPanelProps> = ({
       title="Herramientas"
       icon={Wrench}
       panelRef={panelRef}
-      initialPosition={position}
+      initialPosition={{ x:0, y:0 }} // initialPosition is less relevant now
       onMouseDownHeader={onMouseDownHeader}
       isCollapsed={isCollapsed}
       onToggleCollapse={onToggleCollapse}
       onClose={onClosePanel} 
       showCloseButton={true} 
-      style={{ top: `${position.y}px`, left: `${position.x}px` }}
+      style={style} // Pass the style from parent (includes top, left, zIndex)
+      zIndex={style?.zIndex as number | undefined} // Pass zIndex explicitly
     >
         <div className="w-full bg-white/5 rounded-md p-2">
             <DrawingToolbar

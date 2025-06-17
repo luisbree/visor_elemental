@@ -4,8 +4,6 @@
 import React from 'react';
 import DraggablePanel from './DraggablePanel';
 import BaseLayerSelector from '@/components/layer-manager/BaseLayerSelector';
-// FileUploadControl removed
-// InspectToolToggle removed
 import LocationSearch, { type NominatimResult } from '@/components/location-search/LocationSearch';
 import MapCaptureControl from '@/components/map-tools/MapCaptureControl';
 import GeoServerUrlInput from '@/components/geoserver-connection/GeoServerUrlInput';
@@ -16,18 +14,16 @@ import { Database } from 'lucide-react';
 
 interface LayersPanelProps {
   panelRef: React.RefObject<HTMLDivElement>;
-  position: { x: number; y: number };
+  // position: { x: number; y: number }; // Removed, controlled by style
   isCollapsed: boolean;
   onToggleCollapse: () => void;
   onClosePanel: () => void; 
   onMouseDownHeader: (e: React.MouseEvent<HTMLDivElement>) => void;
 
-  // onAddLayer prop removed
   availableBaseLayers: BaseLayerOptionForSelect[];
   activeBaseLayerId: string;
   onChangeBaseLayer: (id: string) => void;
 
-  // isInspectModeActive and onToggleInspectMode props removed
   onZoomToBoundingBox: (bbox: [number, number, number, number]) => void;
 
   captureMap: (outputType: 'jpeg-full' | 'jpeg-red' | 'jpeg-green' | 'jpeg-blue') => void;
@@ -41,19 +37,19 @@ interface LayersPanelProps {
   isLoadingGeoServerLayers: boolean;
   onAddGeoServerLayerToMap: (layerName: string, layerTitle: string) => void;
   onAddGeoServerLayerAsWFS: (layerName: string, layerTitle: string) => Promise<void>;
+  style?: React.CSSProperties; // Added for position and zIndex
 }
 
 
 const LayersPanel: React.FC<LayersPanelProps> = ({
-  panelRef, position, isCollapsed, onToggleCollapse, onClosePanel, onMouseDownHeader,
-  // onAddLayer removed
+  panelRef, /*position,*/ isCollapsed, onToggleCollapse, onClosePanel, onMouseDownHeader,
   availableBaseLayers, activeBaseLayerId, onChangeBaseLayer,
-  // isInspectModeActive, onToggleInspectMode removed
   onZoomToBoundingBox,
   captureMap, isCapturingMap,
   geoServerUrlInput, onGeoServerUrlChange, onFetchGeoServerLayers, 
   geoServerDiscoveredLayers, setGeoServerDiscoveredLayers,
-  isLoadingGeoServerLayers, onAddGeoServerLayerToMap, onAddGeoServerLayerAsWFS
+  isLoadingGeoServerLayers, onAddGeoServerLayerToMap, onAddGeoServerLayerAsWFS,
+  style, // Destructure style
 }) => {
   
   const handleLocationSelection = (location: NominatimResult) => {
@@ -71,13 +67,14 @@ const LayersPanel: React.FC<LayersPanelProps> = ({
       title="Datos"
       icon={Database}
       panelRef={panelRef}
-      initialPosition={position}
+      initialPosition={{ x: 0, y: 0 }} // initialPosition is less relevant now, style dictates
       onMouseDownHeader={onMouseDownHeader}
       isCollapsed={isCollapsed}
       onToggleCollapse={onToggleCollapse}
       onClose={onClosePanel}
       showCloseButton={true}
-      style={{ top: `${position.y}px`, left: `${position.x}px` }}
+      style={style} // Pass the style from parent (includes top, left, zIndex)
+      zIndex={style?.zIndex as number | undefined} // Pass zIndex explicitly if needed by DraggablePanel
     >
       <div className="space-y-3"> 
         
@@ -115,8 +112,6 @@ const LayersPanel: React.FC<LayersPanelProps> = ({
             />
           </>
         )}
-        
-        {/* FileUploadControl and InspectToolToggle removed from here */}
         
       </div>
     </DraggablePanel>
