@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { MapPin, Database, Wrench, ListTree } from 'lucide-react'; // Added ListTree
+import { MapPin, Database, Wrench, ListTree } from 'lucide-react'; 
 import { Style, Fill, Stroke, Circle as CircleStyle } from 'ol/style';
 import { transformExtent } from 'ol/proj';
 import type { Extent } from 'ol/extent';
@@ -19,7 +19,7 @@ import MapView, { BASE_LAYER_DEFINITIONS } from '@/components/map-view';
 import FeatureAttributesPanel from '@/components/panels/FeatureAttributesPanel';
 import LayersPanel from '@/components/panels/LayersPanel';
 import ToolsPanel from '@/components/panels/ToolsPanel';
-import LegendPanel from '@/components/panels/LegendPanel'; // New panel for layers
+import LegendPanel from '@/components/panels/LegendPanel'; 
 import WfsLoadingIndicator from '@/components/feedback/WfsLoadingIndicator';
 
 import { useOpenLayersMap } from '@/hooks/map-core/useOpenLayersMap';
@@ -97,12 +97,18 @@ const PANEL_WIDTH = 350;
 const PANEL_PADDING = 8; 
 const ESTIMATED_COLLAPSED_HEADER_HEIGHT = 32; 
 
+const panelToggleConfigs = [
+  { id: 'layers', IconComponent: Database, name: "Datos" },
+  { id: 'tools', IconComponent: Wrench, name: "Herramientas" },
+  { id: 'legend', IconComponent: ListTree, name: "Capas" },
+];
+
 
 export default function GeoMapperClient() {
   const mapAreaRef = useRef<HTMLDivElement>(null);
-  const layersPanelRef = useRef<HTMLDivElement>(null); // Datos
-  const toolsPanelRef = useRef<HTMLDivElement>(null);  // Herramientas
-  const legendPanelRef = useRef<HTMLDivElement>(null); // Capas (nuevo)
+  const layersPanelRef = useRef<HTMLDivElement>(null); 
+  const toolsPanelRef = useRef<HTMLDivElement>(null);  
+  const legendPanelRef = useRef<HTMLDivElement>(null); 
   const featureAttributesPanelRef = useRef<HTMLDivElement>(null);
 
   const { mapRef, mapElementRef, drawingSourceRef, drawingLayerRef, setMapInstanceAndElement, isMapReady } = useOpenLayersMap();
@@ -171,9 +177,9 @@ export default function GeoMapperClient() {
   });
 
   const { panels, handlePanelMouseDown, togglePanelCollapse, togglePanelMinimize } = useFloatingPanels({
-    layersPanelRef, // Datos
-    toolsPanelRef,  // Herramientas
-    legendPanelRef, // Capas
+    layersPanelRef, 
+    toolsPanelRef,  
+    legendPanelRef, 
     mapAreaRef, 
     panelWidth: PANEL_WIDTH, 
     panelPadding: PANEL_PADDING,
@@ -268,37 +274,39 @@ export default function GeoMapperClient() {
           onTogglePanelCollapse={() => setIsAttrPanelCollapsed(!isAttrPanelCollapsed)}
         />
         
-        <div className="absolute top-2 right-2 z-20 flex flex-col space-y-1">
+        <div className="absolute top-2 right-2 z-20 flex flex-row space-x-1">
           <TooltipProvider delayDuration={200}>
-            {Object.entries(panels).map(([panelId, panelState]) => {
-              if (panelState.isMinimized) {
-                let IconComponent;
-                let tooltipText = "";
-                if (panelId === 'layers') { IconComponent = Database; tooltipText = "Restaurar Panel de Datos"; }
-                else if (panelId === 'tools') { IconComponent = Wrench; tooltipText = "Restaurar Panel de Herramientas"; }
-                else if (panelId === 'legend') { IconComponent = ListTree; tooltipText = "Restaurar Panel de Capas"; }
-                else { return null; }
+            {panelToggleConfigs.map((panelConfig) => {
+              const panelState = panels[panelConfig.id];
+              if (!panelState) return null; // Should not happen if panelConfigs and panels state are in sync
 
-                return (
-                  <Tooltip key={panelId}>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="h-8 w-8 bg-gray-700/80 text-white hover:bg-gray-600/90 border-gray-600/70"
-                        onClick={() => togglePanelMinimize(panelId)}
-                      >
-                        <IconComponent className="h-4 w-4" />
-                        <span className="sr-only">{tooltipText}</span>
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent side="left" className="bg-gray-700 text-white border-gray-600">
-                      <p>{tooltipText}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                );
-              }
-              return null;
+              const isPanelOpen = !panelState.isMinimized;
+              const tooltipText = isPanelOpen 
+                ? `Minimizar Panel de ${panelConfig.name}` 
+                : `Restaurar Panel de ${panelConfig.name}`;
+              
+              return (
+                <Tooltip key={panelConfig.id}>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant={isPanelOpen ? "default" : "outline"}
+                      size="icon"
+                      className={`h-8 w-8 focus-visible:ring-primary ${
+                        isPanelOpen 
+                          ? 'bg-primary text-primary-foreground hover:bg-primary/90' 
+                          : 'bg-gray-700/80 text-white hover:bg-gray-600/90 border-gray-600/70'
+                      }`}
+                      onClick={() => togglePanelMinimize(panelConfig.id)}
+                      aria-label={tooltipText}
+                    >
+                      <panelConfig.IconComponent className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="bg-gray-700 text-white border-gray-600">
+                    <p>{tooltipText}</p>
+                  </TooltipContent>
+                </Tooltip>
+              );
             })}
           </TooltipProvider>
         </div>
@@ -322,7 +330,11 @@ export default function GeoMapperClient() {
             isCapturingMap={isMapCapturing}
             geoServerUrlInput={geoServerUrlInput}
             onGeoServerUrlChange={setGeoServerUrlInput}
-            onFetchGeoServerLayers={handleFetchGeoServerLayers}
+            onFetchGeoServerLayers={async () => {
+              const discovered = await handleFetchGeoServerLayers();
+              setGeoServerDiscoveredLayers(discovered);
+              return discovered;
+            }}
             geoServerDiscoveredLayers={geoServerDiscoveredLayers}
             setGeoServerDiscoveredLayers={setGeoServerDiscoveredLayers}
             isLoadingGeoServerLayers={isLoadingGeoServerLayers}
@@ -376,3 +388,4 @@ export default function GeoMapperClient() {
     </div>
   );
 }
+
