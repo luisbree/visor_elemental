@@ -52,6 +52,20 @@ export const BASE_LAYER_DEFINITIONS = [
       properties: { baseLayerId: 'esri-satellite', isBaseLayer: true, name: 'ESRISatelliteBaseLayer' },
     }),
   },
+  {
+    id: 'sentinel-2-esri',
+    name: 'Sentinel-2 (ESRI)',
+    createLayer: () => new TileLayer({
+      source: new XYZ({
+        url: 'https://tiles.arcgis.com/tiles/P3ePLMYs2RVChkJx/arcgis/rest/services/Sentinel_2_L2A_Global_View/MapServer/tile/{z}/{y}/{x}',
+        attributions: 'Sentinel-2, Contains modified Copernicus Sentinel data, processed by Esri.',
+        maxZoom: 19, // Consistent with ESRI Satellite, can be adjusted if needed
+        crossOrigin: 'Anonymous'
+      }),
+      visible: false,
+      properties: { baseLayerId: 'sentinel-2-esri', isBaseLayer: true, name: 'Sentinel2ESRIBaseLayer' },
+    }),
+  },
 ] as const;
 
 
@@ -135,3 +149,4 @@ const MapView: React.FC<MapViewProps> = ({ setMapInstanceAndElement, onMapClick,
 };
 
 export default MapView;
+
