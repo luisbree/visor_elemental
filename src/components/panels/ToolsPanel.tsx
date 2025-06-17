@@ -25,7 +25,7 @@ interface ToolsPanelProps {
   position: { x: number; y: number };
   isCollapsed: boolean;
   onToggleCollapse: () => void;
-  onClosePanel: () => void; // New prop for closing/minimizing
+  onClosePanel: () => void; 
   onMouseDownHeader: (e: React.MouseEvent<HTMLDivElement>) => void;
 
   // Drawing props
@@ -75,8 +75,8 @@ const ToolsPanel: React.FC<ToolsPanelProps> = ({
       onMouseDownHeader={onMouseDownHeader}
       isCollapsed={isCollapsed}
       onToggleCollapse={onToggleCollapse}
-      onClose={onClosePanel} // Use new prop
-      showCloseButton={true} // Explicitly show close button
+      onClose={onClosePanel} 
+      showCloseButton={true} 
       style={{ top: `${position.y}px`, left: `${position.x}px` }}
     >
         <div className="w-full bg-white/5 rounded-md p-2">
@@ -108,7 +108,7 @@ const ToolsPanel: React.FC<ToolsPanelProps> = ({
                 <OSMCategorySelector
                     osmCategoriesForSelection={osmCategoriesForSelection}
                     selectedOSMCategoryIds={selectedOSMCategoryIds}
-                    onSelectedOSMCategoriesChange={onSelectedOSMCategoriesChange}
+                    onSelectedOSMCategoriesChange={onSelectedOSMCategoriesChange} 
                 />
                 <OSMDownloadOptions
                     isFetchingOSM={isFetchingOSM}
