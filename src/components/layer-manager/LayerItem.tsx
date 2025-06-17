@@ -17,7 +17,7 @@ import VectorLayer from 'ol/layer/Vector';
 interface LayerItemProps {
   layer: MapLayer;
   onToggleVisibility: (layerId: string) => void;
-  onZoomToExtent: (layerId: string) => void; // Correct prop name
+  onZoomToExtent: (layerId: string) => void;
   onShowTable: (layerId: string) => void;
   onRemove: (layerId: string) => void;
   onExtractByPolygon: (layerId: string) => void;
@@ -27,7 +27,7 @@ interface LayerItemProps {
 const LayerItem: React.FC<LayerItemProps> = ({
   layer,
   onToggleVisibility,
-  onZoomToExtent, // Correct prop name
+  onZoomToExtent,
   onShowTable,
   onRemove,
   onExtractByPolygon,
@@ -36,7 +36,7 @@ const LayerItem: React.FC<LayerItemProps> = ({
   const isVectorLayer = layer.olLayer instanceof VectorLayer;
 
   return (
-    <li className="flex items-center p-1.5 rounded-md border border-white/15 bg-black/10 hover:bg-white/15 transition-colors overflow-hidden">
+    <li className="flex items-center px-1.5 py-1 hover:bg-gray-700/30 transition-colors overflow-hidden">
       <Button
         variant="ghost"
         size="icon"
@@ -66,7 +66,7 @@ const LayerItem: React.FC<LayerItemProps> = ({
           <DropdownMenuContent side="right" align="start" className="bg-gray-700 text-white border-gray-600 w-56">
             <DropdownMenuItem
               className="text-xs hover:bg-gray-600 focus:bg-gray-600 cursor-pointer"
-              onSelect={() => onZoomToExtent(layer.id)} // Use corrected prop name
+              onSelect={() => onZoomToExtent(layer.id)}
             >
               <ZoomIn className="mr-2 h-3.5 w-3.5" />
               Ir a la extensión

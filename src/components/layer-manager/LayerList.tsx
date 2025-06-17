@@ -2,7 +2,7 @@
 "use client";
 
 import React from 'react';
-import { ScrollArea } from '@/components/ui/scroll-area';
+// ScrollArea removed
 import LayerItem from './LayerItem';
 import type { MapLayer } from '@/lib/types';
 import { Layers } from 'lucide-react';
@@ -10,7 +10,7 @@ import { Layers } from 'lucide-react';
 interface LayerListProps {
   layers: MapLayer[];
   onToggleVisibility: (layerId: string) => void;
-  onZoomToExtent: (layerId: string) => void; // Correct prop name
+  onZoomToExtent: (layerId: string) => void; 
   onShowTable: (layerId: string) => void;
   onRemoveLayer: (layerId: string) => void;
   onExtractByPolygon: (layerId: string) => void;
@@ -20,7 +20,7 @@ interface LayerListProps {
 const LayerList: React.FC<LayerListProps> = ({
   layers,
   onToggleVisibility,
-  onZoomToExtent, // Correct prop name
+  onZoomToExtent, 
   onShowTable,
   onRemoveLayer,
   onExtractByPolygon,
@@ -36,23 +36,22 @@ const LayerList: React.FC<LayerListProps> = ({
     );
   }
 
+  // ScrollArea component removed, ul is now the direct child or returned directly
   return (
-    <ScrollArea className="max-h-48 p-2"> 
-      <ul className="space-y-1.5">
-        {layers.map((layer) => (
-          <LayerItem
-            key={layer.id}
-            layer={layer}
-            onToggleVisibility={onToggleVisibility}
-            onZoomToExtent={onZoomToExtent} // Pass down corrected prop name
-            onShowTable={onShowTable}
-            onRemove={onRemoveLayer}
-            onExtractByPolygon={onExtractByPolygon}
-            isDrawingSourceEmptyOrNotPolygon={isDrawingSourceEmptyOrNotPolygon}
-          />
-        ))}
-      </ul>
-    </ScrollArea>
+    <ul className="space-y-1.5">
+      {layers.map((layer) => (
+        <LayerItem
+          key={layer.id}
+          layer={layer}
+          onToggleVisibility={onToggleVisibility}
+          onZoomToExtent={onZoomToExtent}
+          onShowTable={onShowTable}
+          onRemove={onRemoveLayer}
+          onExtractByPolygon={onExtractByPolygon}
+          isDrawingSourceEmptyOrNotPolygon={isDrawingSourceEmptyOrNotPolygon}
+        />
+      ))}
+    </ul>
   );
 };
 
