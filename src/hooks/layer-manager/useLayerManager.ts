@@ -2,8 +2,8 @@
 "use client";
 
 import { useState, useCallback, useEffect } from 'react';
-import type { Map as OLMap, geom } from 'ol'; // OLMap and geom can remain type imports if only used as types
-import { Feature as OLFeature } from 'ol';    // OLFeature needs to be a value import
+import type { Map as OLMap, geom } from 'ol';
+import { Feature as OLFeature } from 'ol';
 import VectorLayer from 'ol/layer/Vector';
 import type VectorSourceType from 'ol/source/Vector';
 import VectorSource from 'ol/source/Vector';
@@ -12,11 +12,13 @@ import TileWMS from 'ol/source/TileWMS';
 import type { Extent } from 'ol/extent';
 import { Style, Fill, Stroke } from 'ol/style';
 import { fromExtent as polygonFromExtent } from 'ol/geom/Polygon';
+import { transformExtent } from 'ol/proj';
+import { GeoJSON as GeoJSONFormat } from 'ol/format';
 import { toast } from "@/hooks/use-toast";
 import type { MapLayer } from '@/lib/types';
 
 const SENTINEL_FOOTPRINTS_LAYER_ID = "sentinel-footprints-layer";
-const SENTINEL_FOOTPRINTS_LAYER_NAME = "Footprints Sentinel-2 (Sim.)";
+const SENTINEL_FOOTPRINTS_LAYER_NAME = "Footprints Sentinel-2";
 
 interface UseLayerManagerProps {
   mapRef: React.RefObject<OLMap | null>;
@@ -306,44 +308,60 @@ export function useLayerManager({
       return;
     }
     setIsFindingSentinelFootprints(true);
-    toast({ description: "Simulando búsqueda de footprints Sentinel-2..." });
+    toast({ description: "Buscando footprints Sentinel-2..." });
 
     const existingFootprintsLayer = layers.find(l => l.id === SENTINEL_FOOTPRINTS_LAYER_ID);
     if (existingFootprintsLayer) {
       removeLayer(SENTINEL_FOOTPRINTS_LAYER_ID);
     }
 
-    await new Promise(resolve => setTimeout(resolve, 500)); 
-
     try {
       const view = mapRef.current.getView();
-      const extent = view.calculateExtent(mapRef.current.getSize());
-      const simulatedFootprints: OLFeature[] = [];
-      const numFootprints = Math.floor(Math.random() * 3) + 3; 
+      const extentEPSG3857 = view.calculateExtent(mapRef.current.getSize());
+      const extentEPSG4326 = transformExtent(extentEPSG3857, 'EPSG:3857', 'EPSG:4326');
+      
+      const bbox = `${extentEPSG4326[0]},${extentEPSG4326[1]},${extentEPSG4326[2]},${extentEPSG4326[3]}`;
+      const stacApiUrl = `https://earth-search.aws.element84.com/v1/search`;
+      
+      const requestBody = {
+        "collections": ["sentinel-2-l2a"],
+        "bbox": [extentEPSG4326[0], extentEPSG4326[1], extentEPSG4326[2], extentEPSG4326[3]],
+        "limit": 20, // Limitar el número de resultados
+         "sortby": [ // Opcional: ordenar por fecha más reciente o menos nubosidad
+            // { "field": "properties.datetime", "direction": "desc" },
+            { "field": "properties.eo:cloud_cover", "direction": "asc" }
+        ]
+      };
 
-      const extentWidth = extent[2] - extent[0];
-      const extentHeight = extent[3] - extent[1];
+      const response = await fetch(stacApiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/geo+json'
+        },
+        body: JSON.stringify(requestBody)
+      });
 
-      for (let i = 0; i < numFootprints; i++) {
-        const fpWidth = extentWidth * (Math.random() * 0.2 + 0.4); 
-        const fpHeight = extentHeight * (Math.random() * 0.2 + 0.4); 
-
-        const fpX = extent[0] + Math.random() * (extentWidth - fpWidth);
-        const fpY = extent[1] + Math.random() * (extentHeight - fpHeight);
-
-        const footprintExtent: Extent = [fpX, fpY, fpX + fpWidth, fpY + fpHeight];
-        const footprintGeom = polygonFromExtent(footprintExtent);
-        const footprintFeature = new OLFeature({
-          geometry: footprintGeom,
-          name: `Sentinel-2 Escena Simulada ${i + 1}`,
-          date: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], 
-          cloud_cover: Math.round(Math.random() * 30), 
-        });
-        simulatedFootprints.push(footprintFeature);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ detail: "Error desconocido de la API STAC." }));
+        throw new Error(`Error API STAC ${response.status}: ${errorData.detail || response.statusText}`);
       }
 
-      if (simulatedFootprints.length > 0) {
-        const vectorSource = new VectorSource({ features: simulatedFootprints });
+      const geojsonResponse = await response.json();
+      
+      if (!geojsonResponse.features || geojsonResponse.features.length === 0) {
+        toast({ description: "No se encontraron escenas Sentinel-2 en la vista actual." });
+        setIsFindingSentinelFootprints(false);
+        return;
+      }
+
+      const olFeatures = new GeoJSONFormat().readFeatures(geojsonResponse, {
+        dataProjection: 'EPSG:4326',
+        featureProjection: 'EPSG:3857',
+      });
+
+      if (olFeatures && olFeatures.length > 0) {
+        const vectorSource = new VectorSource({ features: olFeatures });
         const vectorLayer = new VectorLayer({
           source: vectorSource,
           style: new Style({
@@ -354,19 +372,19 @@ export function useLayerManager({
         });
         addLayer({
           id: SENTINEL_FOOTPRINTS_LAYER_ID,
-          name: `${SENTINEL_FOOTPRINTS_LAYER_NAME} (${simulatedFootprints.length})`,
+          name: `${SENTINEL_FOOTPRINTS_LAYER_NAME} (${olFeatures.length})`,
           olLayer: vectorLayer,
           visible: true,
           opacity: 0.8,
-          originType: 'file', 
+          originType: 'file', // O podríamos tener un 'stac'
         });
-        toast({ description: `${simulatedFootprints.length} footprints Sentinel-2 simulados encontrados.` });
+        toast({ description: `${olFeatures.length} footprints Sentinel-2 encontrados y añadidos.` });
       } else {
-        toast({ description: "No se generaron footprints simulados." });
+        toast({ description: "No se encontraron escenas Sentinel-2 válidas en la respuesta." });
       }
     } catch (error: any) {
-      console.error("Error generando footprints Sentinel-2 simulados:", error);
-      toast({ description: "Error al simular búsqueda de footprints.", variant: "destructive" });
+      console.error("Error buscando footprints Sentinel-2:", error);
+      toast({ description: error.message || "Error al buscar footprints Sentinel-2.", variant: "destructive" });
     } finally {
       setIsFindingSentinelFootprints(false);
     }

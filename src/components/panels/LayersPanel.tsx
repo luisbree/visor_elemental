@@ -11,7 +11,7 @@ import GeoServerLayerList from '@/components/geoserver-connection/GeoServerLayer
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import type { BaseLayerOptionForSelect, GeoServerDiscoveredLayer } from '@/lib/types'; 
-import { Database, Search, ImageOff, Cloud } from 'lucide-react'; 
+import { Database, Search, ImageUp, Cloud, ImageOff } from 'lucide-react'; 
 
 interface LayersPanelProps {
   panelRef: React.RefObject<HTMLDivElement>;
@@ -40,7 +40,7 @@ interface LayersPanelProps {
   
   onFindSentinel2Footprints: () => void;
   onClearSentinel2Footprints: () => void;
-  isFindingSentinelFootprints: boolean; // To disable button while searching
+  isFindingSentinelFootprints: boolean; 
 
   style?: React.CSSProperties; 
 }
@@ -129,15 +129,15 @@ const LayersPanel: React.FC<LayersPanelProps> = ({
 
         <div>
           <h3 className="text-xs font-semibold text-white/90 mb-1.5 flex items-center">
-            <ImageOff className="h-3.5 w-3.5 mr-1.5 text-primary/80" /> {/* Placeholder icon */}
-            Sentinel-2 (Simulado)
+            <ImageUp className="h-3.5 w-3.5 mr-1.5 text-primary/80" /> 
+            Sentinel-2
           </h3>
           <div className="flex items-center gap-2">
             <Button 
               onClick={onFindSentinel2Footprints} 
               className="flex-1 text-xs h-8 bg-black/20 hover:bg-black/40 border border-white/30 text-white/90"
               disabled={isFindingSentinelFootprints}
-              title="Buscar footprints de escenas Sentinel-2 simuladas en la vista actual del mapa"
+              title="Buscar footprints de escenas Sentinel-2 en la vista actual del mapa"
             >
               <Search className="h-3.5 w-3.5 mr-1.5" />
               {isFindingSentinelFootprints ? "Buscando..." : "Buscar Escenas en Vista"}
@@ -152,7 +152,7 @@ const LayersPanel: React.FC<LayersPanelProps> = ({
               Limpiar Footprints
             </Button>
           </div>
-           <p className="text-xs text-gray-400/70 mt-1">Nota: Esta es una búsqueda simulada de footprints.</p>
+           <p className="text-xs text-gray-400/70 mt-1">Busca footprints de Sentinel-2 L2A. Puede requerir paciencia.</p>
         </div>
 
       </div>
