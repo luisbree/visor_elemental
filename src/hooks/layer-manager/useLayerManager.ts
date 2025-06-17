@@ -2,7 +2,8 @@
 "use client";
 
 import { useState, useCallback, useEffect } from 'react';
-import type { Map as OLMap, Feature as OLFeature, geom } from 'ol';
+import type { Map as OLMap, geom } from 'ol'; // OLMap and geom can remain type imports if only used as types
+import { Feature as OLFeature } from 'ol';    // OLFeature needs to be a value import
 import VectorLayer from 'ol/layer/Vector';
 import type VectorSourceType from 'ol/source/Vector';
 import VectorSource from 'ol/source/Vector';
@@ -26,13 +27,13 @@ interface UseLayerManagerProps {
   updateGeoServerDiscoveredLayerState?: (layerName: string, added: boolean, type: 'wms' | 'wfs') => void;
 }
 
-export function useLayerManager({ 
-  mapRef, 
-  isMapReady, 
-  drawingLayerRef, 
+export function useLayerManager({
+  mapRef,
+  isMapReady,
+  drawingLayerRef,
   drawingSourceRef,
-  onShowTableRequest, 
-  updateGeoServerDiscoveredLayerState 
+  onShowTableRequest,
+  updateGeoServerDiscoveredLayerState
 }: UseLayerManagerProps) {
   const [layers, setLayers] = useState<MapLayer[]>([]);
   const [isDrawingSourceEmptyOrNotPolygon, setIsDrawingSourceEmptyOrNotPolygon] = useState(true);
@@ -52,7 +53,7 @@ export function useLayerManager({
         setIsDrawingSourceEmptyOrNotPolygon(!geometry || geometry.getType() !== 'Polygon');
       };
 
-      checkDrawingSource(); 
+      checkDrawingSource();
       drawingSourceRef.current.on('addfeature', checkDrawingSource);
       drawingSourceRef.current.on('removefeature', checkDrawingSource);
       drawingSourceRef.current.on('clear', checkDrawingSource);
@@ -72,7 +73,7 @@ export function useLayerManager({
     let alreadyExists = false;
     const layerWithOpacity: MapLayer = {
       ...newLayerData,
-      opacity: newLayerData.opacity ?? 1, 
+      opacity: newLayerData.opacity ?? 1,
     };
 
     setLayers(prevLayers => {
@@ -82,7 +83,7 @@ export function useLayerManager({
       }
       const maxZIndex = prevLayers.reduce((max, l) => Math.max(max, l.olLayer.getZIndex() || 0), 0);
       layerWithOpacity.olLayer.setZIndex(maxZIndex + 1);
-      layerWithOpacity.olLayer.setOpacity(layerWithOpacity.opacity); 
+      layerWithOpacity.olLayer.setOpacity(layerWithOpacity.opacity);
       return [...prevLayers, layerWithOpacity];
     });
 
@@ -110,9 +111,9 @@ export function useLayerManager({
         return true;
       })
     );
-    
+
     if (layerToRemove && layerToRemove.isGeoServerLayer && layerToRemove.originType && updateGeoServerDiscoveredLayerState) {
-        let originalLayerName = layerToRemove.name.replace(/\s\((WMS|WFS)\)$/, ''); 
+        let originalLayerName = layerToRemove.name.replace(/\s\((WMS|WFS)\)$/, '');
         if (layerToRemove.originType === 'wms' && layerToRemove.olLayer.getSource() instanceof TileWMS) {
              originalLayerName = (layerToRemove.olLayer.getSource() as TileWMS).getParams().LAYERS;
         } else if (layerToRemove.originType === 'wfs' && layerToRemove.olLayer.get('originalGeoServerName')) {
@@ -269,7 +270,7 @@ export function useLayerManager({
           if ((selectionPolygonGeom as geom.Polygon).intersectsCoordinate(targetGeom.getCoordinates() as any)) { // Cast to any to satisfy OL type
             extractedFeatures.push(feature.clone());
           }
-        } else { 
+        } else {
            extractedFeatures.push(feature.clone());
         }
       }
@@ -279,18 +280,18 @@ export function useLayerManager({
       const newSource = new VectorSource({ features: extractedFeatures });
       const newLayer = new VectorLayer({
         source: newSource,
-        style: targetMapLayer.olLayer.getStyle(), 
-        opacity: targetMapLayer.opacity, 
+        style: targetMapLayer.olLayer.getStyle(),
+        opacity: targetMapLayer.opacity,
       });
       const newLayerId = `extraction-${targetMapLayer.id}-${Date.now()}`;
       const newLayerName = `Extracción de ${targetMapLayer.name.substring(0,25)}${targetMapLayer.name.length > 25 ? "..." : ""}`;
-      
+
       addLayer({
         id: newLayerId,
         name: newLayerName,
         olLayer: newLayer,
         visible: true,
-        originType: 'file', 
+        originType: 'file',
         opacity: targetMapLayer.opacity,
       });
       setTimeout(() => toast({ description: `${extractedFeatures.length} entidades extraídas a la capa "${newLayerName}".` }), 0);
@@ -307,38 +308,36 @@ export function useLayerManager({
     setIsFindingSentinelFootprints(true);
     toast({ description: "Simulando búsqueda de footprints Sentinel-2..." });
 
-    // Remove existing footprints layer first
     const existingFootprintsLayer = layers.find(l => l.id === SENTINEL_FOOTPRINTS_LAYER_ID);
     if (existingFootprintsLayer) {
       removeLayer(SENTINEL_FOOTPRINTS_LAYER_ID);
     }
-    
-    await new Promise(resolve => setTimeout(resolve, 500)); // Simulate API call delay
+
+    await new Promise(resolve => setTimeout(resolve, 500)); 
 
     try {
       const view = mapRef.current.getView();
       const extent = view.calculateExtent(mapRef.current.getSize());
       const simulatedFootprints: OLFeature[] = [];
-      const numFootprints = Math.floor(Math.random() * 3) + 3; // 3 to 5 footprints
+      const numFootprints = Math.floor(Math.random() * 3) + 3; 
 
       const extentWidth = extent[2] - extent[0];
       const extentHeight = extent[3] - extent[1];
 
       for (let i = 0; i < numFootprints; i++) {
-        // Make footprints slightly smaller than full view and somewhat overlapping
-        const fpWidth = extentWidth * (Math.random() * 0.2 + 0.4); // 40-60% of view width
-        const fpHeight = extentHeight * (Math.random() * 0.2 + 0.4); // 40-60% of view height
+        const fpWidth = extentWidth * (Math.random() * 0.2 + 0.4); 
+        const fpHeight = extentHeight * (Math.random() * 0.2 + 0.4); 
 
         const fpX = extent[0] + Math.random() * (extentWidth - fpWidth);
         const fpY = extent[1] + Math.random() * (extentHeight - fpHeight);
-        
+
         const footprintExtent: Extent = [fpX, fpY, fpX + fpWidth, fpY + fpHeight];
         const footprintGeom = polygonFromExtent(footprintExtent);
         const footprintFeature = new OLFeature({
           geometry: footprintGeom,
           name: `Sentinel-2 Escena Simulada ${i + 1}`,
-          date: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // Random date in last 30 days
-          cloud_cover: Math.round(Math.random() * 30), // Random cloud cover 0-30%
+          date: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], 
+          cloud_cover: Math.round(Math.random() * 30), 
         });
         simulatedFootprints.push(footprintFeature);
       }
@@ -359,7 +358,7 @@ export function useLayerManager({
           olLayer: vectorLayer,
           visible: true,
           opacity: 0.8,
-          originType: 'file', // Treat as a dynamic/generated layer for now
+          originType: 'file', 
         });
         toast({ description: `${simulatedFootprints.length} footprints Sentinel-2 simulados encontrados.` });
       } else {
@@ -400,10 +399,10 @@ export function useLayerManager({
 
     layers.forEach((appLayer) => {
       if (!currentMap.getLayers().getArray().includes(appLayer.olLayer)) {
-        currentMap.addLayer(appLayer.olLayer); 
+        currentMap.addLayer(appLayer.olLayer);
       }
       appLayer.olLayer.setVisible(appLayer.visible);
-      appLayer.olLayer.setOpacity(appLayer.opacity); 
+      appLayer.olLayer.setOpacity(appLayer.opacity);
     });
 
   }, [layers, isMapReady, mapRef, drawingLayerRef]);
@@ -415,7 +414,7 @@ export function useLayerManager({
     addLayer,
     removeLayer,
     toggleLayerVisibility,
-    setLayerOpacity, 
+    setLayerOpacity,
     zoomToLayerExtent,
     handleShowLayerTable,
     handleExtractFeaturesByPolygon,
