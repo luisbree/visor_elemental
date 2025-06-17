@@ -33,8 +33,8 @@ export function useFloatingPanels({
 }: UseFloatingPanelsProps) {
 
   const [panels, setPanels] = useState<Record<string, PanelState>>({
-    layers: { position: { x: panelPadding, y: panelPadding }, isCollapsed: false, ref: layersPanelRef, isMinimized: false },
-    tools: { position: { x: panelWidth + 2 * panelPadding, y: panelPadding }, isCollapsed: true, ref: toolsPanelRef, isMinimized: false },
+    layers: { position: { x: panelPadding, y: panelPadding }, isCollapsed: false, ref: layersPanelRef, isMinimized: true }, // Start minimized
+    tools: { position: { x: panelWidth + 2 * panelPadding, y: panelPadding }, isCollapsed: true, ref: toolsPanelRef, isMinimized: true }, // Start minimized
   });
 
   const [draggingPanelId, setDraggingPanelId] = useState<string | null>(null);
