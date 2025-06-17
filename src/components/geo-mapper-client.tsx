@@ -2,23 +2,24 @@
 "use client";
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { MapPin, Database, Wrench } from 'lucide-react'; // Added Database, Wrench
+import { MapPin, Database, Wrench, ListTree } from 'lucide-react'; // Added ListTree
 import { Style, Fill, Stroke, Circle as CircleStyle } from 'ol/style';
 import { transformExtent } from 'ol/proj';
 import type { Extent } from 'ol/extent';
-import { Button } from '@/components/ui/button'; // For minimized icons
+import { Button } from '@/components/ui/button'; 
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@/components/ui/tooltip"; // For tooltips on minimized icons
+} from "@/components/ui/tooltip"; 
 
 
 import MapView, { BASE_LAYER_DEFINITIONS } from '@/components/map-view';
 import FeatureAttributesPanel from '@/components/panels/FeatureAttributesPanel';
 import LayersPanel from '@/components/panels/LayersPanel';
 import ToolsPanel from '@/components/panels/ToolsPanel';
+import LegendPanel from '@/components/panels/LegendPanel'; // New panel for layers
 import WfsLoadingIndicator from '@/components/feedback/WfsLoadingIndicator';
 
 import { useOpenLayersMap } from '@/hooks/map-core/useOpenLayersMap';
@@ -99,8 +100,9 @@ const ESTIMATED_COLLAPSED_HEADER_HEIGHT = 32;
 
 export default function GeoMapperClient() {
   const mapAreaRef = useRef<HTMLDivElement>(null);
-  const layersPanelRef = useRef<HTMLDivElement>(null);
-  const toolsPanelRef = useRef<HTMLDivElement>(null);
+  const layersPanelRef = useRef<HTMLDivElement>(null); // Datos
+  const toolsPanelRef = useRef<HTMLDivElement>(null);  // Herramientas
+  const legendPanelRef = useRef<HTMLDivElement>(null); // Capas (nuevo)
   const featureAttributesPanelRef = useRef<HTMLDivElement>(null);
 
   const { mapRef, mapElementRef, drawingSourceRef, drawingLayerRef, setMapInstanceAndElement, isMapReady } = useOpenLayersMap();
@@ -120,10 +122,7 @@ export default function GeoMapperClient() {
   const [geoServerDiscoveredLayers, setGeoServerDiscoveredLayers] = useState<GeoServerDiscoveredLayer[]>([]);
   const [isWfsLoading, setIsWfsLoading] = useState(false); 
 
-  const {
-    layers, addLayer, removeLayer, toggleLayerVisibility, zoomToLayerExtent, handleShowLayerTable,
-    handleExtractFeaturesByPolygon, isDrawingSourceEmptyOrNotPolygon,
-  } = useLayerManager({ 
+  const layerManagerHook = useLayerManager({ 
     mapRef, 
     isMapReady, 
     drawingLayerRef, 
@@ -150,7 +149,7 @@ export default function GeoMapperClient() {
   const {
     isFetchingOSM, selectedOSMCategoryIds, setSelectedOSMCategoryIds, fetchOSMData,
     downloadFormat, setDownloadFormat, isDownloading, handleDownloadOSMLayers,
-  } = useOSMData({ drawingSourceRef, addLayer, osmCategoryConfigs: osmCategoryConfig });
+  } = useOSMData({ drawingSourceRef, addLayer: layerManagerHook.addLayer, osmCategoryConfigs: osmCategoryConfig });
 
   const {
     geoServerUrlInput, setGeoServerUrlInput, isLoadingGeoServerLayers,
@@ -158,7 +157,7 @@ export default function GeoMapperClient() {
   } = useGeoServerLayers({ 
       mapRef, 
       isMapReady, 
-      addLayer,
+      addLayer: layerManagerHook.addLayer,
       onLayerStateUpdate: (layerName, added, type) => { 
         setGeoServerDiscoveredLayers(prev => prev.map(l => {
             if (l.name === layerName) {
@@ -172,7 +171,9 @@ export default function GeoMapperClient() {
   });
 
   const { panels, handlePanelMouseDown, togglePanelCollapse, togglePanelMinimize } = useFloatingPanels({
-    layersPanelRef, toolsPanelRef, 
+    layersPanelRef, // Datos
+    toolsPanelRef,  // Herramientas
+    legendPanelRef, // Capas
     mapAreaRef, 
     panelWidth: PANEL_WIDTH, 
     panelPadding: PANEL_PADDING,
@@ -232,8 +233,8 @@ export default function GeoMapperClient() {
   }, [mapRef, toast]);
 
   useEffect(() => {
-    featureInspectionHook.updateLayers(layers);
-  }, [layers, featureInspectionHook]);
+    featureInspectionHook.updateLayers(layerManagerHook.layers);
+  }, [layerManagerHook.layers, featureInspectionHook]);
 
    useEffect(() => {
     featureInspectionHook.activeDrawTool = drawingInteractions.activeDrawTool;
@@ -267,7 +268,6 @@ export default function GeoMapperClient() {
           onTogglePanelCollapse={() => setIsAttrPanelCollapsed(!isAttrPanelCollapsed)}
         />
         
-        {/* Minimized Panel Icons Area */}
         <div className="absolute top-2 right-2 z-20 flex flex-col space-y-1">
           <TooltipProvider delayDuration={200}>
             {Object.entries(panels).map(([panelId, panelState]) => {
@@ -276,6 +276,7 @@ export default function GeoMapperClient() {
                 let tooltipText = "";
                 if (panelId === 'layers') { IconComponent = Database; tooltipText = "Restaurar Panel de Datos"; }
                 else if (panelId === 'tools') { IconComponent = Wrench; tooltipText = "Restaurar Panel de Herramientas"; }
+                else if (panelId === 'legend') { IconComponent = ListTree; tooltipText = "Restaurar Panel de Capas"; }
                 else { return null; }
 
                 return (
@@ -302,7 +303,7 @@ export default function GeoMapperClient() {
           </TooltipProvider>
         </div>
 
-        {!panels.layers.isMinimized && (
+        {panels.layers && !panels.layers.isMinimized && (
           <LayersPanel
             panelRef={layersPanelRef}
             position={panels.layers.position}
@@ -310,14 +311,7 @@ export default function GeoMapperClient() {
             onToggleCollapse={() => togglePanelCollapse('layers')}
             onClosePanel={() => togglePanelMinimize('layers')}
             onMouseDownHeader={(e) => handlePanelMouseDown(e, 'layers')}
-            layers={layers}
-            onAddLayer={addLayer}
-            onToggleLayerVisibility={toggleLayerVisibility}
-            onRemoveLayer={removeLayer}
-            onZoomToLayerExtent={zoomToLayerExtent}
-            onShowLayerTable={handleShowLayerTable}
-            onExtractByPolygon={handleExtractFeaturesByPolygon}
-            isDrawingSourceEmptyOrNotPolygon={isDrawingSourceEmptyOrNotPolygon}
+            onAddLayer={layerManagerHook.addLayer}
             availableBaseLayers={availableBaseLayersForSelect}
             activeBaseLayerId={activeBaseLayerId}
             onChangeBaseLayer={handleChangeBaseLayer}
@@ -337,7 +331,7 @@ export default function GeoMapperClient() {
           />
         )}
 
-        {!panels.tools.isMinimized && (
+        {panels.tools && !panels.tools.isMinimized && (
           <ToolsPanel
             panelRef={toolsPanelRef}
             position={panels.tools.position}
@@ -357,7 +351,25 @@ export default function GeoMapperClient() {
             downloadFormat={downloadFormat}
             onDownloadFormatChange={setDownloadFormat}
             isDownloading={isDownloading}
-            onDownloadOSMLayers={() => handleDownloadOSMLayers(layers)}
+            onDownloadOSMLayers={() => handleDownloadOSMLayers(layerManagerHook.layers)}
+          />
+        )}
+
+        {panels.legend && !panels.legend.isMinimized && (
+          <LegendPanel
+            panelRef={legendPanelRef}
+            position={panels.legend.position}
+            isCollapsed={panels.legend.isCollapsed}
+            onToggleCollapse={() => togglePanelCollapse('legend')}
+            onClosePanel={() => togglePanelMinimize('legend')}
+            onMouseDownHeader={(e) => handlePanelMouseDown(e, 'legend')}
+            layers={layerManagerHook.layers}
+            onToggleLayerVisibility={layerManagerHook.toggleLayerVisibility}
+            onRemoveLayer={layerManagerHook.removeLayer}
+            onZoomToLayerExtent={layerManagerHook.zoomToLayerExtent}
+            onShowLayerTable={layerManagerHook.handleShowLayerTable}
+            onExtractByPolygon={layerManagerHook.handleExtractFeaturesByPolygon}
+            isDrawingSourceEmptyOrNotPolygon={layerManagerHook.isDrawingSourceEmptyOrNotPolygon}
           />
         )}
       </div>
