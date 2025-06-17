@@ -27,7 +27,7 @@ const DEFAULT_ESTIMATED_COLLAPSED_HEADER_HEIGHT = 32;
 export function useFloatingPanels({
   layersPanelRef,
   toolsPanelRef,
-  legendPanelRef, // Nuevo ref
+  legendPanelRef, 
   mapAreaRef,
   panelWidth = DEFAULT_PANEL_WIDTH,
   panelPadding = DEFAULT_PANEL_PADDING,
@@ -37,7 +37,7 @@ export function useFloatingPanels({
   const [panels, setPanels] = useState<Record<string, PanelState>>({
     layers: { position: { x: panelPadding, y: panelPadding }, isCollapsed: false, ref: layersPanelRef, isMinimized: true }, 
     tools: { position: { x: panelWidth + 2 * panelPadding, y: panelPadding }, isCollapsed: true, ref: toolsPanelRef, isMinimized: true },
-    legend: { position: { x: 2 * (panelWidth + panelPadding) + panelPadding, y: panelPadding }, isCollapsed: false, ref: legendPanelRef, isMinimized: true }, // Nuevo panel "Capas"
+    legend: { position: { x: 2 * (panelWidth + panelPadding) + panelPadding, y: panelPadding }, isCollapsed: false, ref: legendPanelRef, isMinimized: true }, 
   });
 
   const [draggingPanelId, setDraggingPanelId] = useState<string | null>(null);
@@ -48,35 +48,26 @@ export function useFloatingPanels({
       const mapWidth = mapAreaRef.current.offsetWidth;
       const yPos = panelPadding; 
       
-      // Calculate initial positions, ensuring they don't overlap excessively if map is narrow
-      // For panels starting minimized, their initial "layout" width is effectively 0 for this calculation
-      
-      const layersX = panelPadding;
-      const toolsX = layersX + (panels.layers.isMinimized ? 0 : panelWidth) + (panels.layers.isMinimized ? 0 : panelPadding);
-      const legendX = toolsX + (panels.tools.isMinimized ? 0 : panelWidth) + (panels.tools.isMinimized ? 0 : panelPadding);
-
-
       setPanels(prev => ({
         layers: {
           ...prev.layers,
-          position: prev.layers.isMinimized ? prev.layers.position : { x: layersX, y: yPos },
+          position: prev.layers.isMinimized ? prev.layers.position : { x: panelPadding, y: yPos },
           ref: layersPanelRef,
         },
         tools: {
           ...prev.tools,
-          position: prev.tools.isMinimized ? prev.tools.position : { x: toolsX, y: yPos },
+          position: prev.tools.isMinimized ? prev.tools.position : { x: (prev.layers.isMinimized ? 0 : panelWidth) + (prev.layers.isMinimized ? 0 : panelPadding) + panelPadding, y: yPos },
           ref: toolsPanelRef,
         },
-        legend: {
+        legend: { // "Capas" panel
           ...prev.legend,
-           position: prev.legend.isMinimized ? prev.legend.position : { x: Math.max(panelPadding, mapWidth - panelWidth - panelPadding), y: yPos }, // Default to right side
+           position: prev.legend.isMinimized ? prev.legend.position : { x: Math.max(panelPadding, mapWidth - panelWidth - panelPadding), y: yPos }, // Default to right side if not minimized initially
           ref: legendPanelRef,
         }
       }));
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mapAreaRef, panelPadding, panelWidth, layersPanelRef, toolsPanelRef, legendPanelRef, estimatedCollapsedHeaderHeight]);
-  // draggingPanelId intentionally omitted
 
 
   const handlePanelMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>, panelId: string) => {
@@ -114,27 +105,30 @@ export function useFloatingPanels({
       if (!panel) return prev;
       
       const newMinimizedState = !panel.isMinimized;
-      let newPosition = panel.position;
+      let newPosition = panel.position; // Default to current/last position
+      let newIsCollapsed = panel.isCollapsed;
 
-       if (!newMinimizedState && mapAreaRef.current) { // Restoring
-        // If panel was minimized, try to place it intelligently or restore last known good pos
-        if (panelId === 'layers') newPosition = { x: panelPadding, y: panelPadding };
-        else if (panelId === 'tools') newPosition = { x: panelWidth + 2 * panelPadding, y: panelPadding };
-        else if (panelId === 'legend') newPosition = { x: Math.max(panelPadding, mapAreaRef.current.offsetWidth - panelWidth - panelPadding), y: panelPadding };
+      if (!newMinimizedState) { // Panel is being restored
+        newIsCollapsed = false; // Always uncollapse when restoring from minimized state
+
+        if (panelId === 'legend') { // "Capas" panel
+          newPosition = { x: panelPadding, y: panelPadding }; // Always restore to the left
+        }
+        // For other panels (layers, tools), they will restore to their 'newPosition' which is their last known position.
+        // Boundary checks during drag and initial placement should handle their general positioning.
       }
-
 
       return {
         ...prev,
         [panelId]: { 
           ...panel, 
           isMinimized: newMinimizedState,
+          isCollapsed: newIsCollapsed, // Apply updated collapse state
           position: newPosition,
         },
       };
     });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [panelPadding, panelWidth, mapAreaRef]);
+  }, [panelPadding]);
 
 
   useEffect(() => {

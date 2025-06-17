@@ -4,14 +4,9 @@
 import React from 'react';
 import DraggablePanel from './DraggablePanel';
 import LayerList from '@/components/layer-manager/LayerList';
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
+// Accordion components are no longer needed here
 import type { MapLayer } from '@/lib/types';
-import { Layers as LayersIcon } from 'lucide-react'; // Can reuse LayersIcon or use ListTree
+import { Layers as LayersIcon } from 'lucide-react'; // Or ListTree if preferred for the panel icon
 
 interface LegendPanelProps {
   panelRef: React.RefObject<HTMLDivElement>;
@@ -30,30 +25,14 @@ interface LegendPanelProps {
   isDrawingSourceEmptyOrNotPolygon: boolean;
 }
 
-const SectionHeader: React.FC<{ title: string; icon: React.ElementType, description?: string }> = ({ title, icon: Icon, description }) => (
-  <div className="flex items-center w-full">
-    <Icon className="mr-2 h-4 w-4 text-primary" />
-    <div className="flex-1 text-left">
-      <h3 className="text-sm font-semibold text-white">{title}</h3>
-      {description && <p className="text-xs text-gray-300/80">{description}</p>}
-    </div>
-  </div>
-);
+// SectionHeader is removed as it was part of the Accordion structure
 
 const LegendPanel: React.FC<LegendPanelProps> = ({
   panelRef, position, isCollapsed, onToggleCollapse, onClosePanel, onMouseDownHeader,
   layers, onToggleLayerVisibility, onRemoveLayer, onZoomToLayerExtent, onShowLayerTable,
   onExtractByPolygon, isDrawingSourceEmptyOrNotPolygon,
 }) => {
-  const [activeAccordionItems, setActiveAccordionItems] = React.useState<string[]>(['layers-section']);
-  const prevLayersLengthRef = React.useRef(layers.length);
-
-  React.useEffect(() => {
-    if (layers.length > 0 && !activeAccordionItems.includes('layers-section') && prevLayersLengthRef.current === 0) {
-        setActiveAccordionItems(prev => [...prev, 'layers-section'].filter((value, index, self) => self.indexOf(value) === index));
-    }
-    prevLayersLengthRef.current = layers.length;
-  }, [layers.length, activeAccordionItems]);
+  // activeAccordionItems state and useEffect related to it are removed
 
   return (
     <DraggablePanel
@@ -68,36 +47,21 @@ const LegendPanel: React.FC<LegendPanelProps> = ({
       showCloseButton={true}
       style={{ top: `${position.y}px`, left: `${position.x}px` }}
     >
+      {/* LayerList is now a direct child within DraggablePanel's content area */}
       <div className="space-y-3">
-        <Accordion
-          type="multiple"
-          value={activeAccordionItems}
-          onValueChange={setActiveAccordionItems}
-          className="w-full space-y-1"
-        >
-          <AccordionItem value="layers-section" className="border-b-0 bg-white/5 rounded-md">
-            <AccordionTrigger className="p-3 hover:no-underline hover:bg-white/10 rounded-t-md data-[state=open]:rounded-b-none">
-              <SectionHeader
-                title="Capas Cargadas"
-                icon={LayersIcon}
-              />
-            </AccordionTrigger>
-            <AccordionContent className="p-0 pt-0 border-t border-white/10 bg-transparent rounded-b-md">
-              <LayerList
-                layers={layers}
-                onToggleVisibility={onToggleLayerVisibility}
-                onZoomToExtent={onZoomToLayerExtent}
-                onShowTable={onShowLayerTable}
-                onRemoveLayer={onRemoveLayer}
-                onExtractByPolygon={onExtractByPolygon}
-                isDrawingSourceEmptyOrNotPolygon={isDrawingSourceEmptyOrNotPolygon}
-              />
-            </AccordionContent>
-          </AccordionItem>
-        </Accordion>
+        <LayerList
+          layers={layers}
+          onToggleVisibility={onToggleLayerVisibility}
+          onZoomToExtent={onZoomToLayerExtent}
+          onShowTable={onShowLayerTable}
+          onRemoveLayer={onRemoveLayer}
+          onExtractByPolygon={onExtractByPolygon}
+          isDrawingSourceEmptyOrNotPolygon={isDrawingSourceEmptyOrNotPolygon}
+        />
       </div>
     </DraggablePanel>
   );
 };
 
 export default LegendPanel;
+
