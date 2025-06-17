@@ -9,8 +9,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuSeparator,
+  DropdownMenuLabel, 
 } from "@/components/ui/dropdown-menu";
-import { Eye, EyeOff, Settings2, ZoomIn, Table2, Trash2, Scissors } from 'lucide-react';
+import { Slider } from "@/components/ui/slider"; 
+import { Eye, EyeOff, Settings2, ZoomIn, Table2, Trash2, Scissors, Percent } from 'lucide-react';
 import type { MapLayer } from '@/lib/types';
 import VectorLayer from 'ol/layer/Vector'; 
 
@@ -22,6 +24,7 @@ interface LayerItemProps {
   onRemove: (layerId: string) => void;
   onExtractByPolygon: (layerId: string) => void;
   isDrawingSourceEmptyOrNotPolygon: boolean;
+  onSetLayerOpacity: (layerId: string, opacity: number) => void;
 }
 
 const LayerItem: React.FC<LayerItemProps> = ({
@@ -32,8 +35,10 @@ const LayerItem: React.FC<LayerItemProps> = ({
   onRemove,
   onExtractByPolygon,
   isDrawingSourceEmptyOrNotPolygon,
+  onSetLayerOpacity,
 }) => {
   const isVectorLayer = layer.olLayer instanceof VectorLayer;
+  const currentOpacityPercentage = Math.round(layer.opacity * 100);
 
   return (
     <li className="flex items-center px-1.5 py-1 hover:bg-gray-700/30 transition-colors overflow-hidden">
@@ -94,6 +99,20 @@ const LayerItem: React.FC<LayerItemProps> = ({
                 </span>
               </DropdownMenuItem>
             )}
+            <DropdownMenuSeparator className="bg-gray-500/50" />
+            <DropdownMenuLabel className="text-xs text-gray-300 px-2 py-1 flex items-center">
+                <Percent className="mr-2 h-3.5 w-3.5" /> Opacidad: {currentOpacityPercentage}%
+            </DropdownMenuLabel>
+            <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="focus:bg-transparent hover:bg-transparent cursor-default p-2">
+                <Slider
+                    defaultValue={[currentOpacityPercentage]}
+                    max={100}
+                    step={1}
+                    onValueChange={(value) => onSetLayerOpacity(layer.id, value[0] / 100)}
+                    className="w-full"
+                    aria-label={`Opacidad para ${layer.name}`}
+                />
+            </DropdownMenuItem>
             <DropdownMenuSeparator className="bg-gray-500/50" />
             <DropdownMenuItem
               className="text-xs hover:bg-red-500/30 focus:bg-red-500/40 text-red-300 focus:text-red-200 cursor-pointer"

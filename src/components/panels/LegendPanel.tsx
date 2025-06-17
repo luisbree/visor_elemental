@@ -12,7 +12,6 @@ import { ListTree } from 'lucide-react';
 
 interface LegendPanelProps {
   panelRef: React.RefObject<HTMLDivElement>;
-  // position: { x: number; y: number }; // Removed, controlled by style
   isCollapsed: boolean;
   onToggleCollapse: () => void;
   onClosePanel: () => void;
@@ -25,20 +24,21 @@ interface LegendPanelProps {
   onShowLayerTable: (layerId: string) => void;
   onExtractByPolygon: (layerId: string) => void;
   isDrawingSourceEmptyOrNotPolygon: boolean;
+  onSetLayerOpacity: (layerId: string, opacity: number) => void; // Added prop
 
   onAddLayer: (layer: MapLayer) => void;
   isInspectModeActive: boolean;
   onToggleInspectMode: () => void;
-  style?: React.CSSProperties; // Added for position and zIndex
+  style?: React.CSSProperties;
 }
 
 
 const LegendPanel: React.FC<LegendPanelProps> = ({
-  panelRef, /*position,*/ isCollapsed, onToggleCollapse, onClosePanel, onMouseDownHeader,
+  panelRef, isCollapsed, onToggleCollapse, onClosePanel, onMouseDownHeader,
   layers, onToggleLayerVisibility, onRemoveLayer, onZoomToLayerExtent, onShowLayerTable,
-  onExtractByPolygon, isDrawingSourceEmptyOrNotPolygon,
+  onExtractByPolygon, isDrawingSourceEmptyOrNotPolygon, onSetLayerOpacity, // Destructure new prop
   onAddLayer, isInspectModeActive, onToggleInspectMode,
-  style, // Destructure style
+  style,
 }) => {
 
   return (
@@ -46,14 +46,14 @@ const LegendPanel: React.FC<LegendPanelProps> = ({
       title="Capas"
       icon={ListTree} 
       panelRef={panelRef}
-      initialPosition={{ x: 0, y: 0 }} // initialPosition is less relevant now
+      initialPosition={{ x: 0, y: 0 }} 
       onMouseDownHeader={onMouseDownHeader}
       isCollapsed={isCollapsed}
       onToggleCollapse={onToggleCollapse}
       onClose={onClosePanel}
       showCloseButton={true}
-      style={style} // Pass the style from parent (includes top, left, zIndex)
-      zIndex={style?.zIndex as number | undefined} // Pass zIndex explicitly
+      style={style} 
+      zIndex={style?.zIndex as number | undefined}
     >
       <div className="space-y-2"> 
         <div className="flex items-center gap-1 p-1 bg-white/5 rounded-md"> 
@@ -72,6 +72,7 @@ const LegendPanel: React.FC<LegendPanelProps> = ({
           onRemoveLayer={onRemoveLayer}
           onExtractByPolygon={onExtractByPolygon}
           isDrawingSourceEmptyOrNotPolygon={isDrawingSourceEmptyOrNotPolygon}
+          onSetLayerOpacity={onSetLayerOpacity} // Pass prop
         />
       </div>
     </DraggablePanel>

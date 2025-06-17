@@ -11,15 +11,16 @@ export interface MapLayer {
   name: string;
   olLayer: VectorLayerType<VectorSourceType<OLFeature<any>>> | TileLayer<TileWMS>;
   visible: boolean;
+  opacity: number; // Added opacity, range 0 (transparent) to 1 (opaque)
   isGeoServerLayer?: boolean;
-  originType?: 'wms' | 'wfs' | 'file'; // Added to distinguish layer origin
+  originType?: 'wms' | 'wfs' | 'file';
 }
 
 export interface GeoServerDiscoveredLayer {
   name: string;
   title: string;
-  wmsAddedToMap: boolean; // Changed from addedToMap
-  wfsAddedToMap: boolean; // New property
+  wmsAddedToMap: boolean;
+  wfsAddedToMap: boolean;
 }
 
 export interface OSMCategoryConfig {
@@ -30,7 +31,6 @@ export interface OSMCategoryConfig {
   style: Style;
 }
 
-// Types previously in map-controls.tsx
 export interface BaseLayerOptionForSelect {
   id: string;
   name: string;
@@ -48,5 +48,4 @@ export interface PanelRenderConfig {
 
 export interface PanelProps {
   mapRef: React.RefObject<OLMap | null>;
-  // Add other common props if needed, or specific panels will define their own
 }

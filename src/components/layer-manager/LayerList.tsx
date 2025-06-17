@@ -2,7 +2,6 @@
 "use client";
 
 import React from 'react';
-// ScrollArea removed
 import LayerItem from './LayerItem';
 import type { MapLayer } from '@/lib/types';
 import { Layers } from 'lucide-react';
@@ -15,6 +14,7 @@ interface LayerListProps {
   onRemoveLayer: (layerId: string) => void;
   onExtractByPolygon: (layerId: string) => void;
   isDrawingSourceEmptyOrNotPolygon: boolean;
+  onSetLayerOpacity: (layerId: string, opacity: number) => void;
 }
 
 const LayerList: React.FC<LayerListProps> = ({
@@ -25,6 +25,7 @@ const LayerList: React.FC<LayerListProps> = ({
   onRemoveLayer,
   onExtractByPolygon,
   isDrawingSourceEmptyOrNotPolygon,
+  onSetLayerOpacity,
 }) => {
   if (layers.length === 0) {
     return (
@@ -36,7 +37,6 @@ const LayerList: React.FC<LayerListProps> = ({
     );
   }
 
-  // ScrollArea component removed, ul is now the direct child or returned directly
   return (
     <ul className="space-y-1.5">
       {layers.map((layer) => (
@@ -49,6 +49,7 @@ const LayerList: React.FC<LayerListProps> = ({
           onRemove={onRemoveLayer}
           onExtractByPolygon={onExtractByPolygon}
           isDrawingSourceEmptyOrNotPolygon={isDrawingSourceEmptyOrNotPolygon}
+          onSetLayerOpacity={onSetLayerOpacity}
         />
       ))}
     </ul>

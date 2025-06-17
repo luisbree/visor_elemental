@@ -2,10 +2,10 @@
 "use client";
 
 import { useState, useCallback, useEffect } from 'react';
-import type { Map as OLMap, Feature as OLFeature, geom } from 'ol'; // Added geom
+import type { Map as OLMap, Feature as OLFeature, geom } from 'ol';
 import VectorLayer from 'ol/layer/Vector';
 import type VectorSourceType from 'ol/source/Vector';
-import VectorSource from 'ol/source/Vector'; // Added VectorSource
+import VectorSource from 'ol/source/Vector';
 import TileLayer from 'ol/layer/Tile';
 import TileWMS from 'ol/source/TileWMS';
 import type { Extent } from 'ol/extent';
@@ -16,7 +16,7 @@ interface UseLayerManagerProps {
   mapRef: React.RefObject<OLMap | null>;
   isMapReady: boolean;
   drawingLayerRef: React.RefObject<VectorLayer<VectorSourceType<OLFeature<any>>> | null>;
-  drawingSourceRef: React.RefObject<VectorSourceType<OLFeature<any>> | null>; // Added drawingSourceRef
+  drawingSourceRef: React.RefObject<VectorSourceType<OLFeature<any>> | null>;
   onShowTableRequest: (features: OLFeature<any>[], layerName?: string) => void;
   updateGeoServerDiscoveredLayerState?: (layerName: string, added: boolean, type: 'wms' | 'wfs') => void;
 }
@@ -25,7 +25,7 @@ export function useLayerManager({
   mapRef, 
   isMapReady, 
   drawingLayerRef, 
-  drawingSourceRef, // Destructure drawingSourceRef
+  drawingSourceRef,
   onShowTableRequest, 
   updateGeoServerDiscoveredLayerState 
 }: UseLayerManagerProps) {
@@ -46,7 +46,7 @@ export function useLayerManager({
         setIsDrawingSourceEmptyOrNotPolygon(!geometry || geometry.getType() !== 'Polygon');
       };
 
-      checkDrawingSource(); // Initial check
+      checkDrawingSource(); 
       drawingSourceRef.current.on('addfeature', checkDrawingSource);
       drawingSourceRef.current.on('removefeature', checkDrawingSource);
       drawingSourceRef.current.on('clear', checkDrawingSource);
@@ -62,21 +62,27 @@ export function useLayerManager({
   }, [drawingSourceRef]);
 
 
-  const addLayer = useCallback((newLayer: MapLayer) => {
+  const addLayer = useCallback((newLayerData: Omit<MapLayer, 'opacity'> & { opacity?: number }) => {
     let alreadyExists = false;
+    const layerWithOpacity: MapLayer = {
+      ...newLayerData,
+      opacity: newLayerData.opacity ?? 1, // Default to 1 if not provided
+    };
+
     setLayers(prevLayers => {
-      if (prevLayers.some(l => l.id === newLayer.id)) {
+      if (prevLayers.some(l => l.id === layerWithOpacity.id)) {
         alreadyExists = true;
         return prevLayers;
       }
       const maxZIndex = prevLayers.reduce((max, l) => Math.max(max, l.olLayer.getZIndex() || 0), 0);
-      newLayer.olLayer.setZIndex(maxZIndex + 1);
-      return [...prevLayers, newLayer];
+      layerWithOpacity.olLayer.setZIndex(maxZIndex + 1);
+      layerWithOpacity.olLayer.setOpacity(layerWithOpacity.opacity); // Set initial opacity on OL layer
+      return [...prevLayers, layerWithOpacity];
     });
 
     if (alreadyExists) {
       setTimeout(() => {
-        toast({ description: `La capa "${newLayer.name}" ya está en el mapa.` });
+        toast({ description: `La capa "${layerWithOpacity.name}" ya está en el mapa.` });
       }, 0);
     }
   }, [toast]);
@@ -133,6 +139,21 @@ export function useLayerManager({
       })
     );
   }, []);
+
+  const setLayerOpacity = useCallback((layerId: string, opacity: number) => {
+    setLayers(prevLayers =>
+      prevLayers.map(layer => {
+        if (layer.id === layerId) {
+          if (layer.olLayer) {
+            layer.olLayer.setOpacity(opacity);
+          }
+          return { ...layer, opacity };
+        }
+        return layer;
+      })
+    );
+  }, []);
+
 
   const zoomToLayerExtent = useCallback((layerId: string) => {
     if (!mapRef.current) return;
@@ -238,20 +259,11 @@ export function useLayerManager({
     targetSource.forEachFeatureIntersectingExtent(selectionExtent, (feature) => {
       const targetGeom = feature.getGeometry();
       if (targetGeom) {
-        // For simplicity, we are using intersectsExtent. 
-        // For precise polygon-in-polygon, a more complex check or a geometry library (like JSTS) would be needed.
-        // OpenLayers' intersectsExtent is a good first pass.
-        // We can refine this by checking if any part of targetGeom intersects selectionPolygonGeom
-        // A simple check for points within polygon:
         if (targetGeom.getType() === 'Point') {
           if ((selectionPolygonGeom as geom.Polygon).intersectsCoordinate(targetGeom.getCoordinates())) {
             extractedFeatures.push(feature.clone());
           }
         } else { 
-          // For lines and polygons, checking if their extent intersects the selection polygon's extent
-          // is a broad check. A more accurate check for actual geometry intersection is complex
-          // without external libraries. For this version, we'll include if extents intersect.
-          // This means if any part of the feature's bounding box touches the drawing's bounding box, it's included.
            extractedFeatures.push(feature.clone());
         }
       }
@@ -261,7 +273,8 @@ export function useLayerManager({
       const newSource = new VectorSource({ features: extractedFeatures });
       const newLayer = new VectorLayer({
         source: newSource,
-        style: targetMapLayer.olLayer.getStyle(), // Inherit style from parent
+        style: targetMapLayer.olLayer.getStyle(), 
+        opacity: targetMapLayer.opacity, // Preserve opacity
       });
       const newLayerId = `extraction-${targetMapLayer.id}-${Date.now()}`;
       const newLayerName = `Extracción de ${targetMapLayer.name.substring(0,25)}${targetMapLayer.name.length > 25 ? "..." : ""}`;
@@ -271,7 +284,8 @@ export function useLayerManager({
         name: newLayerName,
         olLayer: newLayer,
         visible: true,
-        originType: 'file', // Or some other type to denote it's derived
+        originType: 'file', 
+        opacity: targetMapLayer.opacity,
       });
       setTimeout(() => toast({ description: `${extractedFeatures.length} entidades extraídas a la capa "${newLayerName}".` }), 0);
     } else {
@@ -299,6 +313,7 @@ export function useLayerManager({
         currentMap.addLayer(appLayer.olLayer); 
       }
       appLayer.olLayer.setVisible(appLayer.visible);
+      appLayer.olLayer.setOpacity(appLayer.opacity); // Ensure opacity is applied
     });
 
   }, [layers, isMapReady, mapRef, drawingLayerRef]);
@@ -310,9 +325,10 @@ export function useLayerManager({
     addLayer,
     removeLayer,
     toggleLayerVisibility,
+    setLayerOpacity, // Expose new function
     zoomToLayerExtent,
     handleShowLayerTable,
-    handleExtractFeaturesByPolygon, // Expose new function
-    isDrawingSourceEmptyOrNotPolygon, // Expose new state
+    handleExtractFeaturesByPolygon,
+    isDrawingSourceEmptyOrNotPolygon,
   };
 }
