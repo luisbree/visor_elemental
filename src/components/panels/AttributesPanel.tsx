@@ -102,8 +102,7 @@ const AttributesPanel: React.FC<AttributesPanelProps> = ({
       <div className="flex-grow flex flex-col"> {/* Removed h-full */}
           {allKeys.length > 0 && currentVisibleFeatures.length > 0 ? (
             <div className="flex-grow min-w-0"> {/* This div wraps the table, min-w-0 is important for flex context */}
-              <Table> {/* ShadCN Table has its own internal div with overflow: auto */}
-                <TableHeader>
+              <Table><TableHeader>
                   <TableRow className="hover:bg-gray-800/70">
                     {allKeys.map(key => (
                       <TableHead
@@ -114,8 +113,7 @@ const AttributesPanel: React.FC<AttributesPanelProps> = ({
                       </TableHead>
                     ))}
                   </TableRow>
-                </TableHeader>
-                <TableBody>
+                </TableHeader><TableBody>
                   {currentVisibleFeatures.map((attrs, idx) => (
                     <TableRow key={`${currentPage}-${startIndex + idx}`} className="hover:bg-gray-700/30">
                       {allKeys.map(key => (
@@ -128,8 +126,7 @@ const AttributesPanel: React.FC<AttributesPanelProps> = ({
                       ))}
                     </TableRow>
                   ))}
-                </TableBody>
-              </Table>
+                </TableBody></Table>
             </div>
           ) : (
             <div className="flex-grow flex items-center justify-center p-3">
@@ -174,3 +171,4 @@ const AttributesPanel: React.FC<AttributesPanelProps> = ({
 };
 
 export default AttributesPanel;
+
