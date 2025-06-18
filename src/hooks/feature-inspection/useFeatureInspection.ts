@@ -11,6 +11,7 @@ import { platformModifierKeyOnly } from 'ol/events/condition';
 import { toast } from "@/hooks/use-toast";
 import type { MapLayer } from '@/lib/types';
 import type VectorSourceType from 'ol/source/Vector'; // Keep as type if only used for types
+import type { Geometry as OLGeometry } from 'ol/geom';
 
 interface UseFeatureInspectionProps {
   mapRef: React.RefObject<OLMap | null>;
@@ -134,11 +135,16 @@ export function useFeatureInspection({
 
 
   const handleDragBoxEnd = useCallback(
-    (event: DragBoxEvent) => { // Use DragBoxEvent if available, otherwise any
+    (event: DragBoxEvent) => { 
       if (!mapRef.current || !isInspectModeActive) return;
 
-      const dragBoxInteractionInstance = event.target as DragBox;
-      const extent = dragBoxInteractionInstance.getGeometry().getExtent();
+      const boxGeometry: OLGeometry | undefined = event.geometry;
+      if (!boxGeometry) {
+        console.warn("DragBox 'boxend' event did not contain a geometry.");
+        return;
+      }
+      const extent = boxGeometry.getExtent();
+
       const foundFeatures: OLFeature[] = [];
       let firstLayerNameWithFeatures: string | undefined;
 
@@ -212,17 +218,12 @@ export function useFeatureInspection({
         if (!dragBoxInteractionRef.current) {
             dragBoxInteractionRef.current = new DragBox({ condition: platformModifierKeyOnly });
             currentMap.addInteraction(dragBoxInteractionRef.current);
-            dragBoxInteractionRef.current.on('boxend', handleDragBoxEnd as (event: Event | DragBoxEvent) => void); // Cast if types mismatch
+            dragBoxInteractionRef.current.on('boxend', handleDragBoxEnd as (evt: Event) => void | boolean);
         }
     } else {
         cleanupInspectionInteractions();
     }
-    // Cleanup on hook unmount or when dependencies change causing this effect to re-run
-    // return () => {
-    //     cleanupInspectionInteractions();
-    // };
   }, [isInspectModeActive, activeDrawTool, isMapReady, mapRef, mapElementRef, handleMapClick, handleDragBoxEnd, cleanupInspectionInteractions]);
-  // Removed handleMapClick, handleDragBoxEnd from deps as they are useCallback
 
 
   const toggleInspectMode = useCallback(() => {
@@ -244,10 +245,6 @@ export function useFeatureInspection({
 
   const closeFeatureAttributesPanel = useCallback(() => {
     setIsFeatureAttributesPanelVisible(false);
-    // Optionally, also deactivate inspect mode when panel is explicitly closed:
-    // setIsInspectModeActive(false); 
-    // However, current behavior is to keep inspect mode active, just hide panel.
-    // If inspect mode were deactivated, the useEffect would handle cleanup.
   }, []);
 
   return {
@@ -261,3 +258,4 @@ export function useFeatureInspection({
     updateLayers,
   };
 }
+
