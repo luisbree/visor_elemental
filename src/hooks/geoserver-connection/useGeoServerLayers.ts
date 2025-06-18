@@ -21,7 +21,7 @@ interface UseGeoServerLayersProps {
 }
 
 export function useGeoServerLayers({ mapRef, isMapReady, addLayer, onLayerStateUpdate, setIsWfsLoading }: UseGeoServerLayersProps) {
-  const [geoServerUrlInput, setGeoServerUrlInput] = useState<string>('');
+  const [geoServerUrlInput, setGeoServerUrlInput] = useState<string>('http://www.minfra.gba.gob.ar/ambientales/geoserver');
   const [isLoadingGeoServerLayers, setIsLoadingGeoServerLayers] = useState<boolean>(false);
 
   const handleFetchGeoServerLayers = useCallback(async (): Promise<GeoServerDiscoveredLayer[]> => {
