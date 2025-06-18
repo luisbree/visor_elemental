@@ -95,14 +95,14 @@ const AttributesPanel: React.FC<AttributesPanelProps> = ({
       initialSize={{ width: 450, height: 350 }} // Default/initial size when shown
       minSize={{ width: 300, height: 250 }}
       style={style} // Includes top, left, zIndex
-      overflowX="hidden" 
-      overflowY="hidden"
+      overflowX="hidden" // For DraggablePanel's ScrollArea: no horizontal scroll here
+      overflowY="auto"   // For DraggablePanel's ScrollArea: vertical scroll for entire panel content
       zIndex={style?.zIndex as number | undefined}
     >
-      <div className="flex-grow flex flex-col h-full">
+      <div className="flex-grow flex flex-col"> {/* Removed h-full */}
           {allKeys.length > 0 && currentVisibleFeatures.length > 0 ? (
-            <div className="flex-grow min-w-0"> {/* Removed overflow-x-auto, kept flex-grow and min-w-0 */}
-              <Table>
+            <div className="flex-grow min-w-0"> {/* This div wraps the table, min-w-0 is important for flex context */}
+              <Table> {/* ShadCN Table has its own internal div with overflow: auto */}
                 <TableHeader>
                   <TableRow className="hover:bg-gray-800/70">
                     {allKeys.map(key => (
