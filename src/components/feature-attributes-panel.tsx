@@ -2,93 +2,65 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import DraggablePanel from './panels/DraggablePanel'; // Updated path
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { X as LucideX, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { ChevronLeft, ChevronRight, ListChecks } from 'lucide-react'; // Added ListChecks for icon
 
-interface FeatureAttributesPanelProps {
+interface AttributesPanelProps {
   featuresAttributes: Record<string, any>[] | null;
-  isVisible: boolean;
   layerName?: string | null;
-  onClose: () => void;
+  
+  panelRef: React.RefObject<HTMLDivElement>;
+  isCollapsed: boolean;
+  onToggleCollapse: () => void;
+  onClosePanel: () => void;
+  onMouseDownHeader: (e: React.MouseEvent<HTMLDivElement>) => void;
+  style?: React.CSSProperties;
 }
 
 const ITEMS_PER_PAGE = 50;
 
-const FeatureAttributesPanel: React.FC<FeatureAttributesPanelProps> = ({
+const AttributesPanelComponent: React.FC<AttributesPanelProps> = ({ // Renamed component function
   featuresAttributes,
-  isVisible,
   layerName,
-  onClose,
+  panelRef,
+  isCollapsed,
+  onToggleCollapse,
+  onClosePanel,
+  onMouseDownHeader,
+  style,
 }) => {
-  const [position, setPosition] = useState({ x: 50, y: 50 });
-  const [size, setSize] = useState({ width: 450, height: 350 });
-  const [isDragging, setIsDragging] = useState(false);
-  const dragStartRef = useRef({ x: 0, y: 0, panelX: 0, panelY: 0 });
-  const panelRef = useRef<HTMLDivElement>(null);
-
   const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
-    if (isVisible) {
+    if (featuresAttributes && featuresAttributes.length > 0) {
       setCurrentPage(1);
     }
-  }, [featuresAttributes, isVisible]);
+  }, [featuresAttributes]);
 
-  const handleMouseDownOnHeader = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    if (!panelRef.current) return;
-    const targetElement = e.target as HTMLElement;
-    if (targetElement.closest('button')) {
-        return;
-    }
-    
-    setIsDragging(true);
-    dragStartRef.current = {
-      x: e.clientX,
-      y: e.clientY,
-      panelX: position.x,
-      panelY: position.y,
-    };
-    e.preventDefault();
-  }, [position]);
-
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!isDragging || !panelRef.current) return;
-
-      const dx = e.clientX - dragStartRef.current.x;
-      const dy = e.clientY - dragStartRef.current.y;
-      let newX = dragStartRef.current.panelX + dx;
-      let newY = dragStartRef.current.panelY + dy;
-      
-      if (!isNaN(newX) && !isNaN(newY)) {
-        setPosition({ x: newX, y: newY });
-      }
-    };
-
-    const handleMouseUp = () => {
-      setIsDragging(false);
-    };
-
-    if (isDragging) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-    } else {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    }
-
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [isDragging]);
-
-
-  if (!isVisible || !featuresAttributes || featuresAttributes.length === 0) {
-    return null;
+  if (!featuresAttributes || featuresAttributes.length === 0) {
+    // If panel is not minimized but has no data, show a message.
+    // Visibility (minimization) is handled by GeoMapperClient.
+    return (
+       <DraggablePanel
+        title="Atributos"
+        icon={ListChecks}
+        panelRef={panelRef}
+        initialPosition={{ x:0, y:0}} // Position controlled by useFloatingPanels
+        onMouseDownHeader={onMouseDownHeader}
+        isCollapsed={isCollapsed}
+        onToggleCollapse={onToggleCollapse}
+        onClose={onClosePanel}
+        showCloseButton={true}
+        style={style}
+        zIndex={style?.zIndex as number | undefined}
+      >
+        <div className="p-3 text-sm text-gray-300 text-center">
+          No hay atributos para mostrar. Haga clic en una entidad en el mapa con la herramienta de inspección activa.
+        </div>
+      </DraggablePanel>
+    );
   }
 
   const totalPages = Math.ceil(featuresAttributes.length / ITEMS_PER_PAGE);
@@ -97,69 +69,43 @@ const FeatureAttributesPanel: React.FC<FeatureAttributesPanelProps> = ({
   const currentVisibleFeatures = featuresAttributes.slice(startIndex, endIndex);
 
   const allKeys = Array.from(
-    new Set(featuresAttributes.flatMap(attrs => Object.keys(attrs)))
+    new Set(currentVisibleFeatures.flatMap(attrs => Object.keys(attrs)))
   ).sort();
 
-  const handleNextPage = () => {
-    setCurrentPage((prev) => Math.min(prev + 1, totalPages));
-  };
-
-  const handlePrevPage = () => {
-    setCurrentPage((prev) => Math.max(prev - 1, 1));
-  };
+  const handleNextPage = () => setCurrentPage((prev) => Math.min(prev + 1, totalPages));
+  const handlePrevPage = () => setCurrentPage((prev) => Math.max(prev - 1, 1));
 
   const panelTitle = layerName 
     ? `${layerName} (${featuresAttributes.length})` 
     : `Atributos (${featuresAttributes.length})`;
 
   return (
-    <div
-      ref={panelRef}
-      className="absolute bg-gray-800/60 backdrop-blur-md text-white shadow-xl rounded-lg border border-gray-700 flex flex-col"
-      style={{
-        top: `${position.y}px`,
-        left: `${position.x}px`,
-        width: `${size.width}px`,
-        height: `${size.height}px`,
-        minWidth: '300px', 
-        minHeight: '250px', 
-        maxWidth: '90vw',
-        maxHeight: '80vh',
-        zIndex: 40, 
-        resize: 'both', 
-        overflow: 'hidden',
-      }}
-      onMouseUpCapture={() => {
-        if (panelRef.current) {
-            const newWidth = panelRef.current.offsetWidth;
-            const newHeight = panelRef.current.offsetHeight;
-            if (newWidth !== size.width || newHeight !== size.height) {
-                 setSize({ width: newWidth, height: newHeight });
-            }
-        }
-      }}
+    <DraggablePanel
+      title={panelTitle}
+      icon={ListChecks}
+      panelRef={panelRef}
+      initialPosition={{ x:0, y:0}} // Position controlled by useFloatingPanels
+      onMouseDownHeader={onMouseDownHeader}
+      isCollapsed={isCollapsed}
+      onToggleCollapse={onToggleCollapse}
+      onClose={onClosePanel}
+      initialSize={{ width: 450, height: 350 }}
+      minSize={{ width: 300, height: 250 }}
+      style={style}
+      overflowX="auto" 
+      overflowY="auto"
+      zIndex={style?.zIndex as number | undefined}
     >
-      <CardHeader
-        className="flex flex-row items-center justify-between p-2 bg-gray-700/80 cursor-grab rounded-t-lg"
-        onMouseDown={handleMouseDownOnHeader}
-      >
-        <CardTitle className="text-sm font-semibold text-white">{panelTitle}</CardTitle>
-        <Button variant="ghost" size="icon" onClick={onClose} className="h-6 w-6 text-white hover:bg-gray-600/80">
-          <LucideX className="h-4 w-4" />
-          <span className="sr-only">Cerrar</span>
-        </Button>
-      </CardHeader>
-      <CardContent className="p-3 flex-grow flex flex-col overflow-hidden">
-        <ScrollArea className="flex-grow h-0 w-full"> 
+      <div className="flex-grow flex flex-col h-full">
           {allKeys.length > 0 && currentVisibleFeatures.length > 0 ? (
-            <div className="overflow-x-auto">
-              <Table className="min-w-full"> 
+            <div className="overflow-x-auto flex-grow min-w-0">
+              <Table>
                 <TableHeader>
-                  <TableRow className="bg-gray-800/50 hover:bg-gray-800/70">
+                  <TableRow className="hover:bg-gray-800/70">
                     {allKeys.map(key => (
-                      <TableHead 
-                        key={key} 
-                        className="px-3 py-2 text-xs font-medium text-gray-300 whitespace-nowrap sticky top-0 bg-gray-700/90 backdrop-blur-sm z-10"
+                      <TableHead
+                        key={key}
+                        className="px-3 py-2 text-xs font-medium text-gray-300 whitespace-nowrap bg-gray-700/50"
                       >
                         {key}
                       </TableHead>
@@ -172,7 +118,7 @@ const FeatureAttributesPanel: React.FC<FeatureAttributesPanelProps> = ({
                       {allKeys.map(key => (
                         <TableCell
                           key={key}
-                          className="px-3 py-1.5 text-xs text-black dark:text-slate-200 border-b border-gray-700/50 whitespace-normal break-words"
+                          className="px-3 py-1.5 text-xs text-slate-200 dark:text-slate-200 border-b border-gray-700/50 whitespace-normal break-words"
                         >
                           {String(attrs[key] === null || attrs[key] === undefined ? '' : attrs[key])}
                         </TableCell>
@@ -183,13 +129,17 @@ const FeatureAttributesPanel: React.FC<FeatureAttributesPanelProps> = ({
               </Table>
             </div>
           ) : (
-            <p className="p-4 text-sm text-center text-gray-400">
-              {featuresAttributes.length > 0 ? 'No hay atributos para mostrar en esta página.' : 'No hay atributos para mostrar.'}
-            </p>
+            <div className="flex-grow flex items-center justify-center p-3">
+                <p className="text-sm text-center text-gray-300">
+                {featuresAttributes.length > 0
+                    ? 'No hay atributos para mostrar para la selección actual.'
+                    : 'No se encontraron atributos para las entidades seleccionadas.'}
+                </p>
+            </div>
           )}
-        </ScrollArea>
+
         {totalPages > 1 && (
-          <div className="flex items-center justify-between p-2 border-t border-gray-700/50 bg-gray-800/50 mt-auto"> {/* mt-auto para empujar al fondo */}
+          <div className="flex items-center justify-center p-2 border-t border-gray-700/50 bg-gray-800/50 mt-auto shrink-0 gap-2">
             <Button
               variant="outline"
               size="sm"
@@ -200,7 +150,7 @@ const FeatureAttributesPanel: React.FC<FeatureAttributesPanelProps> = ({
               <ChevronLeft className="h-3.5 w-3.5 mr-1" />
               Anterior
             </Button>
-            <span className="text-xs text-gray-300">
+            <span className="text-xs text-gray-300 whitespace-nowrap">
               Página {currentPage} de {totalPages}
             </span>
             <Button
@@ -215,9 +165,9 @@ const FeatureAttributesPanel: React.FC<FeatureAttributesPanelProps> = ({
             </Button>
           </div>
         )}
-      </CardContent>
-    </div>
+      </div>
+    </DraggablePanel>
   );
 };
 
-export default FeatureAttributesPanel;
+export default AttributesPanelComponent; // Renamed export

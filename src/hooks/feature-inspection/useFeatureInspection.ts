@@ -17,7 +17,6 @@ interface UseFeatureInspectionProps {
   mapRef: React.RefObject<OLMap | null>;
   mapElementRef: React.RefObject<HTMLDivElement | null>;
   isMapReady: boolean;
-  // layers: MapLayer[]; // Managed internally via updateLayers
   drawingSourceRef: React.RefObject<VectorSourceType<OLFeature<any>> | null>;
   drawingLayerRef: React.RefObject<VectorLayer<VectorSourceType<OLFeature<any>>> | null>;
   activeDrawTool: string | null;
@@ -28,7 +27,6 @@ export function useFeatureInspection({
   mapRef,
   mapElementRef,
   isMapReady,
-  // layers: initialLayers,
   drawingSourceRef,
   drawingLayerRef,
   activeDrawTool,
@@ -36,7 +34,6 @@ export function useFeatureInspection({
 }: UseFeatureInspectionProps) {
   const [isInspectModeActive, setIsInspectModeActive] = useState(false);
   const [selectedFeatureAttributes, setSelectedFeatureAttributes] = useState<Record<string, any>[] | null>(null);
-  const [isFeatureAttributesPanelVisible, setIsFeatureAttributesPanelVisible] = useState(false);
   const [currentInspectedLayerName, setCurrentInspectedLayerName] = useState<string | null>(null);
   const [currentLayers, setCurrentLayers] = useState<MapLayer[]>([]);
 
@@ -58,17 +55,16 @@ export function useFeatureInspection({
             }
             const properties = feature.getProperties();
             const attributesToShow: Record<string, any> = {};
-            const geometryName = feature.getGeometryName(); // Default is 'geometry'
+            const geometryName = feature.getGeometryName(); 
 
             for (const key in properties) {
               if (Object.prototype.hasOwnProperty.call(properties, key)) {
-                if (key !== geometryName) { // Only exclude the actual geometry value
+                if (key !== geometryName) { 
                   const value = properties[key];
-                  // Attempt to convert objects to string representation for display
                   if (typeof value === 'object' && value !== null) {
-                     attributesToShow[key] = String(value); // Will show [object Object] for complex ones
+                     attributesToShow[key] = String(value); 
                   } else {
-                    attributesToShow[key] = value; // Primitives, null, undefined
+                    attributesToShow[key] = value; 
                   }
                 }
               }
@@ -79,11 +75,9 @@ export function useFeatureInspection({
 
         if (allAttributes.length > 0) {
           setSelectedFeatureAttributes(allAttributes);
-          setIsFeatureAttributesPanelVisible(true);
           setCurrentInspectedLayerName(layerName || "Entidad Seleccionada");
         } else {
           setSelectedFeatureAttributes(null);
-          setIsFeatureAttributesPanelVisible(false);
           setCurrentInspectedLayerName(null);
           setTimeout(() => {
             toast({ description: "La(s) entidad(es) seleccionada(s) no tienen atributos visibles o solo contienen geometría." });
@@ -91,12 +85,7 @@ export function useFeatureInspection({
         }
       } else {
         setSelectedFeatureAttributes(null);
-        setIsFeatureAttributesPanelVisible(false);
         setCurrentInspectedLayerName(null);
-        // Optional: toast if click yielded no features at all?
-        // setTimeout(() => {
-        //   toast({ description: "No se encontraron entidades en el punto de inspección." });
-        // }, 0);
       }
   }, [toast]);
 
@@ -104,7 +93,6 @@ export function useFeatureInspection({
   const handleMapClick = useCallback((event: any) => {
     if (!isInspectModeActive || !mapRef.current || activeDrawTool) return;
 
-    // Prevent click processing if it's likely part of a drag box operation
     if (dragBoxInteractionRef.current && (event.type === 'pointerdrag' || event.dragging || event.originalEvent.metaKey || event.originalEvent.ctrlKey || event.originalEvent.shiftKey) ) {
       return;
     }
@@ -116,17 +104,16 @@ export function useFeatureInspection({
     mapRef.current.forEachFeatureAtPixel(clickedPixel, (featureOrLayer, layer) => {
         if (featureOrLayer instanceof OLFeature) {
             featuresAtPixel.push(featureOrLayer);
-             // Determine layer name for the panel title
             if (layer && drawingLayerRef.current && layer === drawingLayerRef.current) {
                 clickedLayerName = "Capa de Dibujo";
-            } else if (layer && typeof layer.get === 'function' && layer.get('title')) { // For WMS layers etc.
+            } else if (layer && typeof layer.get === 'function' && layer.get('title')) { 
                 clickedLayerName = layer.get('title');
-            } else { // For vector layers managed by useLayerManager
+            } else { 
                  const appLayer = currentLayers.find(l => l.olLayer === layer);
                  if (appLayer) clickedLayerName = appLayer.name;
             }
         }
-        return false; // continue checking other features/layers at pixel
+        return false; 
     }, { hitTolerance: 5, layerFilter: (layerCandidate) => !(layerCandidate instanceof TileLayer) });
 
     processAndDisplayFeatures(featuresAtPixel, clickedLayerName);
@@ -182,10 +169,9 @@ export function useFeatureInspection({
 
       if (dragBoxInteractionRef.current) {
         mapRef.current.removeInteraction(dragBoxInteractionRef.current);
-        dragBoxInteractionRef.current.dispose(); // Important to dispose
+        dragBoxInteractionRef.current.dispose(); 
         dragBoxInteractionRef.current = null;
       }
-      // Restore original DragZoom state
       if (olMapDragZoomInteractionRef.current) {
         olMapDragZoomInteractionRef.current.setActive(wasDragZoomOriginallyActive.current);
       }
@@ -201,8 +187,7 @@ export function useFeatureInspection({
         if (mapElementRef.current) mapElementRef.current.classList.add('cursor-crosshair');
         currentMap.on('singleclick', handleMapClick);
 
-        // Manage DragZoom: Deactivate if it exists
-        if (!olMapDragZoomInteractionRef.current) { // Find it only once
+        if (!olMapDragZoomInteractionRef.current) { 
             currentMap.getInteractions().forEach(interaction => {
                 if (interaction instanceof DragZoom) {
                     olMapDragZoomInteractionRef.current = interaction;
@@ -211,10 +196,9 @@ export function useFeatureInspection({
             });
         }
         if (olMapDragZoomInteractionRef.current) {
-            olMapDragZoomInteractionRef.current.setActive(false); // Deactivate for inspection
+            olMapDragZoomInteractionRef.current.setActive(false); 
         }
 
-        // Add DragBox for area selection
         if (!dragBoxInteractionRef.current) {
             dragBoxInteractionRef.current = new DragBox({ condition: platformModifierKeyOnly });
             currentMap.addInteraction(dragBoxInteractionRef.current);
@@ -231,31 +215,46 @@ export function useFeatureInspection({
     setIsInspectModeActive(newInspectModeState);
 
     if (newInspectModeState && activeDrawTool) {
-      stopDrawingTool(); // If activating inspect, stop any active drawing tool
+      stopDrawingTool(); 
     }
 
-    if (!newInspectModeState) { // If deactivating inspect mode
-      setIsFeatureAttributesPanelVisible(false);
+    if (!newInspectModeState) { 
       setSelectedFeatureAttributes(null);
       setCurrentInspectedLayerName(null);
-      // Interactions are cleaned up by the useEffect above
     }
   }, [isInspectModeActive, activeDrawTool, stopDrawingTool]);
 
 
-  const closeFeatureAttributesPanel = useCallback(() => {
-    setIsFeatureAttributesPanelVisible(false);
+  const clearInspectedAttributes = useCallback(() => {
+    setSelectedFeatureAttributes(null);
+    setCurrentInspectedLayerName(null);
   }, []);
+
+  // Make sure activeDrawTool is updated if it changes externally
+  // This might be redundant if GeoMapperClient already handles this interaction flow
+  // but kept for safety if this hook's `activeDrawTool` prop could change.
+  const localActiveDrawTool = useRef(activeDrawTool);
+  useEffect(() => {
+    if (activeDrawTool !== localActiveDrawTool.current) {
+        localActiveDrawTool.current = activeDrawTool;
+        if (isInspectModeActive && activeDrawTool) {
+            // If inspect mode is on and a draw tool gets activated,
+            // deactivate inspect mode to avoid conflicts.
+            setIsInspectModeActive(false);
+            setSelectedFeatureAttributes(null);
+            setCurrentInspectedLayerName(null);
+        }
+    }
+  }, [activeDrawTool, isInspectModeActive]);
+
 
   return {
     isInspectModeActive,
     toggleInspectMode,
     selectedFeatureAttributes,
-    isFeatureAttributesPanelVisible,
     currentInspectedLayerName,
-    closeFeatureAttributesPanel,
+    clearInspectedAttributes, // Renamed from closeFeatureAttributesPanel
     processAndDisplayFeatures,
     updateLayers,
   };
 }
-

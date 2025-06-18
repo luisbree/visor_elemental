@@ -16,11 +16,11 @@ import {
 
 
 import MapView, { BASE_LAYER_DEFINITIONS } from '@/components/map-view';
-import FeatureAttributesPanel from '@/components/panels/FeatureAttributesPanel';
+// import FeatureAttributesPanel from '@/components/panels/FeatureAttributesPanel'; // Will be replaced by AttributesPanel
+import AttributesPanel from '@/components/panels/AttributesPanel'; // Use the new/renamed AttributesPanel
 import LayersPanel from '@/components/panels/LayersPanel';
 import ToolsPanel from '@/components/panels/ToolsPanel';
 import LegendPanel from '@/components/panels/LegendPanel';
-import AttributesPanel from '@/components/panels/AttributesPanel'; // Import new panel
 import WfsLoadingIndicator from '@/components/feedback/WfsLoadingIndicator';
 
 import { useOpenLayersMap } from '@/hooks/map-core/useOpenLayersMap';
@@ -101,7 +101,7 @@ const panelToggleConfigs = [
   { id: 'layers', IconComponent: Database, name: "Datos" },
   { id: 'tools', IconComponent: Wrench, name: "Herramientas" },
   { id: 'legend', IconComponent: ListTree, name: "Capas" },
-  { id: 'attributes', IconComponent: ListChecks, name: "Atributos" }, // Added new panel config
+  { id: 'attributes', IconComponent: ListChecks, name: "Atributos" }, 
 ];
 
 
@@ -110,8 +110,7 @@ export default function GeoMapperClient() {
   const layersPanelRef = useRef<HTMLDivElement>(null);
   const toolsPanelRef = useRef<HTMLDivElement>(null);
   const legendPanelRef = useRef<HTMLDivElement>(null);
-  const attributesPanelRef = useRef<HTMLDivElement>(null); // Ref for new panel
-  const featureAttributesPanelRef = useRef<HTMLDivElement>(null);
+  const attributesPanelRef = useRef<HTMLDivElement>(null); 
 
   const { mapRef, mapElementRef, drawingSourceRef, drawingLayerRef, setMapInstanceAndElement, isMapReady } = useOpenLayersMap();
   const { toast } = useToast();
@@ -123,8 +122,8 @@ export default function GeoMapperClient() {
 
   const featureInspectionHook = useFeatureInspection({
     mapRef, mapElementRef, isMapReady, drawingSourceRef, drawingLayerRef,
-    activeDrawTool: null,
-    stopDrawingTool: () => {},
+    activeDrawTool: null, 
+    stopDrawingTool: () => {}, 
   });
 
   const [geoServerDiscoveredLayers, setGeoServerDiscoveredLayers] = useState<GeoServerDiscoveredLayer[]>([]);
@@ -182,35 +181,13 @@ export default function GeoMapperClient() {
     layersPanelRef,
     toolsPanelRef,
     legendPanelRef,
-    attributesPanelRef, // Pass new panel ref
+    attributesPanelRef, 
     mapAreaRef,
     panelWidth: PANEL_WIDTH,
     panelPadding: PANEL_PADDING,
   });
 
   const { captureMap, isCapturing: isMapCapturing } = useMapCapture({ mapRef });
-
-  const [attrPanelPosition, setAttrPanelPosition] = useState({ x: 50, y: 50 });
-  const handleAttrPanelMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-      const panel = featureAttributesPanelRef.current;
-      if (!panel) return;
-      const targetElement = e.target as HTMLElement;
-      if (targetElement.closest('button') || targetElement.closest('input') || targetElement.closest('[role="combobox"]')) {
-          return;
-      }
-      const startX = e.clientX - panel.offsetLeft;
-      const startY = e.clientY - panel.offsetTop;
-      const handleMouseMove = (moveEvent: MouseEvent) => {
-          setAttrPanelPosition({ x: moveEvent.clientX - startX, y: moveEvent.clientY - startY });
-      };
-      const handleMouseUp = () => {
-          document.removeEventListener('mousemove', handleMouseMove);
-          document.removeEventListener('mouseup', handleMouseUp);
-      };
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-  }, []);
-  const [isAttrPanelCollapsed, setIsAttrPanelCollapsed] = useState(false);
 
   const zoomToBoundingBox = useCallback((bbox: [number, number, number, number]) => {
     if (!mapRef.current) return;
@@ -245,9 +222,25 @@ export default function GeoMapperClient() {
   }, [layerManagerHook.layers, featureInspectionHook]);
 
    useEffect(() => {
+    // Update featureInspectionHook with the latest drawing interaction methods
+    // This ensures that if drawingInteractions.activeDrawTool changes,
+    // featureInspectionHook.activeDrawTool is also updated.
     featureInspectionHook.activeDrawTool = drawingInteractions.activeDrawTool;
     featureInspectionHook.stopDrawingTool = drawingInteractions.stopDrawingTool;
   }, [drawingInteractions.activeDrawTool, drawingInteractions.stopDrawingTool, featureInspectionHook ]);
+
+  // Effect to automatically open/close AttributesPanel based on data
+  useEffect(() => {
+    if (featureInspectionHook.selectedFeatureAttributes && featureInspectionHook.selectedFeatureAttributes.length > 0) {
+      if (panels.attributes && panels.attributes.isMinimized) {
+        togglePanelMinimize('attributes'); // This also un-collapses and brings to front
+      }
+    } 
+    // Optionally, auto-minimize if data is cleared and panel was open due to data:
+    // else if ((!featureInspectionHook.selectedFeatureAttributes || featureInspectionHook.selectedFeatureAttributes.length === 0) && panels.attributes && !panels.attributes.isMinimized) {
+    //  togglePanelMinimize('attributes');
+    // }
+  }, [featureInspectionHook.selectedFeatureAttributes, panels.attributes, togglePanelMinimize]);
 
 
   return (
@@ -263,18 +256,6 @@ export default function GeoMapperClient() {
         />
 
         <WfsLoadingIndicator isVisible={isWfsLoading} />
-
-        <FeatureAttributesPanel
-          featuresAttributes={featureInspectionHook.selectedFeatureAttributes}
-          isVisible={featureInspectionHook.isFeatureAttributesPanelVisible}
-          layerName={featureInspectionHook.currentInspectedLayerName}
-          onClose={featureInspectionHook.closeFeatureAttributesPanel}
-          panelRef={featureAttributesPanelRef}
-          initialPosition={attrPanelPosition}
-          onMouseDownHeader={handleAttrPanelMouseDown}
-          isPanelCollapsed={isAttrPanelCollapsed}
-          onTogglePanelCollapse={() => setIsAttrPanelCollapsed(!isAttrPanelCollapsed)}
-        />
         
         <div className="absolute top-2 right-2 z-20 flex flex-row space-x-1">
           <TooltipProvider delayDuration={200}>
@@ -380,7 +361,7 @@ export default function GeoMapperClient() {
             onToggleLayerVisibility={layerManagerHook.toggleLayerVisibility}
             onRemoveLayer={layerManagerHook.removeLayer}
             onZoomToLayerExtent={layerManagerHook.zoomToLayerExtent}
-            onShowLayerTable={layerManagerHook.handleShowLayerTable}
+            onShowLayerTable={layerManagerHook.handleShowLayerTable} // This will now trigger AttributesPanel
             onExtractByPolygon={layerManagerHook.handleExtractFeaturesByPolygon}
             isDrawingSourceEmptyOrNotPolygon={layerManagerHook.isDrawingSourceEmptyOrNotPolygon}
             onSetLayerOpacity={layerManagerHook.setLayerOpacity}
@@ -396,8 +377,13 @@ export default function GeoMapperClient() {
             panelRef={attributesPanelRef}
             isCollapsed={panels.attributes.isCollapsed}
             onToggleCollapse={() => togglePanelCollapse('attributes')}
-            onClosePanel={() => togglePanelMinimize('attributes')}
+            onClosePanel={() => {
+              featureInspectionHook.clearInspectedAttributes(); // Clear data
+              togglePanelMinimize('attributes'); // Then minimize
+            }}
             onMouseDownHeader={(e) => handlePanelMouseDown(e, 'attributes')}
+            featuresAttributes={featureInspectionHook.selectedFeatureAttributes}
+            layerName={featureInspectionHook.currentInspectedLayerName}
             style={{ top: `${panels.attributes.position.y}px`, left: `${panels.attributes.position.x}px`, zIndex: panels.attributes.zIndex }}
           />
         )}
