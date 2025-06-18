@@ -70,9 +70,6 @@ const AttributesPanel: React.FC<AttributesPanelProps> = ({
   const endIndex = startIndex + ITEMS_PER_PAGE;
   const currentVisibleFeatures = featuresAttributes.slice(startIndex, endIndex);
 
-  // Compute allKeys from the *currently paginated* features to avoid overly wide tables
-  // if different pages have vastly different schemas. If a consistent schema across all
-  // features is desired, compute allKeys from `featuresAttributes` directly.
   const allKeys = Array.from(
     new Set(currentVisibleFeatures.flatMap(attrs => Object.keys(attrs)))
   ).sort();
@@ -98,14 +95,13 @@ const AttributesPanel: React.FC<AttributesPanelProps> = ({
       initialSize={{ width: 450, height: 350 }} // Default/initial size when shown
       minSize={{ width: 300, height: 250 }}
       style={style} // Includes top, left, zIndex
-      overflowX="hidden" // DraggablePanel handles ScrollArea internally
+      overflowX="hidden" 
       overflowY="hidden"
       zIndex={style?.zIndex as number | undefined}
     >
-      {/* Content is wrapped in ScrollArea by DraggablePanel, table itself needs overflow handling */}
-      <div className="flex-grow flex flex-col h-full"> {/* Ensure content takes full height */}
+      <div className="flex-grow flex flex-col h-full">
           {allKeys.length > 0 && currentVisibleFeatures.length > 0 ? (
-            <div className="overflow-x-auto flex-grow min-w-0"> {/* scroll for table */}
+            <div className="flex-grow min-w-0"> {/* Removed overflow-x-auto, kept flex-grow and min-w-0 */}
               <Table>
                 <TableHeader>
                   <TableRow className="hover:bg-gray-800/70">
@@ -136,11 +132,11 @@ const AttributesPanel: React.FC<AttributesPanelProps> = ({
               </Table>
             </div>
           ) : (
-            // This case should ideally be covered by the parent component's check,
-            // but as a fallback:
             <div className="flex-grow flex items-center justify-center p-3">
                 <p className="text-sm text-center text-gray-300">
-                  No se encontraron atributos para las entidades seleccionadas o la página actual.
+                {featuresAttributes.length > 0
+                    ? 'No hay atributos para mostrar para la selección actual.'
+                    : 'No se encontraron atributos para las entidades seleccionadas.'}
                 </p>
             </div>
           )}
