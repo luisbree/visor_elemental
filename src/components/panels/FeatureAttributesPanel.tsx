@@ -72,14 +72,14 @@ const FeatureAttributesPanel: React.FC<FeatureAttributesPanelProps> = ({
       initialSize={{ width: 450, height: 350 }}
       minSize={{ width: 300, height: 250 }}
       style={{ top: `${initialPosition.y}px`, left: `${initialPosition.x}px` }}
-      overflowX="auto" // Explicitly allow horizontal scrolling for the panel's content area
+      overflowX="auto" 
       overflowY="auto"
       zIndex={40}
     >
       <div className="flex-grow flex flex-col h-full">
           {allKeys.length > 0 && currentVisibleFeatures.length > 0 ? (
-              <Table> {/* Removed min-w-full, relying on Table's internal overflow */}
-                <TableHeader>
+            <div className="overflow-x-auto flex-grow min-w-0">
+              <Table><TableHeader>
                   <TableRow className="hover:bg-gray-800/70">
                     {allKeys.map(key => (
                       <TableHead
@@ -90,8 +90,7 @@ const FeatureAttributesPanel: React.FC<FeatureAttributesPanelProps> = ({
                       </TableHead>
                     ))}
                   </TableRow>
-                </TableHeader>
-                <TableBody>
+                </TableHeader><TableBody>
                   {currentVisibleFeatures.map((attrs, idx) => (
                     <TableRow key={`${currentPage}-${startIndex + idx}`} className="hover:bg-gray-700/30">
                       {allKeys.map(key => (
@@ -104,8 +103,8 @@ const FeatureAttributesPanel: React.FC<FeatureAttributesPanelProps> = ({
                       ))}
                     </TableRow>
                   ))}
-                </TableBody>
-              </Table>
+                </TableBody></Table>
+            </div>
           ) : (
             <div className="flex-grow flex items-center justify-center p-3">
                 <p className="text-sm text-center text-gray-300">
