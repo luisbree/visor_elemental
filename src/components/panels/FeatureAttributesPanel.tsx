@@ -73,13 +73,12 @@ const FeatureAttributesPanel: React.FC<FeatureAttributesPanelProps> = ({
       initialSize={{ width: 450, height: 350 }}
       minSize={{ width: 300, height: 250 }}
       style={{ top: `${initialPosition.y}px`, left: `${initialPosition.x}px` }}
-      overflowY="auto" // Allow DraggablePanel's ScrollArea to scroll vertically
-      zIndex={40} // Set a higher zIndex for this panel
+      overflowY="auto" 
+      zIndex={40} 
     >
-      {/* Content for the FeatureAttributesPanel - DraggablePanel's ScrollArea will handle scrolling */}
-      <div className="flex-grow flex flex-col h-full"> {/* Ensure this div takes up space */}
+      <div className="flex-grow flex flex-col h-full">
           {allKeys.length > 0 && currentVisibleFeatures.length > 0 ? (
-            <div className="overflow-x-auto flex-grow"> {/* Table itself might need horizontal scroll, and let it grow */}
+            <div className="overflow-x-auto flex-grow min-w-0"> {/* Added min-w-0 here */}
               <Table className="min-w-full"> 
                 <TableHeader>
                   <TableRow className="bg-gray-800/50 hover:bg-gray-800/70 sticky top-0 z-10">
@@ -110,7 +109,7 @@ const FeatureAttributesPanel: React.FC<FeatureAttributesPanelProps> = ({
               </Table>
             </div>
           ) : (
-            <div className="flex-grow flex items-center justify-center p-3"> {/* Centered message */}
+            <div className="flex-grow flex items-center justify-center p-3">
                 <p className="text-sm text-center text-gray-300">
                 {featuresAttributes.length > 0 
                     ? 'No hay atributos para mostrar para la selección actual.' 
@@ -152,3 +151,4 @@ const FeatureAttributesPanel: React.FC<FeatureAttributesPanelProps> = ({
 };
 
 export default FeatureAttributesPanel;
+
