@@ -2,24 +2,25 @@
 "use client";
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { MapPin, Database, Wrench, ListTree } from 'lucide-react'; 
+import { MapPin, Database, Wrench, ListTree, ListChecks } from 'lucide-react';
 import { Style, Fill, Stroke, Circle as CircleStyle } from 'ol/style';
 import { transformExtent } from 'ol/proj';
 import type { Extent } from 'ol/extent';
-import { Button } from '@/components/ui/button'; 
+import { Button } from '@/components/ui/button';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@/components/ui/tooltip"; 
+} from "@/components/ui/tooltip";
 
 
 import MapView, { BASE_LAYER_DEFINITIONS } from '@/components/map-view';
-import FeatureAttributesPanel from '@/components/panels/FeatureAttributesPanel'; 
+import FeatureAttributesPanel from '@/components/panels/FeatureAttributesPanel';
 import LayersPanel from '@/components/panels/LayersPanel';
 import ToolsPanel from '@/components/panels/ToolsPanel';
-import LegendPanel from '@/components/panels/LegendPanel'; 
+import LegendPanel from '@/components/panels/LegendPanel';
+import AttributesPanel from '@/components/panels/AttributesPanel'; // Import new panel
 import WfsLoadingIndicator from '@/components/feedback/WfsLoadingIndicator';
 
 import { useOpenLayersMap } from '@/hooks/map-core/useOpenLayersMap';
@@ -94,20 +95,22 @@ const osmCategoriesForSelection = osmCategoryConfig.map(({ id, name }) => ({ id,
 const availableBaseLayersForSelect: BaseLayerOptionForSelect[] = BASE_LAYER_DEFINITIONS.map(def => ({ id: def.id, name: def.name }));
 
 const PANEL_WIDTH = 350;
-const PANEL_PADDING = 8; 
+const PANEL_PADDING = 8;
 
 const panelToggleConfigs = [
   { id: 'layers', IconComponent: Database, name: "Datos" },
   { id: 'tools', IconComponent: Wrench, name: "Herramientas" },
   { id: 'legend', IconComponent: ListTree, name: "Capas" },
+  { id: 'attributes', IconComponent: ListChecks, name: "Atributos" }, // Added new panel config
 ];
 
 
 export default function GeoMapperClient() {
   const mapAreaRef = useRef<HTMLDivElement>(null);
-  const layersPanelRef = useRef<HTMLDivElement>(null); 
-  const toolsPanelRef = useRef<HTMLDivElement>(null);  
-  const legendPanelRef = useRef<HTMLDivElement>(null); 
+  const layersPanelRef = useRef<HTMLDivElement>(null);
+  const toolsPanelRef = useRef<HTMLDivElement>(null);
+  const legendPanelRef = useRef<HTMLDivElement>(null);
+  const attributesPanelRef = useRef<HTMLDivElement>(null); // Ref for new panel
   const featureAttributesPanelRef = useRef<HTMLDivElement>(null);
 
   const { mapRef, mapElementRef, drawingSourceRef, drawingLayerRef, setMapInstanceAndElement, isMapReady } = useOpenLayersMap();
@@ -120,17 +123,17 @@ export default function GeoMapperClient() {
 
   const featureInspectionHook = useFeatureInspection({
     mapRef, mapElementRef, isMapReady, drawingSourceRef, drawingLayerRef,
-    activeDrawTool: null, 
-    stopDrawingTool: () => {}, 
+    activeDrawTool: null,
+    stopDrawingTool: () => {},
   });
 
   const [geoServerDiscoveredLayers, setGeoServerDiscoveredLayers] = useState<GeoServerDiscoveredLayer[]>([]);
-  const [isWfsLoading, setIsWfsLoading] = useState(false); 
+  const [isWfsLoading, setIsWfsLoading] = useState(false);
 
-  const layerManagerHook = useLayerManager({ 
-    mapRef, 
-    isMapReady, 
-    drawingLayerRef, 
+  const layerManagerHook = useLayerManager({
+    mapRef,
+    isMapReady,
+    drawingLayerRef,
     drawingSourceRef,
     onShowTableRequest: featureInspectionHook.processAndDisplayFeatures,
     updateGeoServerDiscoveredLayerState: (layerName, added, type) => {
@@ -143,7 +146,7 @@ export default function GeoMapperClient() {
         }));
     }
   });
-  
+
   const drawingInteractions = useDrawingInteractions({
     mapRef, isMapReady, drawingSourceRef,
     isInspectModeActive: featureInspectionHook.isInspectModeActive,
@@ -159,11 +162,11 @@ export default function GeoMapperClient() {
   const {
     geoServerUrlInput, setGeoServerUrlInput, isLoadingGeoServerLayers,
     handleFetchGeoServerLayers, handleAddGeoServerLayerToMap, handleAddGeoServerLayerAsWFS
-  } = useGeoServerLayers({ 
-      mapRef, 
-      isMapReady, 
+  } = useGeoServerLayers({
+      mapRef,
+      isMapReady,
       addLayer: layerManagerHook.addLayer,
-      onLayerStateUpdate: (layerName, added, type) => { 
+      onLayerStateUpdate: (layerName, added, type) => {
         setGeoServerDiscoveredLayers(prev => prev.map(l => {
             if (l.name === layerName) {
                 if (type === 'wms') return { ...l, wmsAddedToMap: added };
@@ -172,15 +175,16 @@ export default function GeoMapperClient() {
             return l;
         }));
       },
-      setIsWfsLoading 
+      setIsWfsLoading
   });
 
   const { panels, handlePanelMouseDown, togglePanelCollapse, togglePanelMinimize } = useFloatingPanels({
-    layersPanelRef, 
-    toolsPanelRef,  
-    legendPanelRef, 
-    mapAreaRef, 
-    panelWidth: PANEL_WIDTH, 
+    layersPanelRef,
+    toolsPanelRef,
+    legendPanelRef,
+    attributesPanelRef, // Pass new panel ref
+    mapAreaRef,
+    panelWidth: PANEL_WIDTH,
     panelPadding: PANEL_PADDING,
   });
 
@@ -276,22 +280,22 @@ export default function GeoMapperClient() {
           <TooltipProvider delayDuration={200}>
             {panelToggleConfigs.map((panelConfig) => {
               const panelState = panels[panelConfig.id];
-              if (!panelState) return null; 
+              if (!panelState) return null;
 
               const isPanelOpen = !panelState.isMinimized;
-              const tooltipText = isPanelOpen 
-                ? `Minimizar Panel de ${panelConfig.name}` 
+              const tooltipText = isPanelOpen
+                ? `Minimizar Panel de ${panelConfig.name}`
                 : `Restaurar Panel de ${panelConfig.name}`;
               
               return (
                 <Tooltip key={panelConfig.id}>
                   <TooltipTrigger asChild>
                     <Button
-                      variant={"outline"} 
+                      variant={"outline"}
                       size="icon"
                       className={`h-8 w-8 focus-visible:ring-primary ${
-                        isPanelOpen 
-                          ? 'bg-primary text-primary-foreground hover:bg-primary/90 border-primary/80' 
+                        isPanelOpen
+                          ? 'bg-primary text-primary-foreground hover:bg-primary/90 border-primary/80'
                           : 'bg-gray-700/80 text-white hover:bg-gray-600/90 border-gray-600/70'
                       }`}
                       onClick={() => togglePanelMinimize(panelConfig.id)}
@@ -384,6 +388,17 @@ export default function GeoMapperClient() {
             isInspectModeActive={featureInspectionHook.isInspectModeActive}
             onToggleInspectMode={featureInspectionHook.toggleInspectMode}
             style={{ top: `${panels.legend.position.y}px`, left: `${panels.legend.position.x}px`, zIndex: panels.legend.zIndex }}
+          />
+        )}
+
+        {panels.attributes && !panels.attributes.isMinimized && (
+          <AttributesPanel
+            panelRef={attributesPanelRef}
+            isCollapsed={panels.attributes.isCollapsed}
+            onToggleCollapse={() => togglePanelCollapse('attributes')}
+            onClosePanel={() => togglePanelMinimize('attributes')}
+            onMouseDownHeader={(e) => handlePanelMouseDown(e, 'attributes')}
+            style={{ top: `${panels.attributes.position.y}px`, left: `${panels.attributes.position.x}px`, zIndex: panels.attributes.zIndex }}
           />
         )}
       </div>
