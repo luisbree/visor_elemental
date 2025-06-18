@@ -78,14 +78,14 @@ const FeatureAttributesPanel: React.FC<FeatureAttributesPanelProps> = ({
     >
       <div className="flex-grow flex flex-col h-full">
           {allKeys.length > 0 && currentVisibleFeatures.length > 0 ? (
-            <div className="overflow-x-auto flex-grow min-w-0"> {/* Added min-w-0 here */}
+            <div className="overflow-x-auto flex-grow min-w-0">
               <Table className="min-w-full"> 
                 <TableHeader>
-                  <TableRow className="bg-gray-800/50 hover:bg-gray-800/70 sticky top-0 z-10">
+                  <TableRow className="hover:bg-gray-800/70">
                     {allKeys.map(key => (
                       <TableHead 
                         key={key} 
-                        className="px-3 py-2 text-xs font-medium text-gray-300 whitespace-nowrap bg-gray-700/90 backdrop-blur-sm"
+                        className="px-3 py-2 text-xs font-medium text-gray-300 whitespace-nowrap bg-gray-700/50"
                       >
                         {key}
                       </TableHead>
@@ -151,4 +151,3 @@ const FeatureAttributesPanel: React.FC<FeatureAttributesPanelProps> = ({
 };
 
 export default FeatureAttributesPanel;
-
