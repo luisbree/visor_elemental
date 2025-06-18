@@ -242,6 +242,18 @@ export default function GeoMapperClient() {
     // }
   }, [featureInspectionHook.selectedFeatureAttributes, panels.attributes, togglePanelMinimize]);
 
+  // Effect to automatically load GeoServer layers on initial mount
+  useEffect(() => {
+    const fetchInitialGeoServerLayers = async () => {
+      // The geoServerUrlInput is already defaulted in useGeoServerLayers,
+      // and handleFetchGeoServerLayers uses it.
+      const discovered = await handleFetchGeoServerLayers();
+      setGeoServerDiscoveredLayers(discovered);
+    };
+    fetchInitialGeoServerLayers();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty dependency array ensures this runs once on mount
+
 
   return (
     <div className="flex h-screen w-screen flex-col bg-background text-foreground">
