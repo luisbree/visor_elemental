@@ -5,7 +5,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import DraggablePanel from './DraggablePanel'; 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight, ListChecks } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ListChecks, Link as LinkIcon } from 'lucide-react'; // Added LinkIcon
 
 interface AttributesPanelProps {
   featuresAttributes: Record<string, any>[] | null;
@@ -14,7 +14,7 @@ interface AttributesPanelProps {
   panelRef: React.RefObject<HTMLDivElement>;
   isCollapsed: boolean;
   onToggleCollapse: () => void;
-  onClosePanel: () => void; // This will be used to clear attributes and thus trigger minimization
+  onClosePanel: () => void; 
   onMouseDownHeader: (e: React.MouseEvent<HTMLDivElement>) => void;
   style?: React.CSSProperties;
 }
@@ -27,33 +27,29 @@ const AttributesPanel: React.FC<AttributesPanelProps> = ({
   panelRef,
   isCollapsed,
   onToggleCollapse,
-  onClosePanel, // This effectively becomes the "clear and hide" action
+  onClosePanel, 
   onMouseDownHeader,
   style,
 }) => {
   const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
-    // Reset to first page when new attributes are loaded
     if (featuresAttributes && featuresAttributes.length > 0) {
       setCurrentPage(1);
     }
   }, [featuresAttributes]);
 
-  // The panel's visibility (minimized state) is controlled by GeoMapperClient
-  // based on whether featuresAttributes has data.
-  // If it's not minimized but has no data, we show a placeholder message.
   if (!featuresAttributes || featuresAttributes.length === 0) {
     return (
       <DraggablePanel
         title="Atributos"
         icon={ListChecks}
         panelRef={panelRef}
-        initialPosition={{ x:0, y:0}} // Position controlled by useFloatingPanels
+        initialPosition={{ x:0, y:0}} 
         onMouseDownHeader={onMouseDownHeader}
         isCollapsed={isCollapsed}
         onToggleCollapse={onToggleCollapse}
-        onClose={onClosePanel} // Wire up the close button to the panel's close action
+        onClose={onClosePanel} 
         showCloseButton={true}
         style={style}
         zIndex={style?.zIndex as number | undefined}
@@ -72,7 +68,12 @@ const AttributesPanel: React.FC<AttributesPanelProps> = ({
 
   const allKeys = Array.from(
     new Set(currentVisibleFeatures.flatMap(attrs => Object.keys(attrs)))
-  ).sort();
+  ).sort((a, b) => {
+    // Move 'preview_url' to the end if it exists
+    if (a === 'preview_url') return 1;
+    if (b === 'preview_url') return -1;
+    return a.localeCompare(b);
+  });
 
   const handleNextPage = () => setCurrentPage((prev) => Math.min(prev + 1, totalPages));
   const handlePrevPage = () => setCurrentPage((prev) => Math.max(prev - 1, 1));
@@ -81,27 +82,36 @@ const AttributesPanel: React.FC<AttributesPanelProps> = ({
     ? `Atributos: ${layerName} (${featuresAttributes.length})` 
     : `Atributos (${featuresAttributes.length})`;
 
+  const isValidUrl = (urlString: string): boolean => {
+    try {
+      new URL(urlString);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  };
+
   return (
     <DraggablePanel
       title={panelTitle}
       icon={ListChecks}
       panelRef={panelRef}
-      initialPosition={{ x:0, y:0}} // Position controlled by useFloatingPanels
+      initialPosition={{ x:0, y:0}} 
       onMouseDownHeader={onMouseDownHeader}
       isCollapsed={isCollapsed}
       onToggleCollapse={onToggleCollapse}
-      onClose={onClosePanel} // Wire up the close button
+      onClose={onClosePanel} 
       showCloseButton={true}
-      initialSize={{ width: 450, height: 350 }} // Default/initial size when shown
+      initialSize={{ width: 450, height: 350 }} 
       minSize={{ width: 300, height: 250 }}
-      style={style} // Includes top, left, zIndex
-      overflowX="hidden" // For DraggablePanel's ScrollArea: no horizontal scroll here
-      overflowY="auto"   // For DraggablePanel's ScrollArea: vertical scroll for entire panel content
+      style={style} 
+      overflowX="hidden" 
+      overflowY="auto"   
       zIndex={style?.zIndex as number | undefined}
     >
-      <div className="flex-grow flex flex-col"> {/* Removed h-full */}
+      <div className="flex-grow flex flex-col"> 
           {allKeys.length > 0 && currentVisibleFeatures.length > 0 ? (
-            <div className="flex-grow min-w-0"> {/* This div wraps the table, min-w-0 is important for flex context */}
+            <div className="flex-grow min-w-0"> 
               <Table><TableHeader>
                   <TableRow className="hover:bg-gray-800/70">
                     {allKeys.map(key => (
@@ -109,7 +119,7 @@ const AttributesPanel: React.FC<AttributesPanelProps> = ({
                         key={key}
                         className="px-3 py-2 text-xs font-medium text-gray-300 whitespace-nowrap bg-gray-700/50"
                       >
-                        {key}
+                        {key === 'preview_url' ? 'Vista Previa' : key}
                       </TableHead>
                     ))}
                   </TableRow>
@@ -121,7 +131,20 @@ const AttributesPanel: React.FC<AttributesPanelProps> = ({
                           key={key}
                           className="px-3 py-1.5 text-xs text-slate-200 dark:text-slate-200 border-b border-gray-700/50 whitespace-normal break-words"
                         >
-                          {String(attrs[key] === null || attrs[key] === undefined ? '' : attrs[key])}
+                          {key === 'preview_url' && attrs[key] && isValidUrl(String(attrs[key])) ? (
+                            <a
+                              href={String(attrs[key])}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-400 hover:text-blue-300 underline flex items-center"
+                              title={`Abrir vista previa de ${layerName || 'escena'}`}
+                            >
+                              <LinkIcon className="h-3 w-3 mr-1" />
+                              Abrir Enlace
+                            </a>
+                          ) : (
+                            String(attrs[key] === null || attrs[key] === undefined ? '' : attrs[key])
+                          )}
                         </TableCell>
                       ))}
                     </TableRow>
@@ -171,4 +194,3 @@ const AttributesPanel: React.FC<AttributesPanelProps> = ({
 };
 
 export default AttributesPanel;
-

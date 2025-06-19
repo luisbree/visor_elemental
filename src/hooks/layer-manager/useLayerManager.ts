@@ -320,15 +320,13 @@ export function useLayerManager({
       const extentEPSG3857 = view.calculateExtent(mapRef.current.getSize());
       const extentEPSG4326 = transformExtent(extentEPSG3857, 'EPSG:3857', 'EPSG:4326');
       
-      const bbox = `${extentEPSG4326[0]},${extentEPSG4326[1]},${extentEPSG4326[2]},${extentEPSG4326[3]}`;
       const stacApiUrl = `https://earth-search.aws.element84.com/v1/search`;
       
       const requestBody = {
         "collections": ["sentinel-2-l2a"],
         "bbox": [extentEPSG4326[0], extentEPSG4326[1], extentEPSG4326[2], extentEPSG4326[3]],
-        "limit": 20, // Limitar el número de resultados
-         "sortby": [ // Opcional: ordenar por fecha más reciente o menos nubosidad
-            // { "field": "properties.datetime", "direction": "desc" },
+        "limit": 20, 
+         "sortby": [ 
             { "field": "properties.eo:cloud_cover", "direction": "asc" }
         ]
       };
@@ -355,6 +353,35 @@ export function useLayerManager({
         return;
       }
 
+      // Add preview_url to properties before creating OLFeatures
+      geojsonResponse.features.forEach((feature: any) => {
+        if (feature.assets) {
+          let previewUrl = null;
+          if (feature.assets.overview && feature.assets.overview.href) {
+            previewUrl = feature.assets.overview.href;
+          } else if (feature.assets.thumbnail && feature.assets.thumbnail.href) {
+            previewUrl = feature.assets.thumbnail.href;
+          } else {
+            for (const assetKey in feature.assets) {
+              const asset = feature.assets[assetKey];
+              if (asset && asset.href && 
+                  (asset.type === 'image/jpeg' || asset.type === 'image/png' || 
+                   (asset.roles && (asset.roles.includes('overview') || asset.roles.includes('thumbnail'))))
+                 ) {
+                previewUrl = asset.href;
+                break; 
+              }
+            }
+          }
+          if (previewUrl) {
+            if (!feature.properties) {
+              feature.properties = {};
+            }
+            feature.properties.preview_url = previewUrl;
+          }
+        }
+      });
+
       const olFeatures = new GeoJSONFormat().readFeatures(geojsonResponse, {
         dataProjection: 'EPSG:4326',
         featureProjection: 'EPSG:3857',
@@ -376,7 +403,7 @@ export function useLayerManager({
           olLayer: vectorLayer,
           visible: true,
           opacity: 0.8,
-          originType: 'file', // O podríamos tener un 'stac'
+          originType: 'file', 
         });
         toast({ description: `${olFeatures.length} footprints Sentinel-2 encontrados y añadidos.` });
       } else {
