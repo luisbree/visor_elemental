@@ -55,11 +55,11 @@ export function useFloatingPanels({
   const [internalPanelsState, setInternalPanelsState] = useState<Record<string, InternalPanelState>>({
     layers: { position: { x: panelPadding, y: panelPadding }, isCollapsed: false, isMinimized: true },
     tools: { position: { x: panelWidth + 2 * panelPadding, y: panelPadding }, isCollapsed: true, isMinimized: true },
-    legend: { position: { x: panelPadding, y: panelPadding }, isCollapsed: false, isMinimized: true },
+    legend: { position: { x: panelPadding, y: panelPadding }, isCollapsed: false, isMinimized: false }, // "Capas" panel starts open
     attributes: { position: { x: panelPadding + 50, y: panelPadding + 50 }, isCollapsed: true, isMinimized: true }, // Initial state for new panel
   });
 
-  const [zOrder, setZOrder] = useState<string[]>(['attributes', 'tools', 'layers', 'legend']); // Add new panel to zOrder
+  const [zOrder, setZOrder] = useState<string[]>(['attributes', 'tools', 'layers', 'legend']); // legend (Capas) will be on top initially if open
 
   const [draggingPanelId, setDraggingPanelId] = useState<string | null>(null);
   const dragStartRef = useRef({ x: 0, y: 0, panelX: 0, panelY: 0 });
@@ -77,13 +77,13 @@ export function useFloatingPanels({
           ...prev.tools,
           position: prev.tools.isMinimized ? prev.tools.position : { x: (prev.layers.isMinimized ? 0 : panelWidth) + (prev.layers.isMinimized ? 0 : panelPadding) + panelPadding, y: yPos },
         },
-        legend: {
+        legend: { // "Capas" panel
           ...prev.legend,
           position: prev.legend.isMinimized ? prev.legend.position : { x: panelPadding, y: yPos },
         },
-        attributes: { // Ensure attributes panel also gets initial position if needed
+        attributes: { 
             ...prev.attributes,
-            position: prev.attributes.isMinimized ? prev.attributes.position : { x: panelPadding + panelWidth + panelPadding, y: yPos + 50}, // Example: to the right of tools, slightly down
+            position: prev.attributes.isMinimized ? prev.attributes.position : { x: panelPadding + panelWidth + panelPadding, y: yPos + 50}, 
         }
       }));
     }
@@ -137,18 +137,28 @@ export function useFloatingPanels({
       let newPosition = panel.position;
       let newIsCollapsed = panel.isCollapsed;
 
-      if (!newMinimizedState) {
-        newIsCollapsed = false; 
+      if (!newMinimizedState) { // If un-minimizing
+        newIsCollapsed = false; // Always un-collapse when un-minimizing
 
-        if (panelId === 'legend' || panelId === 'attributes') { // Attributes also to the left
+        // Default positions when un-minimizing, can be adjusted
+        if (panelId === 'legend' || panelId === 'layers' || panelId === 'attributes') { 
           newPosition = { x: panelPadding, y: panelPadding };
-          if (panelId === 'attributes') { // Slightly offset if both are restored to left
+          if (panelId === 'attributes') { 
               const legendPanelState = prev['legend'];
               if(legendPanelState && !legendPanelState.isMinimized && legendPanelState.position.x === panelPadding && legendPanelState.position.y === panelPadding) {
-                newPosition = { x: panelPadding, y: panelPadding + 50 }; // Example offset
+                newPosition = { x: panelPadding, y: panelPadding + 50 }; 
               }
           }
+          if (panelId === 'layers') {
+             const legendPanelState = prev['legend'];
+             if(legendPanelState && !legendPanelState.isMinimized && legendPanelState.position.x === panelPadding && legendPanelState.position.y === panelPadding) {
+                newPosition = { x: panelPadding, y: panelPadding + 100 }; // Further down if legend is also at top-left
+             }
+          }
+        } else if (panelId === 'tools') {
+            newPosition = { x: panelWidth + 2 * panelPadding, y: panelPadding};
         }
+
         setZOrder(prevZOrder => {
           const newOrder = prevZOrder.filter(id => id !== panelId);
           newOrder.push(panelId);
@@ -166,7 +176,7 @@ export function useFloatingPanels({
         },
       };
     });
-  }, [panelPadding]);
+  }, [panelPadding, panelWidth]);
 
 
   useEffect(() => {
