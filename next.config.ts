@@ -21,7 +21,10 @@ const nextConfig: NextConfig = {
   },
   // Allow cross-origin requests from Firebase Studio development environment
   experimental: {
-    allowedDevOrigins: ['https://*.cloudworkstations.dev'],
+    allowedDevOrigins: [
+      'https://*.cluster-ve345ymguzcd6qqzuko2qbxtfe.cloudworkstations.dev',
+      'https://*.cloudworkstations.dev' // Keep the broader one as a fallback
+    ],
   },
 };
 
