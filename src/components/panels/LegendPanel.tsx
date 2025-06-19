@@ -8,7 +8,7 @@ import FileUploadControl from '@/components/layer-manager/FileUploadControl';
 import InspectToolToggle from '@/components/feature-inspection/InspectToolToggle';
 import { Separator } from '@/components/ui/separator';
 import type { MapLayer } from '@/lib/types';
-import { ListTree } from 'lucide-react'; 
+import { ListTree, Library } from 'lucide-react'; 
 
 interface LegendPanelProps {
   panelRef: React.RefObject<HTMLDivElement>;
@@ -24,7 +24,7 @@ interface LegendPanelProps {
   onShowLayerTable: (layerId: string) => void;
   onExtractByPolygon: (layerId: string) => void;
   isDrawingSourceEmptyOrNotPolygon: boolean;
-  onSetLayerOpacity: (layerId: string, opacity: number) => void; // Added prop
+  onSetLayerOpacity: (layerId: string, opacity: number) => void; 
 
   onAddLayer: (layer: MapLayer) => void;
   isInspectModeActive: boolean;
@@ -36,7 +36,7 @@ interface LegendPanelProps {
 const LegendPanel: React.FC<LegendPanelProps> = ({
   panelRef, isCollapsed, onToggleCollapse, onClosePanel, onMouseDownHeader,
   layers, onToggleLayerVisibility, onRemoveLayer, onZoomToLayerExtent, onShowLayerTable,
-  onExtractByPolygon, isDrawingSourceEmptyOrNotPolygon, onSetLayerOpacity, // Destructure new prop
+  onExtractByPolygon, isDrawingSourceEmptyOrNotPolygon, onSetLayerOpacity, 
   onAddLayer, isInspectModeActive, onToggleInspectMode,
   style,
 }) => {
@@ -72,8 +72,19 @@ const LegendPanel: React.FC<LegendPanelProps> = ({
           onRemoveLayer={onRemoveLayer}
           onExtractByPolygon={onExtractByPolygon}
           isDrawingSourceEmptyOrNotPolygon={isDrawingSourceEmptyOrNotPolygon}
-          onSetLayerOpacity={onSetLayerOpacity} // Pass prop
+          onSetLayerOpacity={onSetLayerOpacity} 
         />
+        <Separator className="bg-white/15 mt-3" />
+        <div>
+          <h3 className="text-xs font-semibold text-white/90 mb-1.5 mt-2 flex items-center">
+            <Library className="h-3.5 w-3.5 mr-1.5 text-primary/80" /> 
+            DEAS
+          </h3>
+          <p className="text-xs text-gray-400/70 mt-1">
+            Herramientas y datos específicos de DEAS se gestionarán aquí.
+          </p>
+          {/* Aquí puedes añadir botones, selectores u otros controles para la sección DEAS */}
+        </div>
       </div>
     </DraggablePanel>
   );

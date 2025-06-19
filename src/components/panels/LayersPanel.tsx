@@ -11,7 +11,7 @@ import GeoServerLayerList from '@/components/geoserver-connection/GeoServerLayer
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import type { BaseLayerOptionForSelect, GeoServerDiscoveredLayer } from '@/lib/types'; 
-import { Database, Search, ImageUp, Cloud, ImageOff, Loader2, Library } from 'lucide-react'; 
+import { Database, Search, ImageUp, Cloud, ImageOff, Loader2 } from 'lucide-react'; 
 
 interface LayersPanelProps {
   panelRef: React.RefObject<HTMLDivElement>;
@@ -152,20 +152,6 @@ const LayersPanel: React.FC<LayersPanelProps> = ({
           </div>
            <p className="text-xs text-gray-400/70 mt-1">Busca footprints de Sentinel-2 L2A. Puede requerir paciencia.</p>
         </div>
-
-        <Separator className="bg-white/15" />
-
-        <div>
-          <h3 className="text-xs font-semibold text-white/90 mb-1.5 flex items-center">
-            <Library className="h-3.5 w-3.5 mr-1.5 text-primary/80" /> 
-            DEAS
-          </h3>
-          <p className="text-xs text-gray-400/70 mt-1">
-            Contenido específico de DEAS se mostrará aquí.
-          </p>
-          {/* Aquí puedes añadir botones, selectores u otros controles para la sección DEAS */}
-        </div>
-
       </div>
     </DraggablePanel>
   );
