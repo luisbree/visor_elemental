@@ -16,8 +16,7 @@ import {
 
 
 import MapView, { BASE_LAYER_DEFINITIONS } from '@/components/map-view';
-// import FeatureAttributesPanel from '@/components/panels/FeatureAttributesPanel'; // Will be replaced by AttributesPanel
-import AttributesPanel from '@/components/panels/AttributesPanel'; // Use the new/renamed AttributesPanel
+import AttributesPanel from '@/components/panels/AttributesPanel'; 
 import LayersPanel from '@/components/panels/LayersPanel';
 import ToolsPanel from '@/components/panels/ToolsPanel';
 import LegendPanel from '@/components/panels/LegendPanel';
@@ -222,37 +221,36 @@ export default function GeoMapperClient() {
   }, [layerManagerHook.layers, featureInspectionHook]);
 
    useEffect(() => {
-    // Update featureInspectionHook with the latest drawing interaction methods
-    // This ensures that if drawingInteractions.activeDrawTool changes,
-    // featureInspectionHook.activeDrawTool is also updated.
     featureInspectionHook.activeDrawTool = drawingInteractions.activeDrawTool;
     featureInspectionHook.stopDrawingTool = drawingInteractions.stopDrawingTool;
   }, [drawingInteractions.activeDrawTool, drawingInteractions.stopDrawingTool, featureInspectionHook ]);
 
-  // Effect to automatically open/close AttributesPanel based on data
   useEffect(() => {
     if (featureInspectionHook.selectedFeatureAttributes && featureInspectionHook.selectedFeatureAttributes.length > 0) {
       if (panels.attributes && panels.attributes.isMinimized) {
-        togglePanelMinimize('attributes'); // This also un-collapses and brings to front
+        togglePanelMinimize('attributes'); 
       }
     } 
-    // Optionally, auto-minimize if data is cleared and panel was open due to data:
-    // else if ((!featureInspectionHook.selectedFeatureAttributes || featureInspectionHook.selectedFeatureAttributes.length === 0) && panels.attributes && !panels.attributes.isMinimized) {
-    //  togglePanelMinimize('attributes');
-    // }
   }, [featureInspectionHook.selectedFeatureAttributes, panels.attributes, togglePanelMinimize]);
 
-  // Effect to automatically load GeoServer layers on initial mount
   useEffect(() => {
-    const fetchInitialGeoServerLayers = async () => {
-      // The geoServerUrlInput is already defaulted in useGeoServerLayers,
-      // and handleFetchGeoServerLayers uses it.
+    const fetchAndAddInitialGeoServerLayers = async () => {
       const discovered = await handleFetchGeoServerLayers();
       setGeoServerDiscoveredLayers(discovered);
+      if (discovered && discovered.length > 0) {
+        discovered.forEach(layer => {
+          // Add as WMS layer, initially invisible
+          handleAddGeoServerLayerToMap(layer.name, layer.title, false);
+        });
+        toast({ description: `${discovered.length} capas de GeoServer cargadas (inicialmente ocultas).` });
+      } else if (discovered && discovered.length === 0 && !isLoadingGeoServerLayers) {
+        // Only toast if not loading and no layers found after attempt
+        toast({ description: "No se encontraron capas en GeoServer para cargar automáticamente." });
+      }
     };
-    fetchInitialGeoServerLayers();
+    fetchAndAddInitialGeoServerLayers();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Empty dependency array ensures this runs once on mount
+  }, []); // Keep dependencies minimal for on-mount fetch, hook functions are stable
 
 
   return (
@@ -373,7 +371,7 @@ export default function GeoMapperClient() {
             onToggleLayerVisibility={layerManagerHook.toggleLayerVisibility}
             onRemoveLayer={layerManagerHook.removeLayer}
             onZoomToLayerExtent={layerManagerHook.zoomToLayerExtent}
-            onShowLayerTable={layerManagerHook.handleShowLayerTable} // This will now trigger AttributesPanel
+            onShowLayerTable={layerManagerHook.handleShowLayerTable} 
             onExtractByPolygon={layerManagerHook.handleExtractFeaturesByPolygon}
             isDrawingSourceEmptyOrNotPolygon={layerManagerHook.isDrawingSourceEmptyOrNotPolygon}
             onSetLayerOpacity={layerManagerHook.setLayerOpacity}
@@ -390,8 +388,8 @@ export default function GeoMapperClient() {
             isCollapsed={panels.attributes.isCollapsed}
             onToggleCollapse={() => togglePanelCollapse('attributes')}
             onClosePanel={() => {
-              featureInspectionHook.clearInspectedAttributes(); // Clear data
-              togglePanelMinimize('attributes'); // Then minimize
+              featureInspectionHook.clearInspectedAttributes(); 
+              togglePanelMinimize('attributes'); 
             }}
             onMouseDownHeader={(e) => handlePanelMouseDown(e, 'attributes')}
             featuresAttributes={featureInspectionHook.selectedFeatureAttributes}
@@ -403,3 +401,5 @@ export default function GeoMapperClient() {
     </div>
   );
 }
+
+    

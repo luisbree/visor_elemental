@@ -112,9 +112,15 @@ export function useGeoServerLayers({ mapRef, isMapReady, addLayer, onLayerStateU
     }
   }, [geoServerUrlInput, toast]);
 
-  const handleAddGeoServerLayerToMap = useCallback((layerName: string, layerTitle: string) => { // This is for WMS
+  const handleAddGeoServerLayerToMap = useCallback((
+    layerName: string,
+    layerTitle: string,
+    initialVisibility: boolean = true // Added initialVisibility parameter
+  ) => {
     if (!isMapReady || !mapRef.current || !geoServerUrlInput.trim()) {
-        toast({ description: "El mapa o la URL de GeoServer no están disponibles." });
+        if (initialVisibility) { // Only toast for user-initiated actions if map isn't ready
+          toast({ description: "El mapa o la URL de GeoServer no están disponibles." });
+        }
         return;
     }
 
@@ -125,9 +131,18 @@ export function useGeoServerLayers({ mapRef, isMapReady, addLayer, onLayerStateU
     if (geoserverBaseWmsUrl.endsWith('/')) geoserverBaseWmsUrl = geoserverBaseWmsUrl.slice(0, -1);
     if (geoserverBaseWmsUrl.toLowerCase().endsWith('/web')) geoserverBaseWmsUrl = geoserverBaseWmsUrl.substring(0, geoserverBaseWmsUrl.length - '/web'.length);
     else if (geoserverBaseWmsUrl.toLowerCase().endsWith('/web/')) geoserverBaseWmsUrl = geoserverBaseWmsUrl.substring(0, geoserverBaseWmsUrl.length - '/web/'.length);
-    if (!geoserverBaseWmsUrl.toLowerCase().endsWith('/wms')) {
-        geoserverBaseWmsUrl = geoserverBaseWmsUrl.includes('/geoserver') ? `${geoserverBaseWmsUrl}/wms` : `${geoserverBaseWmsUrl}/geoserver/wms`; // Ensure /geoserver/wms
+    
+    // Ensure /wms is part of the URL structure, trying to be intelligent about common GeoServer setups
+    if (!geoserverBaseWmsUrl.toLowerCase().includes('/wms')) {
+        if (geoserverBaseWmsUrl.toLowerCase().includes('/geoserver')) {
+            // URL might be http://host/geoserver
+            geoserverBaseWmsUrl = `${geoserverBaseWmsUrl}/wms`;
+        } else {
+            // URL might be http://host or http://host/something_else
+            geoserverBaseWmsUrl = `${geoserverBaseWmsUrl}/geoserver/wms`;
+        }
     }
+
 
     const wmsSource = new TileWMS({
         url: geoserverBaseWmsUrl,
@@ -146,12 +161,16 @@ export function useGeoServerLayers({ mapRef, isMapReady, addLayer, onLayerStateU
       id: mapLayerId,
       name: `${layerTitle || layerName} (WMS)`,
       olLayer: newOlLayer,
-      visible: true,
+      visible: initialVisibility, // Use initialVisibility
       isGeoServerLayer: true,
       originType: 'wms',
     });
-    onLayerStateUpdate(layerName, true, 'wms');
-    toast({ description: `Capa WMS "${layerTitle || layerName}" añadida al mapa.` });
+    
+    onLayerStateUpdate(layerName, true, 'wms'); // Update state in GeoServerLayerList
+
+    if (initialVisibility) { // Only toast if layer is added visibly (user action)
+        toast({ description: `Capa WMS "${layerTitle || layerName}" añadida al mapa.` });
+    }
   }, [geoServerUrlInput, addLayer, mapRef, isMapReady, onLayerStateUpdate, toast]);
 
   const handleAddGeoServerLayerAsWFS = useCallback(async (layerName: string, layerTitle: string): Promise<void> => {
@@ -160,7 +179,7 @@ export function useGeoServerLayers({ mapRef, isMapReady, addLayer, onLayerStateU
       return;
     }
     
-    setIsWfsLoading(true); // Set loading true at the beginning
+    setIsWfsLoading(true); 
     toast({ description: `Solicitando capa WFS "${layerTitle || layerName}"...` });
 
     try {
@@ -275,7 +294,7 @@ export function useGeoServerLayers({ mapRef, isMapReady, addLayer, onLayerStateU
             id: mapLayerId,
             name: `${layerTitle || layerName} (WFS)`,
             olLayer: vectorLayer,
-            visible: true,
+            visible: true, // WFS layers are typically added visibly for interaction
             isGeoServerLayer: true,
             originType: 'wfs',
         });
@@ -286,7 +305,7 @@ export function useGeoServerLayers({ mapRef, isMapReady, addLayer, onLayerStateU
       console.warn("Error cargando capa WFS (inesperado):", error);
       toast({ description: error.message || `Error desconocido al cargar capa WFS.`, variant: "destructive" });
     } finally {
-        setIsWfsLoading(false); // Set loading false at the end
+        setIsWfsLoading(false); 
     }
   }, [geoServerUrlInput, addLayer, mapRef, isMapReady, onLayerStateUpdate, toast, setIsWfsLoading]);
 
@@ -300,3 +319,5 @@ export function useGeoServerLayers({ mapRef, isMapReady, addLayer, onLayerStateU
     handleAddGeoServerLayerAsWFS, // WFS
   };
 }
+
+    
