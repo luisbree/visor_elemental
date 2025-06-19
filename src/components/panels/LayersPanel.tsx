@@ -11,7 +11,7 @@ import GeoServerLayerList from '@/components/geoserver-connection/GeoServerLayer
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import type { BaseLayerOptionForSelect, GeoServerDiscoveredLayer } from '@/lib/types'; 
-import { Database, Search, ImageUp, Cloud, ImageOff } from 'lucide-react'; 
+import { Database, Search, ImageUp, Cloud, ImageOff, Loader2 } from 'lucide-react'; 
 
 interface LayersPanelProps {
   panelRef: React.RefObject<HTMLDivElement>;
@@ -135,21 +135,19 @@ const LayersPanel: React.FC<LayersPanelProps> = ({
           <div className="flex items-center gap-2">
             <Button 
               onClick={onFindSentinel2Footprints} 
-              className="flex-1 text-xs h-8 bg-black/20 hover:bg-black/40 border border-white/30 text-white/90"
+              className="h-8 w-8 p-0 flex items-center justify-center bg-black/20 hover:bg-black/40 border border-white/30 text-white/90"
               disabled={isFindingSentinelFootprints}
-              title="Buscar footprints de escenas Sentinel-2 en la vista actual del mapa"
+              title={isFindingSentinelFootprints ? "Buscando..." : "Buscar footprints de escenas Sentinel-2 en la vista actual del mapa"}
             >
-              <Search className="h-3.5 w-3.5 mr-1.5" />
-              {isFindingSentinelFootprints ? "Buscando..." : "Buscar Escenas en Vista"}
+              {isFindingSentinelFootprints ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
             </Button>
             <Button 
               onClick={onClearSentinel2Footprints} 
               variant="destructive"
-              className="flex-1 text-xs h-8 bg-red-700/30 hover:bg-red-600/50 border border-red-500/50 text-white/90"
+              className="h-8 w-8 p-0 flex items-center justify-center bg-red-700/30 hover:bg-red-600/50 border border-red-500/50 text-white/90"
               title="Limpiar los footprints de Sentinel-2 del mapa"
             >
-              <ImageOff className="h-3.5 w-3.5 mr-1.5" /> 
-              Limpiar Footprints
+              <ImageOff className="h-4 w-4" /> 
             </Button>
           </div>
            <p className="text-xs text-gray-400/70 mt-1">Busca footprints de Sentinel-2 L2A. Puede requerir paciencia.</p>
