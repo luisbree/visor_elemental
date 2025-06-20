@@ -51,18 +51,6 @@ export const ALL_BASE_LAYER_DEFINITIONS = [
       properties: { baseLayerId: 'esri-satellite', isBaseLayer: true, name: 'ESRISatelliteBaseLayer' },
     }),
   },
-  {
-    id: 'sentinel-2-esri', 
-    name: 'Sentinel-2 (ESRI)', // Updated name for clarity in selector
-    createLayer: () => new TileLayer({
-      source: new XYZ({
-        url: 'https://tiles.arcgis.com/tiles/P3ePLMYs2RVChkJx/arcgis/rest/services/Sentinel_2_L2A_Global_View/MapServer/tile/{z}/{y}/{x}',
-        attributions: 'Sentinel-2, Contains modified Copernicus Sentinel data, processed by Esri.',
-        maxZoom: 19, 
-      }),
-      properties: { baseLayerId: 'sentinel-2-esri', isBaseLayer: true, name: 'Sentinel2ESRIBaseLayer' },
-    }),
-  },
 ] as const;
 
 // Definitions for base layers to be shown in the selector
