@@ -54,8 +54,8 @@ export const ALL_BASE_LAYER_DEFINITIONS = [
     }),
   },
   {
-    id: 'sentinel-2-esri', // Kept for potential future use, but not in BASE_LAYER_DEFINITIONS_FOR_SELECT
-    name: 'Sentinel-2 (ESRI) - Imagery',
+    id: 'sentinel-2-esri', 
+    name: 'Sentinel-2 (ESRI)', // Updated name for clarity in selector
     createLayer: () => new TileLayer({
       source: new XYZ({
         url: 'https://tiles.arcgis.com/tiles/P3ePLMYs2RVChkJx/arcgis/rest/services/Sentinel_2_L2A_Global_View/MapServer/tile/{z}/{y}/{x}',
@@ -70,9 +70,8 @@ export const ALL_BASE_LAYER_DEFINITIONS = [
 ] as const;
 
 // Definitions for base layers to be shown in the selector
-export const BASE_LAYER_DEFINITIONS = ALL_BASE_LAYER_DEFINITIONS.filter(
-  def => def.id !== 'sentinel-2-esri'
-);
+// Now includes all layers from ALL_BASE_LAYER_DEFINITIONS
+export const BASE_LAYER_DEFINITIONS = [...ALL_BASE_LAYER_DEFINITIONS];
 
 
 const MapView: React.FC<MapViewProps> = ({ setMapInstanceAndElement, onMapClick, activeBaseLayerId }) => {
