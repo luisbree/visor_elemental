@@ -35,7 +35,6 @@ export const ALL_BASE_LAYER_DEFINITIONS = [
         maxZoom: 20,
         crossOrigin: 'Anonymous'
       }),
-      visible: false, 
       properties: { baseLayerId: 'carto-light', isBaseLayer: true, name: 'CartoGrayscaleBaseLayer' },
     }),
   },
@@ -49,7 +48,6 @@ export const ALL_BASE_LAYER_DEFINITIONS = [
         maxZoom: 19,
         crossOrigin: 'Anonymous'
       }),
-      visible: false, 
       properties: { baseLayerId: 'esri-satellite', isBaseLayer: true, name: 'ESRISatelliteBaseLayer' },
     }),
   },
@@ -61,9 +59,7 @@ export const ALL_BASE_LAYER_DEFINITIONS = [
         url: 'https://tiles.arcgis.com/tiles/P3ePLMYs2RVChkJx/arcgis/rest/services/Sentinel_2_L2A_Global_View/MapServer/tile/{z}/{y}/{x}',
         attributions: 'Sentinel-2, Contains modified Copernicus Sentinel data, processed by Esri.',
         maxZoom: 19, 
-        crossOrigin: 'Anonymous'
       }),
-      visible: false,
       properties: { baseLayerId: 'sentinel-2-esri', isBaseLayer: true, name: 'Sentinel2ESRIBaseLayer' },
     }),
   },
